@@ -900,40 +900,6 @@ typedef struct shader_sky
 
 } shader_sky;
 
-typedef struct shader_marching_cubes
-{
-  shader_header header;
-
-  i32 loc_iResolution;
-  i32 loc_mvp;
-
-} shader_marching_cubes;
-
-typedef struct shader_terrain
-{
-  shader_header header;
-
-  i32 loc_iResolution;
-  i32 loc_camera;
-  i32 loc_sun_dir;
-  i32 loc_camera_view_dir;
-  i32 loc_base_scale;
-  i32 loc_mvp;
-  i32 loc_texture_diffuse;
-  i32 loc_texture_normal;
-  i32 loc_texture_displacement;
-
-} shader_terrain;
-
-typedef struct shader_font_new
-{
-  shader_header header;
-
-  i32 loc_iResolution;
-  i32 loc_texture_font;
-
-} shader_font_new;
-
 typedef struct shader_tiles
 {
   shader_header header;
@@ -976,44 +942,6 @@ typedef struct shader_tile_nm
   i32 loc_stamped_heightmap_size;
 
 } shader_tile_nm;
-
-typedef struct shader_main
-{
-  shader_header header;
-
-  i32 loc_iResolution;
-  i32 loc_iTime;
-  i32 loc_iTimeDelta;
-  i32 loc_iFrame;
-  i32 loc_iFrameRate;
-  i32 loc_iMouse;
-  i32 loc_iTextureInfo;
-  i32 loc_iTexture;
-  i32 loc_iController;
-
-  i32 loc_brick_map_texture;
-  i32 loc_atlas_texture;
-  i32 loc_material_texture;
-  i32 loc_palette_texture;
-
-  i32 loc_brick_map_dim;
-  i32 loc_atlas_brick_dim;
-
-  i32 loc_inverse_atlas_size;
-  i32 loc_grid_start;
-  i32 loc_cell_size;
-  i32 loc_cell_diagonal;
-  i32 loc_truncation;
-  i32 loc_cell_size_inverse;
-
-  /* Camera */
-  i32 loc_camera_position;
-  i32 loc_camera_forward;
-  i32 loc_camera_right;
-  i32 loc_camera_up;
-  i32 loc_camera_forward_scaled;
-
-} shader_main;
 
 static u32 opengl_failed_function_load_count = 0;
 
@@ -1697,7 +1625,7 @@ VAST_API void vast_tile_render(win32_vast_state *state, vast_camera *camera, vas
 
     /* Setup tiles shaders */
     vast_tile_load_shader(&tiles_shader);
-    fs_last = win32_file_mod_time("vast_tiles.fs");
+    fs_last = win32_file_mod_time("shaders/vast_tiles.fs");
 
     /* Setup FBO heightmap Shader  */
     {
@@ -1789,7 +1717,7 @@ VAST_API void vast_tile_render(win32_vast_state *state, vast_camera *camera, vas
 
   /* reload tiles shader */
   {
-    FILETIME fs_now = win32_file_mod_time("vast_tiles.fs");
+    FILETIME fs_now = win32_file_mod_time("shaders/vast_tiles.fs");
 
     if (CompareFileTime(&fs_now, &fs_last) != 0)
     {
@@ -2202,7 +2130,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 VAST_API i32 start(i32 argc, u8 **argv)
 {
   /* Default fragment shader file name to load if no file is passed as an argument in cli */
-  s8 *fragment_shader_file_name = (argv && argc > 1) ? (s8 *)argv[1] : "vast.fs";
+  s8 *fragment_shader_file_name = (argv && argc > 1) ? (s8 *)argv[1] : "shaders/vast_sky.fs";
 
   win32_vast_state state = {0};
   shader_font font_shader = {0};
