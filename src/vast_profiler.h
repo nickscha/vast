@@ -7,7 +7,10 @@
  * # [SECTION] Performance Profiler
  * #############################################################################
  */
+#ifndef VAST_PROFILER_MAX_ENTRIES
 #define VAST_PROFILER_MAX_ENTRIES 512
+#endif
+
 #define VAST_PROFILER_ENTRY_INVALID 0xFFFFFFFF
 
 typedef struct vast_profiler_entry
