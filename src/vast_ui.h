@@ -169,7 +169,6 @@ VAST_API void vast_ui_glyph_add(
  */
 VAST_API void vast_ui_render(
     vast_platform_state *state,
-    vast_opengl_print print,
     i32 thread_count,
     i32 handle_count,
     i32 working_set, i32 peak_working_set, i32 private_bytes,
@@ -224,7 +223,7 @@ VAST_API void vast_ui_render(
 
         /* Load font shader */
         {
-            if (opengl_shader_load(&font_shader.header, vast_ui_shader_vertex, vast_ui_shader_fragment, print))
+            if (opengl_shader_load(&font_shader.header, vast_ui_shader_vertex, vast_ui_shader_fragment, state->api.io_print))
             {
                 font_shader.loc_iResolution = glGetUniformLocation(font_shader.header.program, "r");
                 font_shader.loc_iTextureInfo = glGetUniformLocation(font_shader.header.program, "t");

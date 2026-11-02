@@ -59,7 +59,6 @@ static s8 *vast_screen_recording_shader_fragment =
  */
 VAST_API void vast_screen_recording_render(
     vast_platform_state *state,
-    vast_opengl_print print,
     u8 *framebuffer)
 {
     static u8 screen_recording_initialized = 0;
@@ -73,7 +72,7 @@ VAST_API void vast_screen_recording_render(
         glBindVertexArray(screeen_recording_vao);
 
         /* Load recording shader */
-        if (opengl_shader_load(&recording_shader.header, vast_screen_recording_shader_vertex, vast_screen_recording_shader_fragment, print))
+        if (opengl_shader_load(&recording_shader.header, vast_screen_recording_shader_vertex, vast_screen_recording_shader_fragment, state->api.io_print))
         {
             recording_shader.loc_iResolution = glGetUniformLocation(recording_shader.header.program, "iRes");
             recording_shader.loc_iTime = glGetUniformLocation(recording_shader.header.program, "iTime");

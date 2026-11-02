@@ -2262,7 +2262,7 @@ VAST_API i32 start(i32 argc, u8 **argv)
         win32_process_memory(&mem);
 
         vast_ui_render(
-            &state.platform_state, win32_print,
+            &state.platform_state,
             thread_count, (i32)handle_count,
             (i32)(mem.working_set / 1024), (i32)(mem.peak_working_set / 1024), (i32)(mem.private_bytes / 1024),
             state.gl_version, state.gl_renderer, state.gl_vendor,
@@ -2313,7 +2313,7 @@ VAST_API i32 start(i32 argc, u8 **argv)
           }
 
           /* Render Image to framebuffer */
-          vast_screen_recording_render(&state.platform_state, win32_print, framebuffer);
+          vast_screen_recording_render(&state.platform_state, framebuffer);
 
           WriteFile(video_file_handle, framebuffer, state.platform_state.window.width * state.platform_state.window.height * 3, &written, 0);
         }
