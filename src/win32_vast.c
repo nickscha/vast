@@ -90,6 +90,76 @@ VAST_API u8 win32_print(s8 *str)
   return 1;
 }
 
+VAST_API u8 win32_file_size(s8 *filename, u32 *file_size)
+{
+  void *hFile = INVALID_HANDLE;
+  u32 fileSize = 0;
+  i32 attempt;
+
+  /* Retry loop for hot-reload: file might be locked or partially written */
+  for (attempt = 0; attempt < 4; ++attempt)
+  {
+    hFile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+
+    if (hFile != INVALID_HANDLE)
+    {
+      break;
+    }
+
+    Sleep(5); /* Small delay */
+  }
+
+  if (hFile == INVALID_HANDLE)
+  {
+    return 0;
+  }
+
+  fileSize = GetFileSize(hFile, 0);
+
+  if (fileSize == INVALID_FILE_SIZE || fileSize == 0)
+  {
+    CloseHandle(hFile);
+    return 0;
+  }
+
+  *file_size = fileSize;
+  return 1;
+}
+
+VAST_API u8 win32_file_read_api(s8 *filename, u8 *buffer, u32 buffer_size)
+{
+  void *hFile = INVALID_HANDLE;
+  u32 bytesRead = 0;
+  i32 attempt;
+
+  /* Retry loop for hot-reload: file might be locked or partially written */
+  for (attempt = 0; attempt < 4; ++attempt)
+  {
+    hFile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+
+    if (hFile != INVALID_HANDLE)
+    {
+      break;
+    }
+
+    Sleep(5); /* Small delay */
+  }
+
+  if (hFile == INVALID_HANDLE)
+  {
+    return 0;
+  }
+
+  if (!ReadFile(hFile, buffer, buffer_size, &bytesRead, 0) || bytesRead != buffer_size)
+  {
+    CloseHandle(hFile);
+    return 0;
+  }
+
+  CloseHandle(hFile);
+  return 1;
+}
+
 VAST_API u8 *win32_file_read(s8 *filename, u32 *file_size_out)
 {
   void *hFile = INVALID_HANDLE;
@@ -109,7 +179,7 @@ VAST_API u8 *win32_file_read(s8 *filename, u32 *file_size_out)
       break;
     }
 
-    Sleep(5); /* Small delay, adjust as needed */
+    Sleep(5); /* Small delay */
   }
 
   if (hFile == INVALID_HANDLE)
@@ -1886,6 +1956,8 @@ VAST_API i32 start(i32 argc, u8 **argv)
 
   /* Platform API setup */
   state.platform_state.api.io_print = win32_print;
+  state.platform_state.api.io_file_size = win32_file_size;
+  state.platform_state.api.io_file_read = win32_file_read_api;
 
   /* Platform Window setup */
   state.platform_state.window.width = 800;
