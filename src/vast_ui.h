@@ -86,31 +86,7 @@ static s8 *vast_ui_shader_fragment =
  * # [SECTION] Font & Glyph loading and parsing
  * #############################################################################
  */
-VAST_API void vast_ui_unpack_1bit_to_8bit(
-    u8 *dst,   /* width * height bytes */
-    u8 *src,   /* packed bits */
-    u32 width, /* pixel width for each glyph */
-    u32 height /* pixel height for each glyph */)
-{
-    u32 x;
-    u32 y;
-
-    for (y = 0; y < height; ++y)
-    {
-        for (x = 0; x < width; ++x)
-        {
-            u32 bit_index = y * width + x;
-            u32 byte_index = bit_index >> 3;
-            u32 bit = 7 - (bit_index & 7);
-            u8 b = (src[byte_index] >> bit) & 1;
-
-            /* 1 = black, 0 = white */
-            dst[bit_index] = b ? 0xFF : 0x00;
-        }
-    }
-}
-
-VAST_API u16 vast_ui_pack_rgb565(u8 r, u8 g, u8 b)
+VAST_API VAST_INLINE u16 vast_ui_pack_rgb565(u8 r, u8 g, u8 b)
 {
     return (u16)(((r >> 3) << 11) |
                  ((g >> 2) << 5) |
@@ -138,44 +114,53 @@ VAST_API void vast_ui_glyph_add(
     vast_ui_glyph_state_flag state, /* GLYPH_STATE_BLINK | GLYPH_STATE_VFLIP | GLYPH_STATE_HFLIP */
     f32 font_scale)
 {
-    u16 start_x = *offset_x;
+    u16 x = *offset_x;
+    u16 y = *offset_y;
 
+    u16 start_x = x;
     u16 advance_x = vast_ui_glyph_advance_x(font_scale);
     u16 advance_y = vast_ui_glyph_advance_y(font_scale);
 
-    while (*text && *glyph_buffer_count < glyph_buffer_size)
+    u32 count = *glyph_buffer_count;
+    vast_ui_glyph *dst = glyph_buffer;
+
+    while (*text && count < glyph_buffer_size)
     {
         s8 c = *text++;
-        i32 glyph_index;
 
         if (c == '\n')
         {
-            *offset_x = start_x;
-            *offset_y += advance_y;
+            x = start_x;
+            y = (u16)(y + advance_y);
             continue;
         }
 
-        /* skip spaces explicitly */
         if (c == ' ')
         {
-            *offset_x += advance_x;
+            x = (u16)(x + advance_x);
             continue;
         }
 
-        glyph_index = vast_font_s8_to_index(c);
-
-        if (glyph_index < 0)
         {
-            continue;
+            i32 glyph_index = vast_font_s8_to_index(c);
+
+            if (glyph_index >= 0)
+            {
+                dst[count].x = x;
+                dst[count].y = y;
+                dst[count].packed_glyph_state =
+                    (u16)glyph_index | (u16)state;
+                dst[count].packed_color = color_rgb565;
+
+                ++count;
+                x = (u16)(x + advance_x);
+            }
         }
-
-        glyph_buffer[*glyph_buffer_count].x = *offset_x;
-        glyph_buffer[*glyph_buffer_count].y = *offset_y;
-        glyph_buffer[*glyph_buffer_count].packed_glyph_state = (u16)glyph_index | (u16)state;
-        glyph_buffer[(*glyph_buffer_count)++].packed_color = color_rgb565;
-
-        *offset_x += advance_x;
     }
+
+    *glyph_buffer_count = count;
+    *offset_x = x;
+    *offset_y = y;
 }
 
 /* #############################################################################
@@ -211,15 +196,20 @@ VAST_API void vast_ui_render(
     static u8 glyph_initialized = 0;
     static s8 tmp[128];
     static f32 font_scale = 2.0f;
+    static u16 advance_x;
+    static u16 advance_y;
 
     if (!ui_initialized)
     {
+        advance_x = vast_ui_glyph_advance_x(font_scale);
+        advance_y = vast_ui_glyph_advance_y(font_scale);
+
         /* Generate font texture */
         {
             u8 vast_ui_font_pixels[VAST_FONT_WIDTH * VAST_FONT_HEIGHT];
 
             /* OpenGL does not allow 1bit packed texture data so we convert each bit to 1 byte */
-            vast_ui_unpack_1bit_to_8bit(vast_ui_font_pixels, vast_font, VAST_FONT_WIDTH, VAST_FONT_HEIGHT);
+            vast_font_unpack_1bit_to_8bit(vast_ui_font_pixels, vast_font, VAST_FONT_WIDTH, VAST_FONT_HEIGHT);
 
             glGenTextures(1, &ui_font_texture_id);
             glBindTexture(GL_TEXTURE_2D, ui_font_texture_id);
@@ -270,14 +260,18 @@ VAST_API void vast_ui_render(
             glVertexAttribDivisor(1, 1);
         }
 
+        /* Setup Fixed Shader Uniform constants */
+        glUseProgram(font_shader.header.program);
+        glUniform4f(font_shader.loc_iTextureInfo, VAST_FONT_WIDTH, VAST_FONT_HEIGHT, VAST_FONT_GLYPH_WIDTH, VAST_FONT_GLYPH_HEIGHT);
+        glUniform1i(font_shader.loc_iTexture, 0);
+        glUniform1f(font_shader.loc_iFontScale, font_scale);
+
         ui_initialized = 1;
     }
 
     /* Calculate Glpyhs */
     {
         u16 default_color = vast_ui_pack_rgb565(255, 255, 255);
-        u16 advance_x = vast_ui_glyph_advance_x(font_scale);
-        u16 advance_y = vast_ui_glyph_advance_y(font_scale);
         u16 separator_start_col = 11;
         u16 text_start_col = separator_start_col + 2;
         u16 offset_x_start = 10;
@@ -534,9 +528,6 @@ VAST_API void vast_ui_render(
     glUseProgram(font_shader.header.program);
     glUniform3f(font_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
     glUniform1f(font_shader.loc_iTime, (f32)state->timing.time_elapsed);
-    glUniform4f(font_shader.loc_iTextureInfo, VAST_FONT_WIDTH, VAST_FONT_HEIGHT, VAST_FONT_GLYPH_WIDTH, VAST_FONT_GLYPH_HEIGHT);
-    glUniform1i(font_shader.loc_iTexture, 0);
-    glUniform1f(font_shader.loc_iFontScale, font_scale);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

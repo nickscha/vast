@@ -58,4 +58,28 @@ VAST_API i32 vast_font_s8_to_index(s8 c)
 }
 /* clang-format on */
 
+VAST_API void vast_font_unpack_1bit_to_8bit(
+    u8 *dst,   /* width * height bytes */
+    u8 *src,   /* packed bits */
+    u32 width, /* pixel width for each glyph */
+    u32 height /* pixel height for each glyph */)
+{
+  u32 x;
+  u32 y;
+
+  for (y = 0; y < height; ++y)
+  {
+    for (x = 0; x < width; ++x)
+    {
+      u32 bit_index = y * width + x;
+      u32 byte_index = bit_index >> 3;
+      u32 bit = 7 - (bit_index & 7);
+      u8 b = (src[byte_index] >> bit) & 1;
+
+      /* 1 = black, 0 = white */
+      dst[bit_index] = b ? 0xFF : 0x00;
+    }
+  }
+}
+
 #endif /* VAST_FONT_H */
