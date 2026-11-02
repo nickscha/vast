@@ -1967,7 +1967,7 @@ VAST_API i32 start(i32 argc, u8 **argv)
   state.platform_state.window.clear_color_b = 0.1f;
 
   /* Platform Memory Setup */
-  state.platform_state.memory.size = 1024 * 1024 * 64; /* 64 MB */
+  state.platform_state.memory.size = 1024 * 1024 * 8; /* 8 MB */
   state.platform_state.memory.data = VirtualAlloc(0, state.platform_state.memory.size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
   (void)win32_file_read;

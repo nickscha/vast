@@ -232,8 +232,9 @@ typedef struct vast_platform_api
  */
 typedef struct vast_platform_memory
 {
-    u8 *data;
-    u32 size;
+    u8 *data;   /* The memory allocated by the platform */
+    u32 size;   /* The total size of memory             */
+    u32 offset; /* The current offset in memory         */
 
 } vast_platform_memory;
 
