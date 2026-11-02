@@ -15,6 +15,7 @@ LICENSE
 #include "vast_opengl.h"
 #include "vast_camera.h"
 #include "vast_ui.h"
+#include "vast_screen_recording.h"
 #include "vast_tiles.h"
 #include "win32_vast_opengl.h"
 #include "win32_vast_api.h"
@@ -747,15 +748,6 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
  * # [SECTION] OpenGL Context Creation and Shader Management
  * #############################################################################
  */
-typedef struct shader_recording
-{
-  shader_header header;
-
-  i32 loc_iResolution;
-  i32 loc_iTime;
-
-} shader_recording;
-
 typedef struct shader_sky
 {
   shader_header header;
@@ -1040,44 +1032,6 @@ VAST_API VAST_INLINE i32 opengl_create_context(win32_vast_state *state)
   VAST_PROFILER_END(win32_opengl_init);
 
   return 1;
-}
-
-static s8 *shader_code_vertex =
-    "#version 330 core\n"
-    "vec2 quad[3]=vec2[3]("
-    "vec2(-1.0,-1.0),"
-    "vec2(3.0,-1.0),"
-    "vec2(-1.0,3.0)"
-    ");"
-    "void main(){gl_Position=vec4(quad[gl_VertexID],0.0,1.0);}";
-
-VAST_API void opengl_shader_load_shader_recording(shader_recording *shader)
-{
-  static s8 *shader_code_fragment =
-      "#version 330 core\n"
-      "out vec4 FragColor;"
-      "uniform float iTime;"
-      "uniform vec3 iRes;"
-      "void main()"
-      "{"
-      "float r=10.0;"
-      "float m=10.0;"
-      "vec2 p=gl_FragCoord.xy;"
-      "vec2 c=vec2(iRes.x-r-m, r+m);"
-      "float d=length(p-c);"
-      "float blink=0.5+0.5*sin(iTime*12.0);"
-      "float b=4.0;"
-      "if ((d<=r&&blink>0.5)||(p.x<b||p.y<b||p.x>=iRes.x-b||p.y>=iRes.y-b))"
-      " FragColor=vec4(1.0,0.0,0.0,blink);"
-      "else"
-      " discard;"
-      "}";
-
-  if (opengl_shader_load(&shader->header, shader_code_vertex, shader_code_fragment, win32_print))
-  {
-    shader->loc_iResolution = glGetUniformLocation(shader->header.program, "iRes");
-    shader->loc_iTime = glGetUniformLocation(shader->header.program, "iTime");
-  }
 }
 
 /* #############################################################################
@@ -1924,9 +1878,6 @@ VAST_API i32 start(i32 argc, u8 **argv)
   s8 *fragment_shader_file_name = (argv && argc > 1) ? (s8 *)argv[1] : "shaders/vast_sky.fs";
 
   win32_vast_state state = {0};
-  shader_recording recording_shader = {0};
-
-  u32 main_vao;
 
   state.platform_state.running = 1;
   state.platform_state.window.title = "vast v0.1 (F1=Debug UI, F2=Screen Recording, R=Reset, P=Pause, F9=Borderless, F11=Fullscreen)";
@@ -2012,22 +1963,6 @@ VAST_API i32 start(i32 argc, u8 **argv)
 
   /* Make the window visible */
   ShowWindow(state.window_handle, SW_SHOW);
-
-  /******************************/
-  /* Initialize Shaders         */
-  /******************************/
-  {
-    /* Generate a dummy vao with no buffer */
-    glGenVertexArrays(1, &main_vao);
-    glBindVertexArray(main_vao);
-
-    /* Load Fragment Shader source code from file */
-    win32_print("[opengl] load shader file: ");
-    win32_print(fragment_shader_file_name);
-    win32_print("\n");
-
-    opengl_shader_load_shader_recording(&recording_shader);
-  }
 
   {
     i64 perf_freq;
@@ -2374,20 +2309,13 @@ VAST_API i32 start(i32 argc, u8 **argv)
             framebuffer = VirtualAlloc(0, state.platform_state.window.width * state.platform_state.window.height * 3, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             video_file_handle = CreateFileA(t.buffer, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 
-            glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
             state.screen_recording_initialized = 1;
           }
-          glReadPixels(0, 0, (i32)state.platform_state.window.width, (i32)state.platform_state.window.height, GL_RGB, GL_UNSIGNED_BYTE, framebuffer);
+
+          /* Render Image to framebuffer */
+          vast_screen_recording_render(&state.platform_state, win32_print, framebuffer);
 
           WriteFile(video_file_handle, framebuffer, state.platform_state.window.width * state.platform_state.window.height * 3, &written, 0);
-
-          /* Render recording indicator */
-          glUseProgram(recording_shader.header.program);
-          glUniform3f(recording_shader.loc_iResolution, (f32)state.platform_state.window.width, (f32)state.platform_state.window.height, 1.0f);
-          glUniform1f(recording_shader.loc_iTime, (f32)state.platform_state.timing.time_elapsed);
-          glBindVertexArray(main_vao);
-          glDrawArrays(GL_TRIANGLES, 0, 3);
         }
         else if (state.screen_recording_initialized)
         {

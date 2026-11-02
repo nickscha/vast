@@ -454,36 +454,38 @@ VAST_API void vast_ui_render(
 
         if (state->input.controller.connected)
         {
+            vast_platform_input_controller *controller = &state->input.controller;
+
             vast_sb_s8(&t, "CONNECTED");
             CALC_GLYPH(t, vast_ui_pack_rgb565(0, 255, 0));
-            vast_sb_f64(&t, state->input.controller.stick_left_x, 6);
+            vast_sb_f64(&t, controller->stick_left_x, 6);
             vast_sb_s8(&t, "/");
-            vast_sb_f64(&t, state->input.controller.stick_left_y, 6);
+            vast_sb_f64(&t, controller->stick_left_y, 6);
             CALC_GLYPH(t, default_color);
-            vast_sb_f64(&t, state->input.controller.stick_right_x, 6);
+            vast_sb_f64(&t, controller->stick_right_x, 6);
             vast_sb_s8(&t, "/");
-            vast_sb_f64(&t, state->input.controller.stick_right_y, 6);
+            vast_sb_f64(&t, controller->stick_right_y, 6);
             CALC_GLYPH(t, default_color);
-            vast_sb_f64(&t, state->input.controller.trigger_left_value, 6);
+            vast_sb_f64(&t, controller->trigger_left_value, 6);
             vast_sb_s8(&t, "/");
-            vast_sb_f64(&t, state->input.controller.trigger_right_value, 6);
+            vast_sb_f64(&t, controller->trigger_right_value, 6);
             CALC_GLYPH(t, default_color);
 
             vast_sb_s8(&t, "");
 
             /* clang-format off */
-          if (state->input.controller.button_a)       vast_sb_s8(&t, "A ");
-          if (state->input.controller.button_b)       vast_sb_s8(&t, "B ");
-          if (state->input.controller.button_x)       vast_sb_s8(&t, "X ");
-          if (state->input.controller.button_y)       vast_sb_s8(&t, "Y ");
-          if (state->input.controller.dpad_left)      vast_sb_s8(&t, "DLEFT ");
-          if (state->input.controller.dpad_right)     vast_sb_s8(&t, "DRIGHT ");
-          if (state->input.controller.dpad_up)        vast_sb_s8(&t, "DUP ");
-          if (state->input.controller.dpad_down)      vast_sb_s8(&t, "DDOWN ");
-          if (state->input.controller.stick_left)     vast_sb_s8(&t, "LSTICK ");
-          if (state->input.controller.stick_right)    vast_sb_s8(&t, "RSTICK ");
-          if (state->input.controller.shoulder_left)  vast_sb_s8(&t, "LSHOULDER ");
-          if (state->input.controller.shoulder_right) vast_sb_s8(&t, "RSHOULDER ");
+          if (controller->button_a)       vast_sb_s8(&t, "A ");
+          if (controller->button_b)       vast_sb_s8(&t, "B ");
+          if (controller->button_x)       vast_sb_s8(&t, "X ");
+          if (controller->button_y)       vast_sb_s8(&t, "Y ");
+          if (controller->dpad_left)      vast_sb_s8(&t, "DLEFT ");
+          if (controller->dpad_right)     vast_sb_s8(&t, "DRIGHT ");
+          if (controller->dpad_up)        vast_sb_s8(&t, "DUP ");
+          if (controller->dpad_down)      vast_sb_s8(&t, "DDOWN ");
+          if (controller->stick_left)     vast_sb_s8(&t, "LSTICK ");
+          if (controller->stick_right)    vast_sb_s8(&t, "RSTICK ");
+          if (controller->shoulder_left)  vast_sb_s8(&t, "LSHOULDER ");
+          if (controller->shoulder_right) vast_sb_s8(&t, "RSHOULDER ");
             /* clang-format on */
 
             CALC_GLYPH(t, default_color);
