@@ -435,4 +435,44 @@ VAST_API i32 vast_opengl_shader_create(u32 *shader_program, s8 *shader_vertex_co
     return 1;
 }
 
+/* #############################################################################
+ * # [SECTION] OpenGL Shader API
+ * #############################################################################
+ */
+typedef struct shader_header
+{
+    u32 created;
+    u32 program;
+    u8 had_failure;
+
+} shader_header;
+
+VAST_API u32 opengl_shader_load(shader_header *shader, s8 *shader_code_vertex, s8 *shader_code_fragment, vast_opengl_print print)
+{
+    u32 new_program;
+
+    if (!vast_opengl_shader_create(&new_program, shader_code_vertex, shader_code_fragment, print))
+    {
+        print("[opengl] compile failed, keeping old shader is present\n");
+        shader->had_failure = 1;
+        return 0;
+    }
+
+    shader->had_failure = 0;
+
+    /* If there has been already a shader created delete the old one */
+    if (shader->created)
+    {
+        glDeleteProgram(shader->program);
+    }
+
+    shader->program = new_program;
+
+    glUseProgram(shader->program);
+
+    shader->created = 1;
+
+    return 1;
+}
+
 #endif /* VAST_OPENGL_H */
