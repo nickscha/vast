@@ -221,6 +221,16 @@ typedef struct FILETIME
     u32 dwHighDateTime;
 } FILETIME;
 
+typedef union _ULARGE_INTEGER
+{
+    struct
+    {
+        u32 LowPart;
+        u32 HighPart;
+    } u;
+    u64 QuadPart;
+} ULARGE_INTEGER;
+
 typedef struct WIN32_FILE_ATTRIBUTE_DATA
 {
     u32 dwFileAttributes;
