@@ -1737,7 +1737,7 @@ VAST_API void vast_tile_render(win32_vast_state *state, vast_camera *camera, vas
   /* Process dirty tiles */
   VAST_PROFILER_BEGIN(tile_process_dirty);
   {
-    i32 updates_per_frame = 4;
+    i32 updates_per_frame = t.dirty_indices_count > 16 ? 16 : 4;
 
     while (updates_per_frame > 0 && t.dirty_indices_count > 0)
     {
