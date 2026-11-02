@@ -24,7 +24,7 @@ typedef long i64;
 typedef unsigned long u64;
 #endif
 
-#define WIN32_VAST_API_TYPES_STATIC_ASSERT(c, m) typedef char win32_vast_api_types_assert_##m[(c) ? 1 : -1]
+#define WIN32_VAST_API_TYPES_STATIC_ASSERT(c, m) typedef s8 win32_vast_api_types_assert_##m[(c) ? 1 : -1]
 WIN32_VAST_API_TYPES_STATIC_ASSERT(sizeof(u64) == 8, u64_size_must_be_8);
 WIN32_VAST_API_TYPES_STATIC_ASSERT(sizeof(i64) == 8, i64_size_must_be_8);
 #undef WIN32_VAST_API_TYPES_STATIC_ASSERT
