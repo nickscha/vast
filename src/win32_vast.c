@@ -99,6 +99,12 @@ VAST_API u8 win32_file_size(s8 *filename, u32 *file_size)
     return 0;
   }
 
+  /* Only support up to 4GB files */
+  if (fad.nFileSizeHigh != 0)
+  {
+    return 0;
+  }
+
   *file_size = fad.nFileSizeLow;
 
   return 1;
