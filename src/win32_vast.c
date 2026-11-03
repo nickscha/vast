@@ -37,6 +37,7 @@ void *memset(void *dest, i32 c, u32 count)
   return dest;
 }
 
+/* Implementation for vast_profiler.h */
 VAST_API f64 vast_profiler_time_ms(void)
 {
   static i64 freq;
@@ -59,6 +60,54 @@ VAST_API f64 vast_profiler_time_ms(void)
  */
 __declspec(dllexport) u32 NvOptimusEnablement = 0x00000001;         /* NVIDIA Force discrete GPU */
 __declspec(dllexport) i32 AmdPowerXpressRequestHighPerformance = 1; /* AMD Force discrete GPU    */
+
+/* #############################################################################
+ * # [SECTION] Structs and Data
+ * #############################################################################
+ */
+typedef struct win32_vast_application
+{
+  void *hDLL;
+  FILETIME lastWriteTime;
+  s8 *dllName;
+} win32_vast_application;
+
+typedef struct win32_vast_state
+{
+  win32_vast_application application;
+
+  vast_platform_state platform_state;
+
+  u32 window_width_pending;
+  u32 window_height_pending;
+
+  u8 controller_id;           /* The XInput id associated with this controller */
+  u8 controller_check_needed; /* If a device is plugged in or disconnected we should check XInput controller state again */
+
+  u8 shader_paused;
+  u8 ui_enabled;
+  u8 fullscreen_enabled;
+  u8 borderless_enabled;
+  u8 screen_recording_enabled;
+  u8 screen_recording_initialized;
+
+  void *window_handle;
+  void *device_context;
+  WINDOWPLACEMENT g_wpPrev;
+
+  s8 *gl_version;
+  s8 *gl_renderer;
+  s8 *gl_vendor;
+  i32 gl_max_3d_texture_size;
+
+} win32_vast_state;
+
+typedef struct win32_process_memory_info
+{
+  u64 private_bytes; /* Commit charge (what you asked for) */
+  u64 working_set;   /* RAM currently used */
+  u64 peak_working_set;
+} win32_process_memory_info;
 
 /* #############################################################################
  * # [SECTION] WIN32 specifiy functions
@@ -310,14 +359,7 @@ VAST_API i32 win32_process_thread_count(void)
   return count;
 }
 
-typedef struct process_memory_info
-{
-  u64 private_bytes; /* Commit charge (what you asked for) */
-  u64 working_set;   /* RAM currently used */
-  u64 peak_working_set;
-} process_memory_info;
-
-u8 win32_process_memory(process_memory_info *out)
+u8 win32_process_memory(win32_process_memory_info *out)
 {
   typedef i32(__stdcall * GetProcessMemoryInfo_Fn)(void *, PROCESS_MEMORY_COUNTERS_EX *, u32);
   static GetProcessMemoryInfo_Fn pGetMemInfo = 0;
@@ -367,43 +409,6 @@ u8 win32_process_memory(process_memory_info *out)
 
   return 1;
 }
-
-typedef struct win32_vast_application
-{
-  void *hDLL;
-  FILETIME lastWriteTime;
-  char *dllName;
-} win32_vast_application;
-
-typedef struct win32_vast_state
-{
-  win32_vast_application application;
-
-  vast_platform_state platform_state;
-
-  u32 window_width_pending;
-  u32 window_height_pending;
-
-  u8 controller_id;           /* The XInput id associated with this controller */
-  u8 controller_check_needed; /* If a device is plugged in or disconnected we should check XInput controller state again */
-
-  u8 shader_paused;
-  u8 ui_enabled;
-  u8 fullscreen_enabled;
-  u8 borderless_enabled;
-  u8 screen_recording_enabled;
-  u8 screen_recording_initialized;
-
-  void *window_handle;
-  void *device_context;
-  WINDOWPLACEMENT g_wpPrev;
-
-  s8 *gl_version;
-  s8 *gl_renderer;
-  s8 *gl_vendor;
-  i32 gl_max_3d_texture_size;
-
-} win32_vast_state;
 
 VAST_API VAST_INLINE i32 win32_vk_to_vast_key(i32 vk)
 {
@@ -764,7 +769,7 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
  * # [SECTION] OpenGL Context Creation and Shader Management
  * #############################################################################
  */
-static u32 opengl_failed_function_load_count = 0;
+static u32 win32_opengl_failed_function_load_count = 0;
 
 VAST_API PROC win32_opengl_load_function(s8 *name)
 {
@@ -810,13 +815,13 @@ VAST_API PROC win32_opengl_load_function(s8 *name)
     win32_print(name);
     win32_print("\" not found!\n");
 
-    opengl_failed_function_load_count++;
+    win32_opengl_failed_function_load_count++;
   }
 
   return gl_function;
 }
 
-VAST_API VAST_INLINE i32 opengl_create_context(win32_vast_state *state)
+VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
 {
   void *window_instance = GetModuleHandleA(0);
   WNDCLASSA window_class = {0};
@@ -913,7 +918,7 @@ VAST_API VAST_INLINE i32 opengl_create_context(win32_vast_state *state)
   /* Load common opengl functions (platform independant) */
   vast_opengl_load_functions(win32_opengl_load_function);
 
-  if (opengl_failed_function_load_count > 0)
+  if (win32_opengl_failed_function_load_count > 0)
   {
     win32_print("[opengl] Some of the required OpenGL functions are not available on your machine (see log file above)!\n");
     return 0;
@@ -1193,7 +1198,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
  * # [SECTION] Main Entry Point
  * #############################################################################
  */
-VAST_API i32 start(i32 argc, u8 **argv)
+VAST_API i32 win32_start(i32 argc, u8 **argv)
 {
   win32_vast_state state = {0};
 
@@ -1266,7 +1271,7 @@ VAST_API i32 start(i32 argc, u8 **argv)
   /******************************/
   /* Window and OpenGL context  */
   /******************************/
-  if (!opengl_create_context(&state))
+  if (!win32_opengl_create_context(&state))
   {
     win32_print("[ERROR] Could not create opengl context!\n");
     return 1;
@@ -1560,7 +1565,7 @@ VAST_API i32 start(i32 argc, u8 **argv)
       if (state.ui_enabled)
       {
         static u32 handle_count = 0;
-        static process_memory_info mem = {0};
+        static win32_process_memory_info mem = {0};
 
         GetProcessHandleCount(GetCurrentProcess(), &handle_count);
         win32_process_memory(&mem);
@@ -1742,7 +1747,7 @@ i32 WinMainCRTStartup(void)
   argv[argc] = (u8 *)0;
 
   /* Run the program and exit with return code */
-  return_code = start(argc, argv);
+  return_code = win32_start(argc, argv);
   ExitProcess((u32)return_code);
   return return_code;
 }
