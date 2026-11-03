@@ -330,7 +330,7 @@ void *vast_io_file_read_to_memory(vast_platform_state *state, vast_platform_memo
     if (!state->api.io_file_size(filename, &file_size) || file_size < 1)
     {
         state->api.io_print(filename);
-        state->api.io_print(": Cannot optain file size!\n");
+        state->api.io_print(": Cannot obtain file size!\n");
         return VAST_NULL;
     }
 
