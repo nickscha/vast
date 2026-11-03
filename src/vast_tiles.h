@@ -8,7 +8,7 @@
  * #############################################################################
  */
 #ifndef VAST_TILES_PER_SIDE
-#define VAST_TILES_PER_SIDE 13
+#define VAST_TILES_PER_SIDE 33
 #endif
 #define VAST_TILES_HALF VAST_TILES_PER_SIDE / 2;
 #define VAST_TILES_TOTAL (VAST_TILES_PER_SIDE * VAST_TILES_PER_SIDE)
@@ -36,7 +36,7 @@ typedef struct vast_tiles
 
     /* Sparse Dirty flag tracking */
     u16 dirty_indices[VAST_TILES_TOTAL]; /* Which index ot the tile_x/z is marked dirty */
-    u16 dirty_indices_count;            /* Total number of dirty tile indices */
+    u16 dirty_indices_count;             /* Total number of dirty tile indices */
 
 } vast_tiles;
 
@@ -70,7 +70,15 @@ VAST_API VAST_INLINE i32 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
     i32 distance = vast_maxi(dx, dz);
 
     /* TODO(nickscha): apply better distance distribution */
-    return distance / 2;
+    i32 lod = distance / 2;
+
+    /* TODO(nickscha): has to match with lod count from tile LOD grid indices builder */
+    if (lod > 5)
+    {
+        lod = 5;
+    }
+
+    return lod;
 }
 
 VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, i32 *tile_rendered_lod, u32 tile_idx)

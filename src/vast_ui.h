@@ -511,12 +511,12 @@ VAST_API void vast_ui_render(
                 if (i == 0)
                 {
                     vast_sb_s8_pad(&t, " ", 25, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_s8_pad(&t, "last", 9, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_s8_pad(&t, "min", 9, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_s8_pad(&t, "max", 9, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_s8_pad(&t, "avg", 9, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_s8_pad(&t, "total", 9, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_s8_pad(&t, "count", 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "last", 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "min", 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "max", 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "avg", 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "total", 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "count", 8, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&t, "\n");
 
                     vast_ui_glyph_add(glyph_buffer, GLYPH_BUFFER_SIZE, &glyph_buffer_count, t.buffer, &offset_memory_x, &offset_memory_y, vast_ui_pack_rgb565(255, 255, 255), GLYPH_STATE_NONE, font_scale);
@@ -525,12 +525,12 @@ VAST_API void vast_ui_render(
 
                 vast_sb_s8_pad(&t, entry.name, 23, ' ', VAST_SB_PAD_RIGHT);
                 vast_sb_s8(&t, ": ");
-                vast_sb_f64_pad(&t, entry.time_ms_last, 4, 9, ' ', VAST_SB_PAD_LEFT);
-                vast_sb_f64_pad(&t, entry.time_ms_min, 4, 9, ' ', VAST_SB_PAD_LEFT);
-                vast_sb_f64_pad(&t, entry.time_ms_max, 4, 9, ' ', VAST_SB_PAD_LEFT);
-                vast_sb_f64_pad(&t, entry.time_ms_total / (f64)entry.counter, 4, 9, ' ', VAST_SB_PAD_LEFT);
-                vast_sb_f64_pad(&t, entry.time_ms_total, 4, 9, ' ', VAST_SB_PAD_LEFT);
-                vast_sb_i32_pad(&t, (i32)entry.counter, 7, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_last, 4, 10, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_min, 4, 10, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_max, 4, 10, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_total / (f64)entry.counter, 4, 10, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_total, 4, 10, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_i32_pad(&t, (i32)entry.counter, 8, ' ', VAST_SB_PAD_LEFT);
                 vast_sb_s8(&t, "\n");
 
                 vast_ui_glyph_add(glyph_buffer, GLYPH_BUFFER_SIZE, &glyph_buffer_count, t.buffer, &offset_memory_x, &offset_memory_y, vast_ui_pack_rgb565(255, 255, 255), GLYPH_STATE_NONE, font_scale);
