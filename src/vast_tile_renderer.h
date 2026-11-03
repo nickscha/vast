@@ -690,7 +690,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             glBindTexture(GL_TEXTURE_2D, tile_normal_tex[i]);
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod][mask]);
-            glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod][mask], GL_UNSIGNED_SHORT, (void *)0);
+            glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod][mask], GL_UNSIGNED_SHORT, VAST_NULL);
         }
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

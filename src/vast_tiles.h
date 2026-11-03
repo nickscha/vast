@@ -8,7 +8,7 @@
  * #############################################################################
  */
 #ifndef VAST_TILES_PER_SIDE
-#define VAST_TILES_PER_SIDE 33
+#define VAST_TILES_PER_SIDE 13
 #endif
 #define VAST_TILES_HALF VAST_TILES_PER_SIDE / 2;
 #define VAST_TILES_TOTAL (VAST_TILES_PER_SIDE * VAST_TILES_PER_SIDE)
