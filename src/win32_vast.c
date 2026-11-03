@@ -1184,18 +1184,34 @@ VAST_API void vast_render_sky(win32_vast_state *state, vast_camera *camera, vast
 
   if (!sky_initialized)
   {
-    u32 size_code_vertex = 0;
+    static s8 *shader_code_vertex =
+        "#version 330 core\n"
+        "\n"
+        "out vec2 vUV;\n"
+        "\n"
+        "const vec2 verts[3] = vec2[](\n"
+        "    vec2(-1.0, -1.0),\n"
+        "    vec2( 3.0, -1.0),\n"
+        "    vec2(-1.0,  3.0)\n"
+        ");\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "    vec2 p = verts[gl_VertexID];\n"
+        "    vUV = p * 0.5 + 0.5;\n"
+        "    gl_Position = vec4(p, 1.0, 1.0);\n"
+        "}";
+
     u32 size_code_fragment = 0;
-    u8 *shader_code_vertex = win32_file_read("shaders/vast_sky.vs", &size_code_vertex);
     u8 *shader_code_fragment = win32_file_read("shaders/vast_sky.fs", &size_code_fragment);
 
-    if (!shader_code_vertex || !shader_code_fragment || size_code_vertex < 1 || size_code_fragment < 1)
+    if (!shader_code_fragment || size_code_fragment < 1)
     {
       win32_print("Cannot load sky shader files!\n");
       return;
     }
 
-    if (opengl_shader_load(&sky_shader.header, (s8 *)shader_code_vertex, (s8 *)shader_code_fragment, win32_print))
+    if (opengl_shader_load(&sky_shader.header, shader_code_vertex, (s8 *)shader_code_fragment, win32_print))
     {
       sky_shader.loc_iResolution = glGetUniformLocation(sky_shader.header.program, "iResolution");
       sky_shader.loc_iTime = glGetUniformLocation(sky_shader.header.program, "iTime");
@@ -1208,7 +1224,6 @@ VAST_API void vast_render_sky(win32_vast_state *state, vast_camera *camera, vast
       win32_print("Cannot compile shaders!\n");
     }
 
-    VirtualFree(shader_code_vertex, 0, MEM_RELEASE);
     VirtualFree(shader_code_fragment, 0, MEM_RELEASE);
 
     glGenVertexArrays(1, &sky_vao);
