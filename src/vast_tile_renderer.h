@@ -300,16 +300,14 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static i32 camera_tile_z = 0;
     static u32 visualization_mode = 0;
 
-    static u32 fs_last = 0;
     static shader_tiles tiles_shader = {0};
+    static shader_tile_hm tiles_hm_shader = {0};
+    static shader_tile_nm tiles_nm_shader = {0};
 
 #define LOD_COUNT 6
     static u32 grid_vao;
     static i32 gridIndexCounts[LOD_COUNT][16] = {0};
     static u32 grid_ibos[LOD_COUNT][16] = {0};
-
-    static shader_tile_hm tiles_hm_shader = {0};
-    static shader_tile_nm tiles_nm_shader = {0};
     static u32 tile_tex[VAST_TILES_TOTAL];
     static u32 tile_fbo[VAST_TILES_TOTAL];
     static u32 tile_normal_tex[VAST_TILES_TOTAL];
@@ -334,8 +332,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tile_shader_heightmap_load(state, &tiles_hm_shader);
         vast_tile_shader_normalmap_load(state, &tiles_nm_shader);
         vast_tile_shader_final_load(state, &tiles_shader);
-
-        state->api.io_file_mod_signature("shaders/vast_tiles.fs", &fs_last);
 
         glGenVertexArrays(1, &tile_vao);
 
@@ -367,16 +363,55 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         tiles_initialized = 1;
     }
 
-    /* reload tiles shader */
+    /* Hot reload tile shaders */
+    if (state->timing.frame_count % 15 == 0)
     {
-        u32 fs_now = 0;
+        static u8 hot_reload_initialized = 0;
 
-        state->api.io_file_mod_signature("shaders/vast_tiles.fs", &fs_now);
+        static s8 *tile_shader_heightmap = "shaders/vast_tile_hm.fs";
+        static s8 *tile_shader_normalmap = "shaders/vast_tile_nm.fs";
+        static s8 *tile_shader_final = "shaders/vast_tiles.fs";
+        static u32 tile_shader_heightmap_last = 0;
+        static u32 tile_shader_normalmap_last = 0;
+        static u32 tile_shader_final_last = 0;
 
-        if (fs_now != fs_last)
+        u32 tile_shader_heightmap_now = 0;
+        u32 tile_shader_normalmap_now = 0;
+        u32 tile_shader_final_now = 0;
+
+        /* Get initial modifcation dates of shaders for hot reloading */
+        if (!hot_reload_initialized)
+        {
+            state->api.io_file_mod_signature(tile_shader_heightmap, &tile_shader_heightmap_last);
+            state->api.io_file_mod_signature(tile_shader_normalmap, &tile_shader_normalmap_last);
+            state->api.io_file_mod_signature(tile_shader_final, &tile_shader_final_last);
+
+            hot_reload_initialized = 1;
+        }
+
+        /* Get current modification timestamp of files */
+        state->api.io_file_mod_signature(tile_shader_heightmap, &tile_shader_heightmap_now);
+        state->api.io_file_mod_signature(tile_shader_normalmap, &tile_shader_normalmap_now);
+        state->api.io_file_mod_signature(tile_shader_final, &tile_shader_final_now);
+
+        if (tile_shader_heightmap_now != tile_shader_heightmap_last)
+        {
+            vast_tile_shader_heightmap_load(state, &tiles_hm_shader);
+            vast_tiles_init(&t, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
+            tile_shader_heightmap_last = tile_shader_heightmap_now;
+        }
+
+        if (tile_shader_normalmap_now != tile_shader_normalmap_last)
+        {
+            vast_tile_shader_normalmap_load(state, &tiles_nm_shader);
+            vast_tiles_init(&t, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
+            tile_shader_normalmap_last = tile_shader_normalmap_now;
+        }
+
+        if (tile_shader_final_now != tile_shader_final_last)
         {
             vast_tile_shader_final_load(state, &tiles_shader);
-            fs_last = fs_now;
+            tile_shader_final_last = tile_shader_final_now;
         }
     }
 
