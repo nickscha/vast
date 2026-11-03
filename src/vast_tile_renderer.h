@@ -18,7 +18,29 @@
  * # [SECTION] Structs and Data
  * #############################################################################
  */
-typedef struct shader_tiles
+typedef struct vast_tile_shader_heightmap
+{
+    shader_header header;
+
+    i32 loc_tile_offset;
+    i32 loc_tile_size;
+    i32 loc_texture_size;
+
+} vast_tile_shader_heightmap;
+
+typedef struct vast_tile_shader_normalmap
+{
+    shader_header header;
+
+    i32 loc_tile_offset;
+    i32 loc_tile_size;
+    i32 loc_texture_size;
+    i32 loc_stamped_heightmap;
+    i32 loc_stamped_heightmap_size;
+
+} vast_tile_shader_normalmap;
+
+typedef struct vast_tile_shader_final
 {
     shader_header header;
 
@@ -37,29 +59,7 @@ typedef struct shader_tiles
     i32 loc_grid_res;
     i32 loc_visualization_mode;
 
-} shader_tiles;
-
-typedef struct shader_tile_hm
-{
-    shader_header header;
-
-    i32 loc_tile_offset;
-    i32 loc_tile_size;
-    i32 loc_texture_size;
-
-} shader_tile_hm;
-
-typedef struct shader_tile_nm
-{
-    shader_header header;
-
-    i32 loc_tile_offset;
-    i32 loc_tile_size;
-    i32 loc_texture_size;
-    i32 loc_stamped_heightmap;
-    i32 loc_stamped_heightmap_size;
-
-} shader_tile_nm;
+} vast_tile_shader_final;
 
 static s8 *vast_tile_texture_vertex_data =
     "#version 330 core\n"
@@ -98,7 +98,7 @@ VAST_API u32 vast_create_height_fbo(u32 tex)
     return fbo;
 }
 
-VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, shader_tile_hm *tile_hm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
+VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, vast_tile_shader_heightmap *tile_hm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, (i32)size, (i32)size);
@@ -114,7 +114,7 @@ VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, sha
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-VAST_API void vast_tile_render_texture_normalmap(vast_platform_state *state, shader_tile_nm *tile_nm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ, u32 heightmap_texture, f32 heightmap_texture_size)
+VAST_API void vast_tile_render_texture_normalmap(vast_platform_state *state, vast_tile_shader_normalmap *tile_nm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ, u32 heightmap_texture, f32 heightmap_texture_size)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, (i32)size, (i32)size);
@@ -219,7 +219,7 @@ VAST_API void *vast_tile_read_file_to_memory(vast_platform_state *state, s8 *fil
     return data;
 }
 
-VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, shader_tile_hm *tiles_hm_shader)
+VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_tile_shader_heightmap *tiles_hm_shader)
 {
     u8 *shader_data_fragment = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_hm.fs");
 
@@ -243,7 +243,7 @@ VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, shader
     state->memory.offset = 0;
 }
 
-VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, shader_tile_nm *tiles_nm_shader)
+VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_tile_shader_normalmap *tiles_nm_shader)
 {
     u8 *shader_data_fragment = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_nm.fs");
 
@@ -269,7 +269,7 @@ VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, shader
     state->memory.offset = 0;
 }
 
-VAST_API void vast_tile_shader_final_load(vast_platform_state *state, shader_tiles *tiles_shader)
+VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_shader_final *tiles_shader)
 {
 
     u8 *shader_data_vertex = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tiles.vs");
@@ -316,14 +316,15 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static i32 camera_tile_z = 0;
     static u32 visualization_mode = 0;
 
-    static shader_tiles tiles_shader = {0};
-    static shader_tile_hm tiles_hm_shader = {0};
-    static shader_tile_nm tiles_nm_shader = {0};
+    static vast_tile_shader_final tiles_shader = {0};
+    static vast_tile_shader_heightmap tiles_hm_shader = {0};
+    static vast_tile_shader_normalmap tiles_nm_shader = {0};
 
 #define LOD_COUNT 6
     static u32 grid_vao;
     static i32 gridIndexCounts[LOD_COUNT][16] = {0};
     static u32 grid_ibos[LOD_COUNT][16] = {0};
+
     static u32 tile_tex[VAST_TILES_TOTAL];
     static u32 tile_fbo[VAST_TILES_TOTAL];
     static u32 tile_normal_tex[VAST_TILES_TOTAL];
