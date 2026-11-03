@@ -1113,7 +1113,6 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   static u8 scene_initialized = 0;
 
   static vast_camera camera = {0};
-  static f32 camera_basis[9];
   static f32 camera_speed = 1000.0f;
 
   vast_vec3 sun_dir;
@@ -1131,16 +1130,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   /* Update camera */
   vast_update_camera_movement(state, &camera, camera_speed);
 
-  camera_basis[0] = camera.right.x;
-  camera_basis[1] = camera.right.y;
-  camera_basis[2] = camera.right.z;
-  camera_basis[3] = camera.up.x;
-  camera_basis[4] = camera.up.y;
-  camera_basis[5] = camera.up.z;
-  camera_basis[6] = camera.forward.x;
-  camera_basis[7] = camera.forward.y;
-  camera_basis[8] = camera.forward.z;
-
+  /* Sun/Moon movement logic */
   {
 
     static u8 move_sun = 0;
@@ -1197,7 +1187,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   }
 
   /* Render */
-  vast_sky_render(&state->platform_state, &camera, sun_dir, camera_basis);
+  vast_sky_render(&state->platform_state, &camera, sun_dir);
   vast_tile_render(&state->platform_state, &camera, sun_dir);
 }
 

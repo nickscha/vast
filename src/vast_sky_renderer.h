@@ -85,11 +85,12 @@ VAST_API void *vast_sky_read_file_to_memory(vast_platform_state *state, s8 *file
     return data;
 }
 
-VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, f32 camera_basis[9])
+VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir)
 {
     static u8 sky_initialized = 0;
     static shader_sky sky_shader = {0};
     static u32 sky_vao;
+    static f32 camera_basis[9];
 
     if (!sky_initialized)
     {
@@ -138,6 +139,18 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
 
         sky_initialized = 1;
     }
+
+    /* Construct camera basis */
+    /* TODO(nickscha): not really needed. Use camera instead for shader */
+    camera_basis[0] = camera->right.x;
+    camera_basis[1] = camera->right.y;
+    camera_basis[2] = camera->right.z;
+    camera_basis[3] = camera->up.x;
+    camera_basis[4] = camera->up.y;
+    camera_basis[5] = camera->up.z;
+    camera_basis[6] = camera->forward.x;
+    camera_basis[7] = camera->forward.y;
+    camera_basis[8] = camera->forward.z;
 
     /* Render */
     glDisable(GL_DEPTH_TEST);
