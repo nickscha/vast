@@ -8,9 +8,7 @@
 #include "vast_types.h"               /* Basic types (u8, u32, ...)    */
 #include "vast.h"                     /* Platform State                */
 #include "vast_profiler.h"            /* Profiler metrics              */
-#include "vast_tiles.h"               /* Toriodal Tiling Grid logic    */
 #include "vast_camera.h"              /* Camera                        */
-#include "vast_geometry.h"            /* Calc. Grid with Edge LOD Mask */
 #include "vast_math_linear_algebra.h" /* Linear Algebra                */
 #include "vast_opengl.h"              /* OpenGL functions              */
 
