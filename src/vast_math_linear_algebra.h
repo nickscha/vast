@@ -7,6 +7,28 @@
  * # [SECTION] Linear Algebra Math (Scalar)
  * #############################################################################
  */
+typedef struct vast_vec2
+{
+    f32 x;
+    f32 y;
+
+} vast_vec2;
+
+VAST_API VAST_INLINE vast_vec2 vast_vec2_init(f32 x, f32 y)
+{
+    vast_vec2 result;
+
+    result.x = x;
+    result.y = y;
+
+    return result;
+}
+
+VAST_API VAST_INLINE f32 vast_vec2_dot(vast_vec2 a, vast_vec2 b)
+{
+    return a.x * b.x + a.y * b.y;
+}
+
 typedef struct vast_vec3
 {
     f32 x;
@@ -181,6 +203,20 @@ VAST_API VAST_INLINE vast_vec3 vast_vec3_cross(vast_vec3 a, vast_vec3 b)
     return result;
 }
 
+VAST_API VAST_INLINE vast_vec3 vast_vec3_normalize(vast_vec3 a)
+{
+    f32 length_squared = a.x * a.x + a.y * a.y + a.z * a.z;
+    f32 scalar = length_squared > 0.0f ? vast_invsqrtf(length_squared) : 0.0f;
+
+    vast_vec3 result;
+
+    result.x = a.x * scalar;
+    result.y = a.y * scalar;
+    result.z = a.z * scalar;
+
+    return result;
+}
+
 #define VAST_MAT2X2_ELEMENT_COUNT 4
 
 #ifdef VAST_MAT_ROW_MAJOR_ORDER
@@ -284,37 +320,6 @@ VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_orthographic(f32 left, f32 right, f
     return result;
 }
 
-typedef struct vast_vec2
-{
-    f32 x;
-    f32 y;
-
-} vast_vec2;
-
-VAST_API VAST_INLINE vast_vec2 vast_vec2_init(f32 x, f32 y)
-{
-    vast_vec2 result;
-
-    result.x = x;
-    result.y = y;
-
-    return result;
-}
-
-VAST_API VAST_INLINE f32 vast_vec2_dot(vast_vec2 a, vast_vec2 b)
-{
-    return a.x * b.x + a.y * b.y;
-}
-
-typedef struct vast_vec4
-{
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-
-} vast_vec4;
-
 VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_perspective(f32 fov, f32 aspectRatio, f32 zNear, f32 zFar)
 {
     f32 f = 1.0f / vast_tanf(fov * 0.5f);
@@ -329,20 +334,6 @@ VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_perspective(f32 fov, f32 aspectRati
     result.e[VAST_MAT4X4_AT(3, 2)] = -1.0f;
 
     return (result);
-}
-
-VAST_API VAST_INLINE vast_vec3 vast_vec3_normalize(vast_vec3 a)
-{
-    f32 length_squared = a.x * a.x + a.y * a.y + a.z * a.z;
-    f32 scalar = length_squared > 0.0f ? vast_invsqrtf(length_squared) : 0.0f;
-
-    vast_vec3 result;
-
-    result.x = a.x * scalar;
-    result.y = a.y * scalar;
-    result.z = a.z * scalar;
-
-    return result;
 }
 
 VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_look_at(vast_vec3 eye, vast_vec3 target, vast_vec3 up)
@@ -376,9 +367,19 @@ VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_look_at(vast_vec3 eye, vast_vec3 ta
     return result;
 }
 
+typedef struct vast_vec4
+{
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+
+} vast_vec4;
+
 typedef struct vast_frustum
 {
     vast_vec4 planes[6];
+
 } vast_frustum;
 
 typedef enum vast_frustum_plane
