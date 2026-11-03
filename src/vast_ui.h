@@ -507,15 +507,30 @@ VAST_API void vast_ui_render(
                 vast_profiler_entry entry = vast_profiler_entries[i];
 
                 t.length = 0;
+
+                if (i == 0)
+                {
+                    vast_sb_s8_pad(&t, " ", 25, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "last", 9, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "min", 9, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "max", 9, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "avg", 9, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "total", 9, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, "count", 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&t, "\n");
+
+                    vast_ui_glyph_add(glyph_buffer, GLYPH_BUFFER_SIZE, &glyph_buffer_count, t.buffer, &offset_memory_x, &offset_memory_y, vast_ui_pack_rgb565(255, 255, 255), GLYPH_STATE_NONE, font_scale);
+                    t.length = 0;
+                }
+
                 vast_sb_s8_pad(&t, entry.name, 23, ' ', VAST_SB_PAD_RIGHT);
                 vast_sb_s8(&t, ": ");
-                vast_sb_f64(&t, entry.time_ms_last, 4);
-                vast_sb_s8(&t, "/");
-                vast_sb_f64(&t, entry.time_ms_total / (f64)entry.counter, 4);
-                vast_sb_s8(&t, "/");
-                vast_sb_f64(&t, entry.time_ms_total, 4);
-                vast_sb_s8(&t, "/");
-                vast_sb_i32(&t, (i32)entry.counter);
+                vast_sb_f64_pad(&t, entry.time_ms_last, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_min, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_max, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_total / (f64)entry.counter, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_f64_pad(&t, entry.time_ms_total, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                vast_sb_i32_pad(&t, (i32)entry.counter, 7, ' ', VAST_SB_PAD_LEFT);
                 vast_sb_s8(&t, "\n");
 
                 vast_ui_glyph_add(glyph_buffer, GLYPH_BUFFER_SIZE, &glyph_buffer_count, t.buffer, &offset_memory_x, &offset_memory_y, vast_ui_pack_rgb565(255, 255, 255), GLYPH_STATE_NONE, font_scale);
@@ -524,6 +539,8 @@ VAST_API void vast_ui_render(
     }
 
     /* Rendering */
+    VAST_PROFILER_BEGIN(ui_render);
+
     glUseProgram(font_shader.header.program);
     glUniform3f(font_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
     glUniform1f(font_shader.loc_iTime, (f32)state->timing.time_elapsed);
@@ -542,6 +559,8 @@ VAST_API void vast_ui_render(
     glBindVertexArray(0);
 
     glDisable(GL_BLEND);
+
+    VAST_PROFILER_END(ui_render);
 }
 
 #endif /* VAST_UI_H */

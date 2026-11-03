@@ -100,6 +100,8 @@ VAST_API u32 vast_create_height_fbo(u32 tex)
 
 VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, vast_tile_shader_heightmap *tile_hm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
 {
+    VAST_PROFILER_BEGIN(tile_render_heightmap);
+
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, (i32)size, (i32)size);
 
@@ -112,10 +114,14 @@ VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, vas
 
     glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    VAST_PROFILER_END(tile_render_heightmap);
 }
 
 VAST_API void vast_tile_render_texture_normalmap(vast_platform_state *state, vast_tile_shader_normalmap *tile_nm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ, u32 heightmap_texture, f32 heightmap_texture_size)
 {
+    VAST_PROFILER_BEGIN(tile_render_normalmap);
+
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, (i32)size, (i32)size);
 
@@ -133,6 +139,8 @@ VAST_API void vast_tile_render_texture_normalmap(vast_platform_state *state, vas
 
     glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    VAST_PROFILER_END(tile_render_normalmap);
 }
 
 VAST_API u8 vast_tile_is_visible(
@@ -331,7 +339,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     }
 
     /* Hot reload tile shaders */
-    if (state->timing.frame_count % 15 == 0)
+    if (state->timing.frame_count % 30 == 0)
     {
         static u8 hot_reload_initialized = 0;
 

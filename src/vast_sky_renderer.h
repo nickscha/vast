@@ -87,6 +87,8 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
         sky_initialized = 1;
     }
 
+    VAST_PROFILER_BEGIN(sky_render);
+
     /* Construct camera basis */
     /* TODO(nickscha): not really needed. Use camera instead for shader */
     camera_basis[0] = camera->right.x;
@@ -117,6 +119,8 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
     glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+
+    VAST_PROFILER_END(sky_render);
 }
 
 #endif /* VAST_SKY_RENDERER_H */

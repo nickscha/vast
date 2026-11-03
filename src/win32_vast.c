@@ -834,8 +834,6 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
   i32 fake_pixel_format;
   PIXELFORMATDESCRIPTOR fake_pfd = {0};
 
-  VAST_PROFILER_BEGIN(win32_opengl_init);
-
   window_class.style = CS_OWNDC;
   window_class.lpfnWndProc = win32_window_callback;
   window_class.hInstance = window_instance;
@@ -994,8 +992,6 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
   win32_print("[opengl] version : ");
   win32_print(state->gl_version);
   win32_print("\n");
-
-  VAST_PROFILER_END(win32_opengl_init);
 
   return 1;
 }
