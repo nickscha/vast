@@ -87,7 +87,7 @@ static s8 *vast_tile_texture_vertex_data =
 #define VAST_TILE_GRID_SIZE 65
 #define VAST_TILE_MAX_INDICES ((VAST_TILE_GRID_SIZE - 1) * (VAST_TILE_GRID_SIZE - 1) * 6)
 
-VAST_API u32 vast_create_height_fbo(u32 tex)
+VAST_API u32 vast_tile_framebuffer_create(u32 tex)
 {
     u32 fbo;
 
@@ -454,12 +454,12 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
             if (tile_fbo[tile_idx] == 0)
             {
-                tile_fbo[tile_idx] = vast_create_height_fbo(tile_tex[tile_idx]);
+                tile_fbo[tile_idx] = vast_tile_framebuffer_create(tile_tex[tile_idx]);
             }
 
             if (tile_normal_fbo[tile_idx] == 0)
             {
-                tile_normal_fbo[tile_idx] = vast_create_height_fbo(tile_normal_tex[tile_idx]);
+                tile_normal_fbo[tile_idx] = vast_tile_framebuffer_create(tile_normal_tex[tile_idx]);
             }
 
             glBindVertexArray(tile_vao);
