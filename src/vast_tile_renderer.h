@@ -470,7 +470,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             if (tile_rendered_lod[tile_idx] != tile_lod)
             {
                 glBindTexture(GL_TEXTURE_2D, tile_tex[tile_idx]);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (i32)height_tex_size, (i32)height_tex_size, 0, GL_RED, GL_FLOAT, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (i32)height_tex_size, (i32)height_tex_size, 0, GL_RED, GL_FLOAT, VAST_NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -488,7 +488,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             if (tile_rendered_lod[tile_idx] != tile_lod)
             {
                 glBindTexture(GL_TEXTURE_2D, tile_normal_tex[tile_idx]);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (i32)normal_tex_size, (i32)normal_tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (i32)normal_tex_size, (i32)normal_tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
