@@ -451,17 +451,17 @@ VAST_API void vast_ui_render(
 
             vast_sb_s8(&t, "CONNECTED");
             CALC_GLYPH(t, vast_ui_pack_rgb565(0, 255, 0));
-            vast_sb_f64(&t, controller->stick_left_x, 6);
+            vast_sb_f64(&t, (f64)controller->stick_left_x, 6);
             vast_sb_s8(&t, "/");
-            vast_sb_f64(&t, controller->stick_left_y, 6);
+            vast_sb_f64(&t, (f64)controller->stick_left_y, 6);
             CALC_GLYPH(t, default_color);
-            vast_sb_f64(&t, controller->stick_right_x, 6);
+            vast_sb_f64(&t, (f64)controller->stick_right_x, 6);
             vast_sb_s8(&t, "/");
-            vast_sb_f64(&t, controller->stick_right_y, 6);
+            vast_sb_f64(&t, (f64)controller->stick_right_y, 6);
             CALC_GLYPH(t, default_color);
-            vast_sb_f64(&t, controller->trigger_left_value, 6);
+            vast_sb_f64(&t, (f64)controller->trigger_left_value, 6);
             vast_sb_s8(&t, "/");
-            vast_sb_f64(&t, controller->trigger_right_value, 6);
+            vast_sb_f64(&t, (f64)controller->trigger_right_value, 6);
             CALC_GLYPH(t, default_color);
 
             vast_sb_s8(&t, "");
