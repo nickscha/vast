@@ -1184,6 +1184,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   }
 
   /* Render */
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   vast_sky_render(&state->platform_state, &camera, sun_dir);
   vast_tile_render(&state->platform_state, &camera, sun_dir);
 }
@@ -1525,24 +1526,24 @@ VAST_API i32 start(i32 argc, u8 **argv)
       /******************************/
       /* Main Application Logic     */
       /******************************/
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
       vast_update(&state.platform_state);
-
       vast_render_scene(&state);
 
+      /* Application updated the window size */
       if (state.platform_state.window.size_changed)
       {
         state.window_width_pending = state.platform_state.window.width;
         state.window_height_pending = state.platform_state.window.height;
       }
 
+      /* Application updated the window clear color */
       if (state.platform_state.window.clear_color_changed)
       {
         glClearColor(state.platform_state.window.clear_color_r, state.platform_state.window.clear_color_g, state.platform_state.window.clear_color_b, state.platform_state.window.clear_color_a);
         state.platform_state.window.clear_color_changed = 0;
       }
 
+      /* Application updated the window title */
       if (state.platform_state.window.title_changed)
       {
         SetWindowTextA(state.window_handle, state.platform_state.window.title);
