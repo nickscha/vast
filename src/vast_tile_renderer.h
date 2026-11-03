@@ -168,60 +168,9 @@ VAST_API u8 vast_tile_is_visible(
     return 1;
 }
 
-/* TODO(nickscha): Temporary */
-VAST_API void *vast_tile_allocate_memory(vast_platform_state *state, u32 size)
-{
-    /* Align to 8 bytes */
-    u32 aligned_size = (size + 7u) & ~7u;
-
-    void *ptr;
-
-    if (state->memory.offset + aligned_size > state->memory.size)
-    {
-        return VAST_NULL;
-    }
-
-    ptr = (void *)(state->memory.data + state->memory.offset);
-    state->memory.offset += aligned_size;
-
-    return ptr;
-}
-
-/* TODO(nickscha): Temporary */
-VAST_API void *vast_tile_read_file_to_memory(vast_platform_state *state, s8 *filename)
-{
-    u32 file_size = 0;
-    void *data;
-
-    if (!state->api.io_file_size(filename, &file_size) || file_size < 1)
-    {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot optain file size!\n");
-        return VAST_NULL;
-    }
-
-    data = vast_tile_allocate_memory(state, file_size);
-
-    if (!data)
-    {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot allocate memory for file data!\n");
-        return VAST_NULL;
-    }
-
-    if (!state->api.io_file_read(filename, (u8 *)data, file_size))
-    {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot read file into memory!\n");
-        return VAST_NULL;
-    }
-
-    return data;
-}
-
 VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_tile_shader_heightmap *tiles_hm_shader)
 {
-    u8 *shader_data_fragment = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_hm.fs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tile_hm.fs");
 
     if (!shader_data_fragment)
     {
@@ -245,7 +194,7 @@ VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_t
 
 VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_tile_shader_normalmap *tiles_nm_shader)
 {
-    u8 *shader_data_fragment = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_nm.fs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tile_nm.fs");
 
     if (!shader_data_fragment)
     {
@@ -272,8 +221,8 @@ VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_t
 VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_shader_final *tiles_shader)
 {
 
-    u8 *shader_data_vertex = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tiles.vs");
-    u8 *shader_data_fragment = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tiles.fs");
+    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tiles.vs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tiles.fs");
 
     if (!shader_data_vertex || !shader_data_fragment)
     {

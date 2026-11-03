@@ -254,7 +254,7 @@ typedef struct vast_platform_timing
 } vast_platform_timing;
 
 /* #############################################################################
- * # [SECTION] Main entry point (vast_update)
+ * # [SECTION] Single Source of Truth coming from the platform layer
  * #############################################################################
  */
 typedef struct vast_platform_state
@@ -270,6 +270,10 @@ typedef struct vast_platform_state
 
 } vast_platform_state;
 
+/* #############################################################################
+ * # [SECTION] Main entry point (vast_update)
+ * #############################################################################
+ */
 #ifdef VAST_APPLICATION
 void vast_update(vast_platform_state *platform_state);
 #else
@@ -294,6 +298,59 @@ typedef void (*vast_update_function)(vast_platform_state *platform_state);
 
 static vast_update_function vast_update = vast_update_stub;
 
-#endif
+#endif /* VAST_APPLICATION */
+
+/* #############################################################################
+ * # [SECTION] Helper Functions
+ * #############################################################################
+ */
+void *vast_memory_allocate(vast_platform_memory *memory, u32 size)
+{
+    /* Align to 8 bytes */
+    u32 aligned_size = (size + 7u) & ~7u;
+
+    void *ptr;
+
+    if (memory->offset + aligned_size > memory->size)
+    {
+        return VAST_NULL;
+    }
+
+    ptr = (void *)(memory->data + memory->offset);
+    memory->offset += aligned_size;
+
+    return ptr;
+}
+
+void *vast_io_file_read_to_memory(vast_platform_state *state, vast_platform_memory *memory, s8 *filename)
+{
+    u32 file_size = 0;
+    void *data;
+
+    if (!state->api.io_file_size(filename, &file_size) || file_size < 1)
+    {
+        state->api.io_print(filename);
+        state->api.io_print(": Cannot optain file size!\n");
+        return VAST_NULL;
+    }
+
+    data = vast_memory_allocate(memory, file_size);
+
+    if (!data)
+    {
+        state->api.io_print(filename);
+        state->api.io_print(": Cannot allocate memory for file data!\n");
+        return VAST_NULL;
+    }
+
+    if (!state->api.io_file_read(filename, (u8 *)data, file_size))
+    {
+        state->api.io_print(filename);
+        state->api.io_print(": Cannot read file into memory!\n");
+        return VAST_NULL;
+    }
+
+    return data;
+}
 
 #endif /* VAST_H */

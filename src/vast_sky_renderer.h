@@ -32,57 +32,6 @@ typedef struct shader_sky
  * # [SECTION] Sky Renderer
  * #############################################################################
  */
-/* TODO(nickscha): Temporary */
-VAST_API void *vast_sky_allocate_memory(vast_platform_state *state, u32 size)
-{
-    /* Align to 8 bytes */
-    u32 aligned_size = (size + 7u) & ~7u;
-
-    void *ptr;
-
-    if (state->memory.offset + aligned_size > state->memory.size)
-    {
-        return VAST_NULL;
-    }
-
-    ptr = (void *)(state->memory.data + state->memory.offset);
-    state->memory.offset += aligned_size;
-
-    return ptr;
-}
-
-/* TODO(nickscha): Temporary */
-VAST_API void *vast_sky_read_file_to_memory(vast_platform_state *state, s8 *filename)
-{
-    u32 file_size = 0;
-    void *data;
-
-    if (!state->api.io_file_size(filename, &file_size) || file_size < 1)
-    {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot optain file size!\n");
-        return VAST_NULL;
-    }
-
-    data = vast_sky_allocate_memory(state, file_size);
-
-    if (!data)
-    {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot allocate memory for file data!\n");
-        return VAST_NULL;
-    }
-
-    if (!state->api.io_file_read(filename, (u8 *)data, file_size))
-    {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot read file into memory!\n");
-        return VAST_NULL;
-    }
-
-    return data;
-}
-
 VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir)
 {
     static u8 sky_initialized = 0;
@@ -110,7 +59,7 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
             "    gl_Position = vec4(p, 1.0, 1.0);\n"
             "}";
 
-        u8 *shader_data_fragment = (u8 *)vast_sky_read_file_to_memory(state, "shaders/vast_sky.fs");
+        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_sky.fs");
 
         if (!shader_data_fragment)
         {
