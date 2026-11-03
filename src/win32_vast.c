@@ -455,6 +455,7 @@ typedef struct win32_vast_state
 
   void *window_handle;
   void *device_context;
+  WINDOWPLACEMENT g_wpPrev;
 
   s8 *gl_version;
   s8 *gl_renderer;
@@ -693,15 +694,13 @@ VAST_API VAST_INLINE i64 win32_window_callback(void *window, u32 message, u64 wP
   return (result);
 }
 
-static WINDOWPLACEMENT g_wpPrev = {0};
-
 VAST_API void win32_window_enter_fullscreen(win32_vast_state *state)
 {
   i32 dwStyle = GetWindowLongA(state->window_handle, GWL_STYLE);
 
   if (dwStyle & WS_OVERLAPPEDWINDOW)
   {
-    if (GetWindowPlacement(state->window_handle, &g_wpPrev))
+    if (GetWindowPlacement(state->window_handle, &state->g_wpPrev))
     {
       MONITORINFO mi;
       mi.cbSize = sizeof(mi);
@@ -725,7 +724,7 @@ VAST_API void win32_window_enter_fullscreen(win32_vast_state *state)
 
 VAST_API void win32_window_enter_borderless(win32_vast_state *state)
 {
-  if (GetWindowPlacement(state->window_handle, &g_wpPrev))
+  if (GetWindowPlacement(state->window_handle, &state->g_wpPrev))
   {
     i32 dwStyle = GetWindowLongA(state->window_handle, GWL_STYLE);
 
@@ -757,7 +756,7 @@ VAST_API void win32_window_enter_windowed(win32_vast_state *state)
     RECT rect;
 
     SetWindowLongA(state->window_handle, GWL_STYLE, WS_OVERLAPPEDWINDOW);
-    SetWindowPlacement(state->window_handle, &g_wpPrev);
+    SetWindowPlacement(state->window_handle, &state->g_wpPrev);
     SetWindowPos(state->window_handle, VAST_NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
     GetClientRect(state->window_handle, &rect);
 
