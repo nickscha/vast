@@ -17,6 +17,7 @@ LICENSE
 #include "vast_ui.h"
 #include "vast_screen_recording.h"
 #include "vast_tiles.h"
+#include "vast_sky_renderer.h"
 #include "vast_tile_renderer.h"
 #include "win32_vast_opengl.h"
 #include "win32_vast_api.h"
@@ -130,7 +131,7 @@ VAST_API u8 win32_file_mod_signature(s8 *filename, u32 *file_mod_signature)
   return 1;
 }
 
-VAST_API u8 win32_file_read_api(s8 *filename, u8 *buffer, u32 buffer_size)
+VAST_API u8 win32_file_read(s8 *filename, u8 *buffer, u32 buffer_size)
 {
   void *hFile = INVALID_HANDLE;
   u32 bytesRead = 0;
@@ -164,63 +165,6 @@ VAST_API u8 win32_file_read_api(s8 *filename, u8 *buffer, u32 buffer_size)
 
   CloseHandle(hFile);
   return 1;
-}
-
-VAST_API u8 *win32_file_read(s8 *filename, u32 *file_size_out)
-{
-  void *hFile = INVALID_HANDLE;
-  u32 fileSize = 0;
-  u32 bytesRead = 0;
-
-  u8 *buffer = 0;
-  i32 attempt;
-
-  /* Retry loop for hot-reload: file might be locked or partially written */
-  for (attempt = 0; attempt < 4; ++attempt)
-  {
-    hFile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
-
-    if (hFile != INVALID_HANDLE)
-    {
-      break;
-    }
-
-    Sleep(5); /* Small delay */
-  }
-
-  if (hFile == INVALID_HANDLE)
-  {
-    return VAST_NULL;
-  }
-
-  fileSize = GetFileSize(hFile, 0);
-
-  if (fileSize == INVALID_FILE_SIZE || fileSize == 0)
-  {
-    CloseHandle(hFile);
-    return VAST_NULL;
-  }
-
-  buffer = (u8 *)VirtualAlloc(0, fileSize + 1, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-  if (!buffer)
-  {
-    CloseHandle(hFile);
-    return VAST_NULL;
-  }
-
-  if (!ReadFile(hFile, buffer, fileSize, &bytesRead, 0) || bytesRead != fileSize)
-  {
-    VirtualFree(buffer, 0, MEM_RELEASE);
-    CloseHandle(hFile);
-    return VAST_NULL;
-  }
-
-  buffer[fileSize] = '\0';
-
-  *file_size_out = fileSize;
-  CloseHandle(hFile);
-  return buffer;
 }
 
 VAST_API VAST_INLINE FILETIME win32_file_mod_time(s8 *file)
@@ -823,18 +767,6 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
  * # [SECTION] OpenGL Context Creation and Shader Management
  * #############################################################################
  */
-typedef struct shader_sky
-{
-  shader_header header;
-
-  i32 loc_iResolution;
-  i32 loc_iTime;
-  i32 loc_camera;
-  i32 loc_camera_basis;
-  i32 loc_sun_dir;
-
-} shader_sky;
-
 static u32 opengl_failed_function_load_count = 0;
 
 VAST_API PROC win32_opengl_load_function(s8 *name)
@@ -1176,81 +1108,6 @@ VAST_API VAST_INLINE void vast_update_camera_movement(win32_vast_state *state, v
   vast_camera_update(camera);
 }
 
-VAST_API void vast_render_sky(win32_vast_state *state, vast_camera *camera, vast_vec3 sun_dir, f32 camera_basis[9])
-{
-  static u8 sky_initialized = 0;
-  static shader_sky sky_shader = {0};
-  static u32 sky_vao;
-
-  if (!sky_initialized)
-  {
-    static s8 *shader_code_vertex =
-        "#version 330 core\n"
-        "\n"
-        "out vec2 vUV;\n"
-        "\n"
-        "const vec2 verts[3] = vec2[](\n"
-        "    vec2(-1.0, -1.0),\n"
-        "    vec2( 3.0, -1.0),\n"
-        "    vec2(-1.0,  3.0)\n"
-        ");\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "    vec2 p = verts[gl_VertexID];\n"
-        "    vUV = p * 0.5 + 0.5;\n"
-        "    gl_Position = vec4(p, 1.0, 1.0);\n"
-        "}";
-
-    u32 size_code_fragment = 0;
-    u8 *shader_code_fragment = win32_file_read("shaders/vast_sky.fs", &size_code_fragment);
-
-    if (!shader_code_fragment || size_code_fragment < 1)
-    {
-      win32_print("Cannot load sky shader files!\n");
-      return;
-    }
-
-    if (opengl_shader_load(&sky_shader.header, shader_code_vertex, (s8 *)shader_code_fragment, win32_print))
-    {
-      sky_shader.loc_iResolution = glGetUniformLocation(sky_shader.header.program, "iResolution");
-      sky_shader.loc_iTime = glGetUniformLocation(sky_shader.header.program, "iTime");
-      sky_shader.loc_camera = glGetUniformLocation(sky_shader.header.program, "cameraPos");
-      sky_shader.loc_camera_basis = glGetUniformLocation(sky_shader.header.program, "cameraBasis");
-      sky_shader.loc_sun_dir = glGetUniformLocation(sky_shader.header.program, "sunDir");
-    }
-    else
-    {
-      win32_print("Cannot compile shaders!\n");
-    }
-
-    VirtualFree(shader_code_fragment, 0, MEM_RELEASE);
-
-    glGenVertexArrays(1, &sky_vao);
-
-    sky_initialized = 1;
-  }
-
-  /* Render */
-  glDisable(GL_DEPTH_TEST);
-  glDepthMask(GL_FALSE);
-
-  glUseProgram(sky_shader.header.program);
-  glBindVertexArray(sky_vao);
-
-  glUniform3f(sky_shader.loc_iResolution, (f32)state->platform_state.window.width, (f32)state->platform_state.window.height, 1.0f);
-  glUniform1f(sky_shader.loc_iTime, (f32)state->platform_state.timing.time_elapsed);
-  glUniform3f(sky_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
-  glUniform3f(sky_shader.loc_camera, camera->position.x, camera->position.y, camera->position.z);
-  glUniformMatrix3fv(sky_shader.loc_camera_basis, 1, GL_FALSE, camera_basis);
-
-  glDrawArrays(GL_TRIANGLES, 0, 3);
-
-  glDepthMask(GL_TRUE);
-  glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LESS);
-}
-
 VAST_API void vast_render_scene(win32_vast_state *state)
 {
   static u8 scene_initialized = 0;
@@ -1340,7 +1197,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   }
 
   /* Render */
-  vast_render_sky(state, &camera, sun_dir, camera_basis);
+  vast_sky_render(&state->platform_state, &camera, sun_dir, camera_basis);
   vast_tile_render(&state->platform_state, &camera, sun_dir);
 }
 
@@ -1364,7 +1221,7 @@ VAST_API i32 start(i32 argc, u8 **argv)
   state.platform_state.api.io_print = win32_print;
   state.platform_state.api.io_file_size = win32_file_size;
   state.platform_state.api.io_file_mod_signature = win32_file_mod_signature;
-  state.platform_state.api.io_file_read = win32_file_read_api;
+  state.platform_state.api.io_file_read = win32_file_read;
 
   /* Platform Window setup */
   state.platform_state.window.width = 800;

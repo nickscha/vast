@@ -694,8 +694,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         glUniform3f(tiles_shader.loc_camera, camera->position.x, camera->position.y, camera->position.z);
         glUniform3f(tiles_shader.loc_camera_view_dir, camera->forward.x, camera->forward.y, camera->forward.z);
         glUniform3f(tiles_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
-        glUniform1f(tiles_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
         glUniform1f(tiles_shader.loc_visualization_mode, (f32)visualization_mode);
+        glUniform1f(tiles_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
         glUniform1i(tiles_shader.loc_heightmap, 0);
         glUniform1i(tiles_shader.loc_normalmap, 1);
 
