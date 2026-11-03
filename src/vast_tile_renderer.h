@@ -333,9 +333,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tile_shader_normalmap_load(state, &tiles_nm_shader);
         vast_tile_shader_final_load(state, &tiles_shader);
 
+        /* Dummy tiles vertex buffer object */
         glGenVertexArrays(1, &tile_vao);
 
-        /* Generate Grid */
+        /* Generate Grid for all LOD edge mask combinations */
         {
             u8 mask;
             u32 i;
@@ -379,6 +380,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         u32 tile_shader_normalmap_now = 0;
         u32 tile_shader_final_now = 0;
 
+        VAST_PROFILER_BEGIN(tile_hot_reload);
+
         /* Get initial modifcation dates of shaders for hot reloading */
         if (!hot_reload_initialized)
         {
@@ -413,6 +416,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             vast_tile_shader_final_load(state, &tiles_shader);
             tile_shader_final_last = tile_shader_final_now;
         }
+
+        VAST_PROFILER_END(tile_hot_reload);
     }
 
     /* Update camera tile based on camera world position */
@@ -427,7 +432,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     /* Process dirty tiles */
     VAST_PROFILER_BEGIN(tile_process_dirty);
     {
-        i32 updates_per_frame = t.dirty_indices_count > 16 ? 16 : 4;
+        i32 updates_per_frame = t.dirty_indices_count == VAST_TILES_TOTAL ? VAST_TILES_TOTAL : 4;
 
         while (updates_per_frame > 0 && t.dirty_indices_count > 0)
         {
