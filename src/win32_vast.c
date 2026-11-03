@@ -1194,9 +1194,6 @@ VAST_API void vast_render_scene(win32_vast_state *state)
  */
 VAST_API i32 start(i32 argc, u8 **argv)
 {
-  /* Default fragment shader file name to load if no file is passed as an argument in cli */
-  s8 *fragment_shader_file_name = (argv && argc > 1) ? (s8 *)argv[1] : "shaders/vast_sky.fs";
-
   win32_vast_state state = {0};
 
   state.platform_state.running = 1;
@@ -1220,6 +1217,9 @@ VAST_API i32 start(i32 argc, u8 **argv)
   /* Platform Memory Setup */
   state.platform_state.memory.size = 1024 * 1024 * 8; /* 8 MB */
   state.platform_state.memory.data = VirtualAlloc(0, state.platform_state.memory.size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
+  (void)argc;
+  (void)argv;
 
   /******************************/
   /* Load application once      */
@@ -1293,8 +1293,6 @@ VAST_API i32 start(i32 argc, u8 **argv)
 
     i32 thread_count = win32_process_thread_count();
 
-    FILETIME fs_last = win32_file_mod_time(fragment_shader_file_name);
-
     QueryPerformanceFrequency(&perf_freq);
     QueryPerformanceCounter(&time_start);
     QueryPerformanceCounter(&time_start_fps_cap);
@@ -1336,6 +1334,7 @@ VAST_API i32 start(i32 argc, u8 **argv)
       /******************************/
       /* Hot Reload Application     */
       /******************************/
+      if (state.platform_state.timing.frame_count % 30 == 0)
       {
         FILETIME ddlFtCurrent = win32_file_mod_time(state.application.dllName);
 
@@ -1343,23 +1342,6 @@ VAST_API i32 start(i32 argc, u8 **argv)
         {
           win32_load_application(&state);
           state.platform_state.application_initialized = 0;
-        }
-      }
-
-      /******************************/
-      /* Hot Reload Fragment Shader */
-      /******************************/
-      {
-        FILETIME fs_now = win32_file_mod_time(fragment_shader_file_name);
-
-        if (CompareFileTime(&fs_now, &fs_last) != 0)
-        {
-          /*opengl_shader_load_shader_main(&main_shader, fragment_shader_file_name);*/
-          fs_last = fs_now;
-
-          /* Reset iTime elapsed seconds on hot reload */
-          QueryPerformanceCounter(&time_start);
-          state.platform_state.timing.frame_count = 0;
         }
       }
 
