@@ -61,6 +61,24 @@ typedef struct shader_tile_nm
 
 } shader_tile_nm;
 
+static s8 *vast_tile_texture_vertex_data =
+    "#version 330 core\n"
+    "\n"
+    "out vec2 v_uv;\n"
+    "\n"
+    "const vec2 verts[3] = vec2[](\n"
+    "    vec2(-1.0, -1.0),\n"
+    "    vec2( 3.0, -1.0),\n"
+    "    vec2(-1.0,  3.0)\n"
+    ");\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    "    vec2 p = verts[gl_VertexID];\n"
+    "    v_uv = p * 0.5 + 0.5;\n"
+    "    gl_Position = vec4(p, 0.0, 1.0);\n"
+    "}";
+
 /* #############################################################################
  * # [SECTION] Tile Renderer
  * #############################################################################
@@ -203,16 +221,15 @@ VAST_API void *vast_tile_read_file_to_memory(vast_platform_state *state, s8 *fil
 
 VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, shader_tile_hm *tiles_hm_shader)
 {
-    u8 *shader_data_vertex = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_hm.vs");
     u8 *shader_data_fragment = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_hm.fs");
 
-    if (!shader_data_vertex || !shader_data_fragment)
+    if (!shader_data_fragment)
     {
         state->memory.offset = 0;
         return;
     }
 
-    if (opengl_shader_load(&tiles_hm_shader->header, (s8 *)shader_data_vertex, (s8 *)shader_data_fragment, state->api.io_print))
+    if (opengl_shader_load(&tiles_hm_shader->header, vast_tile_texture_vertex_data, (s8 *)shader_data_fragment, state->api.io_print))
     {
         tiles_hm_shader->loc_tile_offset = glGetUniformLocation(tiles_hm_shader->header.program, "u_tile_origin");
         tiles_hm_shader->loc_tile_size = glGetUniformLocation(tiles_hm_shader->header.program, "u_tile_size");
@@ -228,16 +245,15 @@ VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, shader
 
 VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, shader_tile_nm *tiles_nm_shader)
 {
-    u8 *shader_data_vertex = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_nm.vs");
     u8 *shader_data_fragment = (u8 *)vast_tile_read_file_to_memory(state, "shaders/vast_tile_nm.fs");
 
-    if (!shader_data_vertex || !shader_data_fragment)
+    if (!shader_data_fragment)
     {
         state->memory.offset = 0;
         return;
     }
 
-    if (opengl_shader_load(&tiles_nm_shader->header, (s8 *)shader_data_vertex, (s8 *)shader_data_fragment, state->api.io_print))
+    if (opengl_shader_load(&tiles_nm_shader->header, vast_tile_texture_vertex_data, (s8 *)shader_data_fragment, state->api.io_print))
     {
         tiles_nm_shader->loc_tile_offset = glGetUniformLocation(tiles_nm_shader->header.program, "u_tile_origin");
         tiles_nm_shader->loc_tile_size = glGetUniformLocation(tiles_nm_shader->header.program, "u_tile_size");
@@ -432,6 +448,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     /* Process dirty tiles */
     VAST_PROFILER_BEGIN(tile_process_dirty);
     {
+        /* When no tiles calculated process everything in one frame otherwise introduce frame pacing */
         i32 updates_per_frame = t.dirty_indices_count == VAST_TILES_TOTAL ? VAST_TILES_TOTAL : 4;
 
         while (updates_per_frame > 0 && t.dirty_indices_count > 0)
