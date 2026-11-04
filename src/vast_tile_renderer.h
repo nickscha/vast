@@ -266,6 +266,10 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
     state->memory.offset = 0;
 }
 
+/* TODO(nickscha) use calculated max lod level from tiles struct */
+#define LOD_COUNT 6
+
+/* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
 VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir)
 {
     static u8 tiles_initialized = 0;
@@ -278,7 +282,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static vast_tile_shader_heightmap tiles_hm_shader = {0};
     static vast_tile_shader_normalmap tiles_nm_shader = {0};
 
-#define LOD_COUNT 6
     static u32 grid_vao;
     static i32 gridIndexCounts[LOD_COUNT][16] = {0};
     static u32 grid_ibos[LOD_COUNT][16] = {0};
@@ -308,39 +311,33 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
         /* Calculate tile count per lod */
         {
-            static u32 tile_lod_count[LOD_COUNT] = {0};
             static s8 tmp[128];
-
-            for (i = 0; i < VAST_TILES_TOTAL; ++i)
-            {
-                tile_lod_count[t.tile_lod[i]]++;
-            }
 
             for (i = 0; i < LOD_COUNT; ++i)
             {
-                vast_sb t = {0};
-                t.size = sizeof(tmp);
-                t.buffer = tmp;
+                vast_sb sb = {0};
+                sb.size = sizeof(tmp);
+                sb.buffer = tmp;
 
-                if (tile_lod_count[i] == 0)
+                if (t.tile_per_lod_count[i] == 0)
                 {
                     usable_max_lod = i;
 
-                    vast_sb_s8(&t, "usable_max_lod =");
-                    vast_sb_i32(&t, (i32)usable_max_lod);
-                    vast_sb_s8(&t, "\n");
-                    state->api.io_print(t.buffer);
+                    vast_sb_s8(&sb, "usable_max_lod =");
+                    vast_sb_i32(&sb, (i32)usable_max_lod);
+                    vast_sb_s8(&sb, "\n");
+                    state->api.io_print(sb.buffer);
 
                     break;
                 }
 
-                vast_sb_s8(&t, "tile_lod_count [");
-                vast_sb_i32(&t, (i32)i);
-                vast_sb_s8(&t, "] = ");
-                vast_sb_i32(&t, (i32)tile_lod_count[i]);
-                vast_sb_s8(&t, "\n");
+                vast_sb_s8(&sb, "tile_lod_count [");
+                vast_sb_i32(&sb, (i32)i);
+                vast_sb_s8(&sb, "] = ");
+                vast_sb_i32(&sb, (i32)t.tile_per_lod_count[i]);
+                vast_sb_s8(&sb, "\n");
 
-                state->api.io_print(t.buffer);
+                state->api.io_print(sb.buffer);
             }
         }
 
@@ -509,142 +506,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 state, &tiles_hm_shader, VAST_TILE_WORLD_SIZE, tile_fbo[tile_idx], height_tex_size,
                 (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
 
-            /*
-            Testing only:
-              - Read back the heights to CPU
-              - Modify heights
-              - Reupload texture with changed heights
-            */
-            if (t.tile_x[tile_idx] == 0 && t.tile_z[tile_idx] == 0)
-            {
-                f32 cpu_heights[VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE];
-                u32 x, z;
-
-                glBindFramebuffer(GL_FRAMEBUFFER, tile_fbo[tile_idx]);
-                glReadPixels(0, 0, (i32)height_tex_size, (i32)height_tex_size, GL_RED, GL_FLOAT, cpu_heights);
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-                for (z = 0; z < height_tex_size; ++z)
-                {
-                    for (x = 0; x < height_tex_size; ++x)
-                    {
-                        u32 i = z * height_tex_size + x;
-                        f32 h = cpu_heights[i];
-                        u32 gap = 1;
-
-                        if (z > gap && z < height_tex_size - gap && x > gap && x < height_tex_size - gap)
-                        {
-                            h = 0.0f;
-                        }
-
-                        cpu_heights[i] = h;
-                    }
-                }
-
-                /* Apply stamps */
-                {
-                    f32 tile_origin_x = (f32)t.tile_x[tile_idx] * VAST_TILE_WORLD_SIZE;
-                    f32 tile_origin_z = (f32)t.tile_z[tile_idx] * VAST_TILE_WORLD_SIZE;
-                    f32 texel_step = VAST_TILE_WORLD_SIZE / (f32)(height_tex_size - 1);
-
-                    typedef enum
-                    {
-                        STAMP_DIG,
-                        STAMP_RAISE,
-                        STAMP_FLATTEN
-                    } vast_stamp_type;
-
-                    typedef struct
-                    {
-                        vast_stamp_type type;
-                        f32 world_x;
-                        f32 world_z;
-                        f32 radius;
-                        f32 strength;      /* Depth/Height value */
-                        f32 target_height; /* Used for flatten only */
-                    } vast_stamp;
-
-                    vast_stamp test_stamps[3];
-                    u32 test_stamp_count = 3;
-
-                    f32 tile_center_x = tile_origin_x + (VAST_TILE_WORLD_SIZE * 0.5f);
-                    f32 tile_center_z = tile_origin_z + (VAST_TILE_WORLD_SIZE * 0.5f);
-                    f32 offset = VAST_TILE_WORLD_SIZE * 0.25f;
-
-                    test_stamps[0].type = STAMP_DIG;
-                    test_stamps[0].world_x = tile_center_x - offset;
-                    test_stamps[0].world_z = tile_center_z;
-                    test_stamps[0].radius = VAST_TILE_WORLD_SIZE * 0.15f;
-                    test_stamps[0].strength = 10.0f;
-
-                    test_stamps[1].type = STAMP_RAISE;
-                    test_stamps[1].world_x = tile_center_x + offset;
-                    test_stamps[1].world_z = tile_center_z;
-                    test_stamps[1].radius = VAST_TILE_WORLD_SIZE * 0.15f;
-                    test_stamps[1].strength = 10.0f;
-
-                    test_stamps[2].type = STAMP_FLATTEN;
-                    test_stamps[2].world_x = tile_center_x;
-                    test_stamps[2].world_z = tile_center_z;
-                    test_stamps[2].radius = VAST_TILE_WORLD_SIZE * 0.18f;
-                    test_stamps[2].strength = 1.0f;      /* 1.0 = hard flatten, lower = soft blend */
-                    test_stamps[2].target_height = 5.0f; /* Flatten target elevation plateau */
-
-                    for (z = 0; z < height_tex_size; ++z)
-                    {
-                        f32 world_z = tile_origin_z + ((f32)z * texel_step);
-
-                        for (x = 0; x < height_tex_size; ++x)
-                        {
-                            f32 world_x = tile_origin_x + ((f32)x * texel_step);
-                            u32 i = z * height_tex_size + x;
-                            f32 h = cpu_heights[i];
-                            u32 s;
-
-                            for (s = 0; s < test_stamp_count; ++s)
-                            {
-                                vast_stamp *stamp = &test_stamps[s];
-
-                                f32 dx = world_x - stamp->world_x;
-                                f32 dz = world_z - stamp->world_z;
-                                f32 distance_squared = dx * dx + dz * dz;
-
-                                if (distance_squared < (stamp->radius * stamp->radius))
-                                {
-                                    f32 distance = vast_sqrtf(distance_squared);
-                                    f32 falloff = 1.0f - (distance / stamp->radius);
-
-                                    switch (stamp->type)
-                                    {
-                                    case STAMP_DIG:
-                                        h -= stamp->strength * falloff;
-                                        break;
-
-                                    case STAMP_RAISE:
-                                        h += stamp->strength * falloff;
-                                        break;
-
-                                    case STAMP_FLATTEN:
-                                    {
-                                        f32 blend_factor = falloff * stamp->strength;
-                                        h = h + (stamp->target_height - h) * blend_factor;
-                                    }
-                                    break;
-                                    }
-                                }
-                            }
-
-                            cpu_heights[i] = h;
-                        }
-                    }
-                }
-
-                glBindTexture(GL_TEXTURE_2D, tile_tex[tile_idx]);
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (i32)height_tex_size, (i32)height_tex_size, GL_RED, GL_FLOAT, cpu_heights);
-            }
-
-            vast_tile_render_texture_normalmap(state, &tiles_nm_shader, VAST_TILE_WORLD_SIZE, tile_normal_fbo[tile_idx], normal_tex_size,
-                                               (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], tile_tex[tile_idx], (f32)height_tex_size);
+            vast_tile_render_texture_normalmap(
+                state, &tiles_nm_shader, VAST_TILE_WORLD_SIZE, tile_normal_fbo[tile_idx], normal_tex_size,
+                (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], tile_tex[tile_idx], (f32)height_tex_size);
 
             /* Mark that texture update is complete for this LOD */
             tile_rendered_lod[tile_idx] = tile_lod;
