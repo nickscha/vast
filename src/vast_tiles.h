@@ -37,7 +37,8 @@ typedef struct vast_tiles
     /* Data Arrays (Indexed via toroidal wrapping) */
     i32 tile_x[VAST_TILES_TOTAL];
     i32 tile_z[VAST_TILES_TOTAL];
-    i32 tile_lod[VAST_TILES_TOTAL];
+    i32 tile_lod_required[VAST_TILES_TOTAL]; /* The LOD required after update */
+    i32 tile_lod_current[VAST_TILES_TOTAL];  /* The current LOD used (has to be updated by application) */
 
     /* Sparse Dirty flag tracking */
     u16 dirty_indices[VAST_TILES_TOTAL]; /* Which index ot the tile_x/z is marked dirty */
@@ -85,9 +86,9 @@ VAST_API VAST_INLINE i32 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
     return lod;
 }
 
-VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, i32 *tile_rendered_lod, u32 tile_idx)
+VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, u32 tile_idx)
 {
-    i32 current_lod = tile_rendered_lod[tile_idx];
+    i32 current_lod = t->tile_lod_current[tile_idx];
     i32 x, z;
     u8 mask;
 
@@ -106,7 +107,7 @@ VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, i32 *tile_ren
 
         if (t->tile_x[n_idx] == x && t->tile_z[n_idx] == z - 1)
         {
-            i32 n_lod = tile_rendered_lod[n_idx];
+            i32 n_lod = t->tile_lod_current[n_idx];
 
             if (n_lod > current_lod)
             {
@@ -121,7 +122,7 @@ VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, i32 *tile_ren
 
         if (t->tile_x[e_idx] == x + 1 && t->tile_z[e_idx] == z)
         {
-            i32 e_lod = tile_rendered_lod[e_idx];
+            i32 e_lod = t->tile_lod_current[e_idx];
 
             if (e_lod > current_lod)
             {
@@ -136,7 +137,7 @@ VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, i32 *tile_ren
 
         if (t->tile_x[s_idx] == x && t->tile_z[s_idx] == z + 1)
         {
-            i32 s_lod = tile_rendered_lod[s_idx];
+            i32 s_lod = t->tile_lod_current[s_idx];
 
             if (s_lod > current_lod)
             {
@@ -151,7 +152,7 @@ VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, i32 *tile_ren
 
         if (t->tile_x[w_idx] == x - 1 && t->tile_z[w_idx] == z)
         {
-            i32 w_lod = tile_rendered_lod[w_idx];
+            i32 w_lod = t->tile_lod_current[w_idx];
 
             if (w_lod > current_lod)
             {
@@ -193,9 +194,9 @@ VAST_API VAST_INLINE void vast_tiles_sort_dirty_by_distance(vast_tiles *t)
         for (i = gap; i < n; ++i)
         {
             u16 temp_idx = t->dirty_indices[i];
-            i32 temp_dist = t->tile_lod[temp_idx];
+            i32 temp_dist = t->tile_lod_required[temp_idx];
 
-            for (j = i; j >= gap && t->tile_lod[t->dirty_indices[j - gap]] < temp_dist; j -= gap)
+            for (j = i; j >= gap && t->tile_lod_required[t->dirty_indices[j - gap]] < temp_dist; j -= gap)
             {
                 t->dirty_indices[j] = t->dirty_indices[j - gap];
             }
@@ -224,7 +225,8 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, i32 camera_tile_x, i32 
 
             t->tile_x[i] = x;
             t->tile_z[i] = z;
-            t->tile_lod[i] = lod;
+            t->tile_lod_required[i] = lod;
+            t->tile_lod_current[i] = -1; /* -1 = Uninitialized/Unknown */
             t->dirty_indices[t->dirty_indices_count++] = (u16)i;
             t->tile_per_lod_count[lod]++;
 
@@ -341,12 +343,12 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, i32 camera_tile_x, i3
     /* Distance Calculation */
     for (i = 0; i < VAST_TILES_TOTAL; ++i)
     {
-        i32 distance_old = t->tile_lod[i];
+        i32 distance_old = t->tile_lod_required[i];
         i32 distance_new = vast_tile_lod(t->tile_x[i], t->tile_z[i], camera_tile_x, camera_tile_z);
 
         if (distance_old != distance_new)
         {
-            t->tile_lod[i] = distance_new;
+            t->tile_lod_required[i] = distance_new;
 
             if (!vast_tile_is_dirty(t, i))
             {

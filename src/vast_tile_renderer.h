@@ -36,8 +36,6 @@ typedef struct vast_tile_shader_normalmap
     i32 loc_tile_offset;
     i32 loc_tile_size;
     i32 loc_texture_size;
-    i32 loc_stamped_heightmap;
-    i32 loc_stamped_heightmap_size;
 
 } vast_tile_shader_normalmap;
 
@@ -88,95 +86,6 @@ static s8 *vast_tile_texture_vertex_data =
 #define VAST_TILE_GRID_SIZE 65
 #define VAST_TILE_MAX_INDICES ((VAST_TILE_GRID_SIZE - 1) * (VAST_TILE_GRID_SIZE - 1) * 6)
 
-VAST_API u32 vast_tile_framebuffer_create(u32 tex)
-{
-    u32 fbo;
-
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
-
-    return fbo;
-}
-
-VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, vast_tile_shader_heightmap *tile_hm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
-{
-    VAST_PROFILER_BEGIN(tile_render_heightmap);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, (i32)size, (i32)size);
-
-    glUseProgram(tile_hm_shader->header.program);
-    glUniform3f(tile_hm_shader->loc_tile_offset, tileWorldX, tileWorldZ, 0.0f);
-    glUniform1f(tile_hm_shader->loc_tile_size, (f32)tile_size);
-    glUniform1f(tile_hm_shader->loc_texture_size, (f32)size);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    VAST_PROFILER_END(tile_render_heightmap);
-}
-
-VAST_API void vast_tile_render_texture_normalmap(vast_platform_state *state, vast_tile_shader_normalmap *tile_nm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ, u32 heightmap_texture, f32 heightmap_texture_size)
-{
-    VAST_PROFILER_BEGIN(tile_render_normalmap);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, (i32)size, (i32)size);
-
-    glUseProgram(tile_nm_shader->header.program);
-    glUniform3f(tile_nm_shader->loc_tile_offset, tileWorldX, tileWorldZ, 0.0f);
-    glUniform1f(tile_nm_shader->loc_tile_size, (f32)tile_size);
-    glUniform1f(tile_nm_shader->loc_texture_size, (f32)size);
-    glUniform1f(tile_nm_shader->loc_stamped_heightmap, 0);
-    glUniform1f(tile_nm_shader->loc_stamped_heightmap_size, heightmap_texture_size);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, heightmap_texture);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    VAST_PROFILER_END(tile_render_normalmap);
-}
-
-VAST_API u8 vast_tile_is_visible(
-    vast_frustum *f,
-    f32 tileX,
-    f32 tileZ,
-    f32 tileSize,
-    f32 minHeight,
-    f32 maxHeight)
-{
-    f32 minX = tileX * tileSize - tileSize * 0.5f;
-    f32 maxX = tileX * tileSize + tileSize * 0.5f;
-
-    f32 minZ = tileZ * tileSize - tileSize * 0.5f;
-    f32 maxZ = tileZ * tileSize + tileSize * 0.5f;
-
-    i32 i;
-
-    for (i = 0; i < 6; ++i)
-    {
-        vast_vec4 *p = &f->planes[i];
-
-        f32 px = (p->x >= 0.0f) ? maxX : minX;
-        f32 py = (p->y >= 0.0f) ? maxHeight : minHeight;
-        f32 pz = (p->z >= 0.0f) ? maxZ : minZ;
-
-        if (p->x * px + p->y * py + p->z * pz + p->w < 0.0f)
-        {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
 VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_tile_shader_heightmap *tiles_hm_shader)
 {
     u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tile_hm.fs");
@@ -216,8 +125,6 @@ VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_t
         tiles_nm_shader->loc_tile_offset = glGetUniformLocation(tiles_nm_shader->header.program, "u_tile_origin");
         tiles_nm_shader->loc_tile_size = glGetUniformLocation(tiles_nm_shader->header.program, "u_tile_size");
         tiles_nm_shader->loc_texture_size = glGetUniformLocation(tiles_nm_shader->header.program, "u_texture_size");
-        tiles_nm_shader->loc_stamped_heightmap = glGetUniformLocation(tiles_nm_shader->header.program, "u_stamped_heightmap");
-        tiles_nm_shader->loc_stamped_heightmap_size = glGetUniformLocation(tiles_nm_shader->header.program, "u_stamped_heightmap_size");
     }
     else
     {
@@ -264,6 +171,155 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
     }
 
     state->memory.offset = 0;
+}
+
+VAST_API void vast_tile_shader_hot_reload(
+    vast_platform_state *state,
+    vast_tiles *tiles,
+    vast_tile_shader_final *tiles_shader,
+    vast_tile_shader_heightmap *tiles_hm_shader,
+    vast_tile_shader_normalmap *tiles_nm_shader,
+    i32 camera_tile_x,
+    i32 camera_tile_z)
+{
+    if (state->timing.frame_count % 30 == 0)
+    {
+        static u8 hot_reload_initialized = 0;
+
+        static s8 *tile_shader_heightmap = "shaders/vast_tile_hm.fs";
+        static s8 *tile_shader_normalmap = "shaders/vast_tile_nm.fs";
+        static s8 *tile_shader_final = "shaders/vast_tiles.fs";
+        static u32 tile_shader_heightmap_last = 0;
+        static u32 tile_shader_normalmap_last = 0;
+        static u32 tile_shader_final_last = 0;
+
+        u32 tile_shader_heightmap_now = 0;
+        u32 tile_shader_normalmap_now = 0;
+        u32 tile_shader_final_now = 0;
+
+        VAST_PROFILER_BEGIN(tile_hot_reload);
+
+        /* Get initial modifcation dates of shaders for hot reloading */
+        if (!hot_reload_initialized)
+        {
+            state->api.io_file_mod_signature(tile_shader_heightmap, &tile_shader_heightmap_last);
+            state->api.io_file_mod_signature(tile_shader_normalmap, &tile_shader_normalmap_last);
+            state->api.io_file_mod_signature(tile_shader_final, &tile_shader_final_last);
+
+            hot_reload_initialized = 1;
+        }
+
+        /* Get current modification timestamp of files */
+        state->api.io_file_mod_signature(tile_shader_heightmap, &tile_shader_heightmap_now);
+        state->api.io_file_mod_signature(tile_shader_normalmap, &tile_shader_normalmap_now);
+        state->api.io_file_mod_signature(tile_shader_final, &tile_shader_final_now);
+
+        if (tile_shader_heightmap_now != tile_shader_heightmap_last)
+        {
+            vast_tile_shader_heightmap_load(state, tiles_hm_shader);
+            vast_tiles_init(tiles, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
+            tile_shader_heightmap_last = tile_shader_heightmap_now;
+        }
+
+        if (tile_shader_normalmap_now != tile_shader_normalmap_last)
+        {
+            vast_tile_shader_normalmap_load(state, tiles_nm_shader);
+            vast_tiles_init(tiles, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
+            tile_shader_normalmap_last = tile_shader_normalmap_now;
+        }
+
+        if (tile_shader_final_now != tile_shader_final_last)
+        {
+            vast_tile_shader_final_load(state, tiles_shader);
+            tile_shader_final_last = tile_shader_final_now;
+        }
+
+        VAST_PROFILER_END(tile_hot_reload);
+    }
+}
+
+VAST_API u32 vast_tile_framebuffer_create(u32 tex)
+{
+    u32 fbo;
+
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+
+    return fbo;
+}
+
+VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, vast_tile_shader_heightmap *tile_hm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
+{
+    VAST_PROFILER_BEGIN(tile_render_heightmap);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, (i32)size, (i32)size);
+
+    glUseProgram(tile_hm_shader->header.program);
+    glUniform3f(tile_hm_shader->loc_tile_offset, tileWorldX, tileWorldZ, 0.0f);
+    glUniform1f(tile_hm_shader->loc_tile_size, (f32)tile_size);
+    glUniform1f(tile_hm_shader->loc_texture_size, (f32)size);
+
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    VAST_PROFILER_END(tile_render_heightmap);
+}
+
+VAST_API void vast_tile_render_texture_normalmap(vast_platform_state *state, vast_tile_shader_normalmap *tile_nm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
+{
+    VAST_PROFILER_BEGIN(tile_render_normalmap);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, (i32)size, (i32)size);
+
+    glUseProgram(tile_nm_shader->header.program);
+    glUniform3f(tile_nm_shader->loc_tile_offset, tileWorldX, tileWorldZ, 0.0f);
+    glUniform1f(tile_nm_shader->loc_tile_size, (f32)tile_size);
+    glUniform1f(tile_nm_shader->loc_texture_size, (f32)size);
+
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    VAST_PROFILER_END(tile_render_normalmap);
+}
+
+VAST_API u8 vast_tile_is_visible(
+    vast_frustum *f,
+    f32 tileX,
+    f32 tileZ,
+    f32 tileSize,
+    f32 minHeight,
+    f32 maxHeight)
+{
+    f32 minX = tileX * tileSize - tileSize * 0.5f;
+    f32 maxX = tileX * tileSize + tileSize * 0.5f;
+
+    f32 minZ = tileZ * tileSize - tileSize * 0.5f;
+    f32 maxZ = tileZ * tileSize + tileSize * 0.5f;
+
+    i32 i;
+
+    for (i = 0; i < 6; ++i)
+    {
+        vast_vec4 *p = &f->planes[i];
+
+        f32 px = (p->x >= 0.0f) ? maxX : minX;
+        f32 py = (p->y >= 0.0f) ? maxHeight : minHeight;
+        f32 pz = (p->z >= 0.0f) ? maxZ : minZ;
+
+        if (p->x * px + p->y * py + p->z * pz + p->w < 0.0f)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 /* TODO(nickscha) use calculated max lod level from tiles struct */
@@ -331,22 +387,15 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static i32 gridIndexCounts[LOD_COUNT][16] = {0};
     static u32 grid_ibos[LOD_COUNT][16] = {0};
 
-    static u32 tile_tex[VAST_TILES_TOTAL];
-    static u32 tile_fbo[VAST_TILES_TOTAL];
-    static u32 tile_normal_tex[VAST_TILES_TOTAL];
-    static u32 tile_normal_fbo[VAST_TILES_TOTAL];
-    static u32 tile_vao;
-    static i32 tile_rendered_lod[VAST_TILES_TOTAL];
+    static u32 tile_heightmap_tex[VAST_TILES_TOTAL];
+    static u32 tile_heightmap_fbo[VAST_TILES_TOTAL];
+    static u32 tile_normalmap_tex[VAST_TILES_TOTAL];
+    static u32 tile_normalmap_fbo[VAST_TILES_TOTAL];
+
+    static u32 tile_dummy_vao;
 
     if (!tiles_initialized)
     {
-        u32 i;
-
-        for (i = 0; i < VAST_TILES_TOTAL; ++i)
-        {
-            tile_rendered_lod[i] = -1; /* -1 = Uninitialized texture state */
-        }
-
         /* Setup tiles */
         VAST_PROFILER_BEGIN(tile_init);
         vast_tiles_init(&t, camera_tile_x, camera_tile_z);
@@ -360,7 +409,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tile_shader_final_load(state, &tiles_shader);
 
         /* Dummy tiles vertex buffer object */
-        glGenVertexArrays(1, &tile_vao);
+        glGenVertexArrays(1, &tile_dummy_vao);
 
         /* Generate Grid for all LOD edge mask combinations */
         {
@@ -391,60 +440,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     }
 
     /* Hot reload tile shaders */
-    if (state->timing.frame_count % 30 == 0)
-    {
-        static u8 hot_reload_initialized = 0;
-
-        static s8 *tile_shader_heightmap = "shaders/vast_tile_hm.fs";
-        static s8 *tile_shader_normalmap = "shaders/vast_tile_nm.fs";
-        static s8 *tile_shader_final = "shaders/vast_tiles.fs";
-        static u32 tile_shader_heightmap_last = 0;
-        static u32 tile_shader_normalmap_last = 0;
-        static u32 tile_shader_final_last = 0;
-
-        u32 tile_shader_heightmap_now = 0;
-        u32 tile_shader_normalmap_now = 0;
-        u32 tile_shader_final_now = 0;
-
-        VAST_PROFILER_BEGIN(tile_hot_reload);
-
-        /* Get initial modifcation dates of shaders for hot reloading */
-        if (!hot_reload_initialized)
-        {
-            state->api.io_file_mod_signature(tile_shader_heightmap, &tile_shader_heightmap_last);
-            state->api.io_file_mod_signature(tile_shader_normalmap, &tile_shader_normalmap_last);
-            state->api.io_file_mod_signature(tile_shader_final, &tile_shader_final_last);
-
-            hot_reload_initialized = 1;
-        }
-
-        /* Get current modification timestamp of files */
-        state->api.io_file_mod_signature(tile_shader_heightmap, &tile_shader_heightmap_now);
-        state->api.io_file_mod_signature(tile_shader_normalmap, &tile_shader_normalmap_now);
-        state->api.io_file_mod_signature(tile_shader_final, &tile_shader_final_now);
-
-        if (tile_shader_heightmap_now != tile_shader_heightmap_last)
-        {
-            vast_tile_shader_heightmap_load(state, &tiles_hm_shader);
-            vast_tiles_init(&t, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
-            tile_shader_heightmap_last = tile_shader_heightmap_now;
-        }
-
-        if (tile_shader_normalmap_now != tile_shader_normalmap_last)
-        {
-            vast_tile_shader_normalmap_load(state, &tiles_nm_shader);
-            vast_tiles_init(&t, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
-            tile_shader_normalmap_last = tile_shader_normalmap_now;
-        }
-
-        if (tile_shader_final_now != tile_shader_final_last)
-        {
-            vast_tile_shader_final_load(state, &tiles_shader);
-            tile_shader_final_last = tile_shader_final_now;
-        }
-
-        VAST_PROFILER_END(tile_hot_reload);
-    }
+    vast_tile_shader_hot_reload(state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, camera_tile_x, camera_tile_z);
 
     /* Update camera tile based on camera world position */
     camera_tile_x = (i32)vast_floorf((camera->position.x + VAST_TILE_WORLD_SIZE * 0.5f) / VAST_TILE_WORLD_SIZE);
@@ -465,20 +461,21 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         {
             u32 last_idx = t.dirty_indices_count - 1;
             u32 tile_idx = t.dirty_indices[last_idx];
-            i32 tile_lod = t.tile_lod[tile_idx];
-            u32 height_tex_size = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod)) + 1;
-            u32 normal_tex_size = 1024 / (1 << (u32)tile_lod);
+            i32 tile_lod_required = t.tile_lod_required[tile_idx];
+            i32 tile_lod_current = t.tile_lod_current[tile_idx];
+            u32 height_tex_size = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
+            u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
 
             /* Height Texture */
-            if (tile_tex[tile_idx] == 0)
+            if (tile_heightmap_tex[tile_idx] == 0)
             {
-                glGenTextures(1, &tile_tex[tile_idx]);
+                glGenTextures(1, &tile_heightmap_tex[tile_idx]);
             }
 
             /* TODO(nickscha): Allocate tiles texture pool once and then reuse from pool       */
-            if (tile_rendered_lod[tile_idx] != tile_lod)
+            if (tile_lod_current != tile_lod_required)
             {
-                glBindTexture(GL_TEXTURE_2D, tile_tex[tile_idx]);
+                glBindTexture(GL_TEXTURE_2D, tile_heightmap_tex[tile_idx]);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (i32)height_tex_size, (i32)height_tex_size, 0, GL_RED, GL_FLOAT, VAST_NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -487,16 +484,16 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             }
 
             /* Normal Map */
-            if (tile_normal_tex[tile_idx] == 0)
+            if (tile_normalmap_tex[tile_idx] == 0)
             {
-                glGenTextures(1, &tile_normal_tex[tile_idx]);
+                glGenTextures(1, &tile_normalmap_tex[tile_idx]);
             }
 
             /* TODO(nickscha): Allocate tiles texture pool once and then reuse from pool       */
             /* TODO(nickscha): Far away normal maps only need RG8 to save memory               */
-            if (tile_rendered_lod[tile_idx] != tile_lod)
+            if (tile_lod_current != tile_lod_required)
             {
-                glBindTexture(GL_TEXTURE_2D, tile_normal_tex[tile_idx]);
+                glBindTexture(GL_TEXTURE_2D, tile_normalmap_tex[tile_idx]);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (i32)normal_tex_size, (i32)normal_tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -504,27 +501,28 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             }
 
-            if (tile_fbo[tile_idx] == 0)
+            if (tile_heightmap_fbo[tile_idx] == 0)
             {
-                tile_fbo[tile_idx] = vast_tile_framebuffer_create(tile_tex[tile_idx]);
+                tile_heightmap_fbo[tile_idx] = vast_tile_framebuffer_create(tile_heightmap_tex[tile_idx]);
             }
 
-            if (tile_normal_fbo[tile_idx] == 0)
+            if (tile_normalmap_fbo[tile_idx] == 0)
             {
-                tile_normal_fbo[tile_idx] = vast_tile_framebuffer_create(tile_normal_tex[tile_idx]);
+                tile_normalmap_fbo[tile_idx] = vast_tile_framebuffer_create(tile_normalmap_tex[tile_idx]);
             }
 
-            glBindVertexArray(tile_vao);
+            glBindVertexArray(tile_dummy_vao);
+
             vast_tile_render_texture_heightmap(
-                state, &tiles_hm_shader, VAST_TILE_WORLD_SIZE, tile_fbo[tile_idx], height_tex_size,
+                state, &tiles_hm_shader, VAST_TILE_WORLD_SIZE, tile_heightmap_fbo[tile_idx], height_tex_size,
                 (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
 
             vast_tile_render_texture_normalmap(
-                state, &tiles_nm_shader, VAST_TILE_WORLD_SIZE, tile_normal_fbo[tile_idx], normal_tex_size,
-                (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], tile_tex[tile_idx], (f32)height_tex_size);
+                state, &tiles_nm_shader, VAST_TILE_WORLD_SIZE, tile_normalmap_fbo[tile_idx], normal_tex_size,
+                (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
 
             /* Mark that texture update is complete for this LOD */
-            tile_rendered_lod[tile_idx] = tile_lod;
+            t.tile_lod_current[tile_idx] = tile_lod_required;
 
             t.dirty_indices_count--;
             updates_per_frame--;
@@ -584,7 +582,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             i32 tile_lod;
             u32 grid_res;
 
-            if (tile_rendered_lod[i] < 0)
+            if (t.tile_lod_current[i] < 0)
             {
                 continue;
             }
@@ -594,8 +592,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 continue;
             }
 
-            tile_lod = tile_rendered_lod[i];
-            mask = vast_get_rendered_edge_mask(&t, tile_rendered_lod, i);
+            tile_lod = t.tile_lod_current[i];
+
+            mask = vast_get_rendered_edge_mask(&t, i);
             grid_res = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod)) + 1;
 
             glUniform3f(tiles_shader.loc_tile_offset, (f32)t.tile_x[i], (f32)t.tile_z[i], 0.0f);
@@ -603,10 +602,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             glUniform1f(tiles_shader.loc_grid_res, (f32)grid_res);
 
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, tile_tex[i]);
+            glBindTexture(GL_TEXTURE_2D, tile_heightmap_tex[i]);
 
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, tile_normal_tex[i]);
+            glBindTexture(GL_TEXTURE_2D, tile_normalmap_tex[i]);
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod][mask]);
             glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod][mask], GL_UNSIGNED_SHORT, VAST_NULL);
