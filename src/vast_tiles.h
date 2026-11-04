@@ -77,11 +77,9 @@ VAST_API VAST_INLINE i32 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
     /* TODO(nickscha): apply better distance distribution */
     i32 lod = distance / 2;
 
-    /* TODO(nickscha): has to match with LOD count from tile LOD grid indices */
-    /* TODO(nickscha): ensure LOD not higher than VAST_TILES_MAX_LOD_LEVELS   */
-    if (lod > 5)
+    if (lod >= VAST_TILES_MAX_LOD_LEVELS)
     {
-        lod = 5;
+        lod = VAST_TILES_MAX_LOD_LEVELS - 1;
     }
 
     return lod;
