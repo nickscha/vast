@@ -34,6 +34,7 @@
 #define GL_UNSIGNED_INT 0x1405
 #define GL_TEXTURE_1D 0x0DE0
 #define GL_TEXTURE_2D 0x0DE1
+#define GL_TEXTURE_2D_ARRAY 0x8C1A
 #define GL_TEXTURE_3D 0x806F
 #define GL_MAX_3D_TEXTURE_SIZE 0x8073
 #define GL_NEAREST 0x2600
@@ -264,11 +265,17 @@ static PFNGLDRAWARRAYSINSTANCED glDrawArraysInstanced;
 typedef void (*PFNGLGENFRAMEBUFFERSPROC)(i32 n, u32 *ids);
 static PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
 
+typedef void (*PFNGLDELETEFRAMEBUFFERSPROC)(i32 n, u32 *framebuffers);
+static PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
+
 typedef void (*PFNGLBINDFRAMEBUFFERPROC)(u32 target, u32 framebuffer);
 static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
 
 typedef void (*PFNGLFRAMEBUFFERTEXTURE2DPROC)(u32 target, u32 attachment, u32 textarget, u32 texture, i32 level);
 static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
+
+typedef void (*PFNGLFRAMEBUFFERTEXTURELAYERPROC)(u32 target, u32 attachment, u32 texture, i32 level, i32 layer);
+static PFNGLFRAMEBUFFERTEXTURELAYERPROC glFramebufferTextureLayer;
 
 /* #############################################################################
  * # [SECTION] OpenGL Function Loader
@@ -354,8 +361,10 @@ VAST_API VAST_INLINE u8 vast_opengl_load_functions(vast_opengl_function_loader l
     glVertexAttribDivisor = (PFNGLVERTEXATTRIBDIVISORPROC)load("glVertexAttribDivisor");
     glDrawArraysInstanced = (PFNGLDRAWARRAYSINSTANCED)load("glDrawArraysInstanced");
     glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)load("glGenFramebuffers");
+    glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)load("glDeleteFramebuffers");
     glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)load("glBindFramebuffer");
     glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)load("glFramebufferTexture2D");
+    glFramebufferTextureLayer = (PFNGLFRAMEBUFFERTEXTURELAYERPROC)load("glFramebufferTextureLayer");
 
 #pragma GCC diagnostic pop
 
