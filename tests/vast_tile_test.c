@@ -1,8 +1,8 @@
 #define VAST_TILES_PER_SIDE 33
 #include "../src/vast_tiles.h"
 
-#define VAST_KB(s) ((s) / 1024)
-#define VAST_MB(s) ((s) / 1024 / 1024)
+#define VAST_KB(s) (((f64)s) / 1024.0)
+#define VAST_MB(s) (((f64)s) / 1024.0 / 1024.0)
 
 #include "stdio.h"
 
@@ -27,6 +27,7 @@ i32 main(void)
 
     i32 total_bytes_heightmap = 0;
     i32 total_bytes_normalmap = 0;
+    i32 total_vertices_needed = 0;
 
     vast_tiles_init(&t, camera_x, camera_z);
 
@@ -57,8 +58,8 @@ i32 main(void)
     {
         i32 lod_res_heightmap = resolution_heightmap / (1 << i);
         i32 lod_res_normalmap = resolution_normalmap / (1 << i);
-        i32 lod_bytes_heightmap = ((lod_res_heightmap * lod_res_heightmap) * bytes_per_pixel_heightmap);
-        i32 lod_bytes_normalmap = ((lod_res_normalmap * lod_res_normalmap) * bytes_per_pixel_normalmap);
+        i32 lod_bytes_heightmap = lod_res_heightmap * lod_res_heightmap * bytes_per_pixel_heightmap;
+        i32 lod_bytes_normalmap = lod_res_normalmap * lod_res_normalmap * bytes_per_pixel_normalmap;
 
         /* Multiply by the number of tiles */
         lod_bytes_heightmap *= (i32)tile_lod_count[i];
@@ -67,14 +68,17 @@ i32 main(void)
         total_bytes_heightmap += lod_bytes_heightmap;
         total_bytes_normalmap += lod_bytes_normalmap;
 
+        total_vertices_needed += lod_res_heightmap * lod_res_heightmap * (i32)tile_lod_count[i];
+
         printf("%4d %15d %15d %11d %13d %13d\n", i, lod_res_heightmap, lod_res_normalmap, tile_lod_count[i], lod_bytes_heightmap, lod_bytes_normalmap);
     }
 
     /* Print memory Statistics */
     printf("\n");
-    printf("heightmap_memory   : %10d mb, %10d kb, %10d bytes\n", VAST_MB(total_bytes_heightmap), VAST_KB(total_bytes_heightmap), total_bytes_heightmap);
-    printf("normalmap_memory   : %10d mb, %10d kb, %10d bytes\n", VAST_MB(total_bytes_normalmap), VAST_KB(total_bytes_normalmap), total_bytes_normalmap);
-    printf("total_memory       : %10d mb, %10d kb, %10d bytes\n\n", VAST_MB(total_bytes_heightmap + total_bytes_normalmap), VAST_KB(total_bytes_heightmap + total_bytes_normalmap), total_bytes_heightmap + total_bytes_normalmap);
+    printf("heightmap_memory   : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_heightmap), VAST_KB(total_bytes_heightmap), total_bytes_heightmap);
+    printf("normalmap_memory   : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_normalmap), VAST_KB(total_bytes_normalmap), total_bytes_normalmap);
+    printf("total_memory       : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_heightmap + total_bytes_normalmap), VAST_KB(total_bytes_heightmap + total_bytes_normalmap), total_bytes_heightmap + total_bytes_normalmap);
+    printf("total_vertices     : %10d\n\n", total_vertices_needed);
 
     return 0;
 }
