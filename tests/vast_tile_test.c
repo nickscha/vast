@@ -31,63 +31,64 @@
  */
 i32 main(void)
 {
-    vast_tiles t = {0};
+  vast_tiles t = {0};
 
-    i32 camera_x = 0;
-    i32 camera_z = 0;
+  i32 camera_x = 0;
+  i32 camera_z = 0;
 
-    i32 tile_world_size = 256; /* units in meters */
+  i32 tile_world_size = 256; /* units in meters */
 
-    i32 resolution_heightmap = 128;
-    i32 resolution_normalmap = 1024;
-    i32 bytes_per_pixel_heightmap = 4; /* GL_R32F */
-    i32 bytes_per_pixel_normalmap = 3; /* GL_RGB8 */
+  i32 resolution_heightmap = 128;
+  i32 resolution_normalmap = 1024;
+  i32 bytes_per_pixel_heightmap = 4; /* GL_R32F */
+  i32 bytes_per_pixel_normalmap = 3; /* GL_RGB8 */
 
-    u32 i;
+  u32 i;
 
-    u32 tile_lod_max = 0;
+  u32 tile_lod_max = 0;
 
-    i32 total_bytes_heightmap = 0;
-    i32 total_bytes_normalmap = 0;
-    i32 total_vertices_needed = 0;
+  i32 total_bytes_heightmap = 0;
+  i32 total_bytes_normalmap = 0;
+  i32 total_vertices_needed = 0;
 
-    vast_tiles_init(&t, camera_x, camera_z);
+  vast_tiles_init(&t, camera_x, camera_z);
 
-    tile_lod_max = (u32)t.tile_lod_max + 1;
+  tile_lod_max = (u32)t.tile_lod_max + 1;
 
-    /* Print LOD stats */
-    printf("\n%4s %15s %15s %11s %13s %13s\n", "LOD", "Height Texture", "Normal Texture", "Tile Count", "Height Bytes", "Normal Bytes");
+  /* Print LOD stats */
+  printf("\n%4s %15s %15s %11s %13s %13s\n", "LOD", "Height Texture", "Normal Texture", "Tile Count", "Height Bytes", "Normal Bytes");
 
-    for (i = 0; i < tile_lod_max; ++i)
-    {
-        i32 lod_res_heightmap = resolution_heightmap / (1 << i);
-        i32 lod_res_normalmap = resolution_normalmap / (1 << i);
-        i32 lod_bytes_heightmap = lod_res_heightmap * lod_res_heightmap * bytes_per_pixel_heightmap;
-        i32 lod_bytes_normalmap = lod_res_normalmap * lod_res_normalmap * bytes_per_pixel_normalmap;
+  for (i = 0; i < tile_lod_max; ++i)
+  {
+    i32 lod_res_heightmap = resolution_heightmap / (1 << i);
+    i32 lod_res_normalmap = resolution_normalmap / (1 << i);
+    i32 lod_bytes_heightmap = lod_res_heightmap * lod_res_heightmap * bytes_per_pixel_heightmap;
+    i32 lod_bytes_normalmap = lod_res_normalmap * lod_res_normalmap * bytes_per_pixel_normalmap;
 
-        /* Multiply by the number of tiles */
-        lod_bytes_heightmap *= (i32)t.tile_per_lod_count[i];
-        lod_bytes_normalmap *= (i32)t.tile_per_lod_count[i];
+    /* Multiply by the number of tiles */
+    lod_bytes_heightmap *= (i32)t.tile_per_lod_count[i];
+    lod_bytes_normalmap *= (i32)t.tile_per_lod_count[i];
 
-        total_bytes_heightmap += lod_bytes_heightmap;
-        total_bytes_normalmap += lod_bytes_normalmap;
+    total_bytes_heightmap += lod_bytes_heightmap;
+    total_bytes_normalmap += lod_bytes_normalmap;
 
-        total_vertices_needed += lod_res_heightmap * lod_res_heightmap * (i32)t.tile_per_lod_count[i];
+    total_vertices_needed += lod_res_heightmap * lod_res_heightmap * (i32)t.tile_per_lod_count[i];
 
-        printf("%4d %15d %15d %11d %13d %13d\n", i, lod_res_heightmap, lod_res_normalmap, t.tile_per_lod_count[i], lod_bytes_heightmap, lod_bytes_normalmap);
-    }
+    printf("%4d %15d %15d %11d %13d %13d\n", i, lod_res_heightmap, lod_res_normalmap, t.tile_per_lod_count[i], lod_bytes_heightmap, lod_bytes_normalmap);
+  }
 
-    /* Print Statistics */
-    printf("\n");
-    printf("heightmap_memory   : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_heightmap), VAST_KB(total_bytes_heightmap), total_bytes_heightmap);
-    printf("normalmap_memory   : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_normalmap), VAST_KB(total_bytes_normalmap), total_bytes_normalmap);
-    printf("total_memory       : %10.2f mb, %10.2f kb, %10d bytes\n\n", VAST_MB(total_bytes_heightmap + total_bytes_normalmap), VAST_KB(total_bytes_heightmap + total_bytes_normalmap), total_bytes_heightmap + total_bytes_normalmap);
+  /* Print Statistics */
+  printf("\n");
+  printf("heightmap_memory   : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_heightmap), VAST_KB(total_bytes_heightmap), total_bytes_heightmap);
+  printf("normalmap_memory   : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_normalmap), VAST_KB(total_bytes_normalmap), total_bytes_normalmap);
+  printf("total_memory       : %10.2f mb, %10.2f kb, %10d bytes\n", VAST_MB(total_bytes_heightmap + total_bytes_normalmap), VAST_KB(total_bytes_heightmap + total_bytes_normalmap), total_bytes_heightmap + total_bytes_normalmap);
+  printf("vast_tiles_struct  : %10.2f mb, %10.2f kb, %10d bytes\n\n", VAST_MB((i32)sizeof(vast_tiles)), VAST_KB((i32)sizeof(vast_tiles)), (i32)sizeof(vast_tiles));
 
-    printf("tile_tiles_per_side: %10d\n", VAST_TILES_PER_SIDE);
-    printf("tile_tiles_total   : %10d\n", VAST_TILES_TOTAL);
-    printf("tile_max_lod       : %10d\n", tile_lod_max);
-    printf("tile_world_size    : %10d\n", tile_world_size);
-    printf("total_vertices     : %10d\n\n", total_vertices_needed);
+  printf("tile_tiles_per_side: %10d\n", VAST_TILES_PER_SIDE);
+  printf("tile_tiles_total   : %10d\n", VAST_TILES_TOTAL);
+  printf("tile_max_lod       : %10d\n", tile_lod_max);
+  printf("tile_world_size    : %10d\n", tile_world_size);
+  printf("total_vertices     : %10d\n", total_vertices_needed);
 
-    return 0;
+  return 0;
 }
