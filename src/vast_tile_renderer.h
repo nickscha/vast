@@ -308,7 +308,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
         /* Calculate tile count per lod */
         {
-            static u32 tile_lod_count[LOD_COUNT];
+            static u32 tile_lod_count[LOD_COUNT] = {0};
             static s8 tmp[128];
 
             for (i = 0; i < VAST_TILES_TOTAL; ++i)
