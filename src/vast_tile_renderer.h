@@ -346,14 +346,14 @@ VAST_API void vast_tile_setup_texture_pools(void)
 
     for (lod = 0; lod < LOD_COUNT; ++lod)
     {
-        u32 resolution_heightmap = 128 / (1 << (u32)lod);
-        u32 resolution_normalmap = 1024 / (1 << (u32)lod);
+        i32 resolution_heightmap = 128 / (1 << lod);
+        i32 resolution_normalmap = 1024 / (1 << lod);
         i32 pool_size = lod_texture_pool_size[lod];
 
         /* Heightmap Texture Array (GL_R32F / 4 byte) */
         glGenTextures(1, &lod_heightmap_arrays[lod]);
         glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[lod]);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32F, (i32)resolution_heightmap, (i32)resolution_heightmap, pool_size, 0, GL_RED, GL_FLOAT, VAST_NULL);
+        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32F, resolution_heightmap, resolution_heightmap, pool_size, 0, GL_RED, GL_FLOAT, VAST_NULL);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -362,7 +362,7 @@ VAST_API void vast_tile_setup_texture_pools(void)
         /* Normalmap Texture Array (GL_RGB8 / 3 byte) */
         glGenTextures(1, &lod_normalmap_arrays[lod]);
         glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[lod]);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB8, (i32)resolution_normalmap, (i32)resolution_normalmap, pool_size, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
+        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB8, resolution_normalmap, resolution_normalmap, pool_size, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
