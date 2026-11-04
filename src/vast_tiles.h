@@ -12,7 +12,7 @@
 #endif
 #define VAST_TILES_HALF VAST_TILES_PER_SIDE / 2;
 #define VAST_TILES_TOTAL (VAST_TILES_PER_SIDE * VAST_TILES_PER_SIDE)
-#define VAST_TILES_MAX_LOD_LEVELS 8 /* Not more than this */
+#define VAST_TILES_MAX_LOD_LEVELS 6 /* Not more than this */
 
 /* Edge Mask */
 #define VAST_EDGE_NONE 0
