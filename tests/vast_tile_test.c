@@ -54,20 +54,14 @@ i32 main(void)
 
     vast_tiles_init(&t, camera_x, camera_z);
 
+    tile_lod_max = (u32)t.tile_lod_max + 1;
+
     /* Get max lod */
     for (i = 0; i < VAST_TILES_TOTAL; ++i)
     {
         u32 lod = (u32)t.tile_lod[i];
-
         tile_lod_count[lod]++;
-
-        if (lod > tile_lod_max)
-        {
-            tile_lod_max = lod;
-        }
     }
-
-    tile_lod_max += 1;
 
     /* Print LOD stats */
     printf("\n%4s %15s %15s %11s %13s %13s\n", "LOD", "Height Texture", "Normal Texture", "Tile Count", "Height Bytes", "Normal Bytes");

@@ -29,6 +29,8 @@ typedef struct vast_tiles
     i32 camera_x;
     i32 camera_z;
 
+    i32 tile_lod_max;
+
     /* Data Arrays (Indexed via toroidal wrapping) */
     i32 tile_x[VAST_TILES_TOTAL];
     i32 tile_z[VAST_TILES_TOTAL];
@@ -221,6 +223,11 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, i32 camera_tile_x, i32 
             t->tile_z[i] = z;
             t->tile_lod[i] = vast_tile_lod(x, z, camera_tile_x, camera_tile_z);
             t->dirty_indices[t->dirty_indices_count++] = (u16)i;
+
+            if (t->tile_lod[i] > t->tile_lod_max)
+            {
+                t->tile_lod_max = t->tile_lod[i];
+            }
         }
     }
 
