@@ -12,6 +12,7 @@
 #endif
 #define VAST_TILES_HALF VAST_TILES_PER_SIDE / 2;
 #define VAST_TILES_TOTAL (VAST_TILES_PER_SIDE * VAST_TILES_PER_SIDE)
+#define VAST_TILES_MAX_LOD_LEVELS 8 /* Not more than this */
 
 /* Edge Mask */
 #define VAST_EDGE_NONE 0
@@ -29,7 +30,9 @@ typedef struct vast_tiles
     i32 camera_x;
     i32 camera_z;
 
+    /* LOD stats (what is the maximum lod and how many tiles per LOD) */
     i32 tile_lod_max;
+    i32 tile_per_lod_count[VAST_TILES_MAX_LOD_LEVELS];
 
     /* Data Arrays (Indexed via toroidal wrapping) */
     i32 tile_x[VAST_TILES_TOTAL];
@@ -74,7 +77,8 @@ VAST_API VAST_INLINE i32 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
     /* TODO(nickscha): apply better distance distribution */
     i32 lod = distance / 2;
 
-    /* TODO(nickscha): has to match with lod count from tile LOD grid indices builder */
+    /* TODO(nickscha): has to match with LOD count from tile LOD grid indices */
+    /* TODO(nickscha): ensure LOD not higher than VAST_TILES_MAX_LOD_LEVELS   */
     if (lod > 5)
     {
         lod = 5;
@@ -218,18 +222,22 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, i32 camera_tile_x, i32 
         for (x = t->origin_x; x < t->origin_x + VAST_TILES_PER_SIDE; ++x)
         {
             u32 i = vast_tile_index(x, z);
+            i32 lod = vast_tile_lod(x, z, camera_tile_x, camera_tile_z);
 
             t->tile_x[i] = x;
             t->tile_z[i] = z;
-            t->tile_lod[i] = vast_tile_lod(x, z, camera_tile_x, camera_tile_z);
+            t->tile_lod[i] = lod;
             t->dirty_indices[t->dirty_indices_count++] = (u16)i;
+            t->tile_per_lod_count[lod]++;
 
-            if (t->tile_lod[i] > t->tile_lod_max)
+            if (lod > t->tile_lod_max)
             {
-                t->tile_lod_max = t->tile_lod[i];
+                t->tile_lod_max = lod;
             }
         }
     }
+
+    /* TODO(nickscha): Check that tile_lod_max is less than VAST_TILES_MAX_LOD_LEVELS */
 
     vast_tiles_sort_dirty_by_distance(t);
 }

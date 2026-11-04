@@ -46,7 +46,6 @@ i32 main(void)
     u32 i;
 
     u32 tile_lod_max = 0;
-    u32 tile_lod_count[12] = {0};
 
     i32 total_bytes_heightmap = 0;
     i32 total_bytes_normalmap = 0;
@@ -55,13 +54,6 @@ i32 main(void)
     vast_tiles_init(&t, camera_x, camera_z);
 
     tile_lod_max = (u32)t.tile_lod_max + 1;
-
-    /* Get max lod */
-    for (i = 0; i < VAST_TILES_TOTAL; ++i)
-    {
-        u32 lod = (u32)t.tile_lod[i];
-        tile_lod_count[lod]++;
-    }
 
     /* Print LOD stats */
     printf("\n%4s %15s %15s %11s %13s %13s\n", "LOD", "Height Texture", "Normal Texture", "Tile Count", "Height Bytes", "Normal Bytes");
@@ -74,15 +66,15 @@ i32 main(void)
         i32 lod_bytes_normalmap = lod_res_normalmap * lod_res_normalmap * bytes_per_pixel_normalmap;
 
         /* Multiply by the number of tiles */
-        lod_bytes_heightmap *= (i32)tile_lod_count[i];
-        lod_bytes_normalmap *= (i32)tile_lod_count[i];
+        lod_bytes_heightmap *= (i32)t.tile_per_lod_count[i];
+        lod_bytes_normalmap *= (i32)t.tile_per_lod_count[i];
 
         total_bytes_heightmap += lod_bytes_heightmap;
         total_bytes_normalmap += lod_bytes_normalmap;
 
-        total_vertices_needed += lod_res_heightmap * lod_res_heightmap * (i32)tile_lod_count[i];
+        total_vertices_needed += lod_res_heightmap * lod_res_heightmap * (i32)t.tile_per_lod_count[i];
 
-        printf("%4d %15d %15d %11d %13d %13d\n", i, lod_res_heightmap, lod_res_normalmap, tile_lod_count[i], lod_bytes_heightmap, lod_bytes_normalmap);
+        printf("%4d %15d %15d %11d %13d %13d\n", i, lod_res_heightmap, lod_res_normalmap, t.tile_per_lod_count[i], lod_bytes_heightmap, lod_bytes_normalmap);
     }
 
     /* Print Statistics */
