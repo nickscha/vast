@@ -7,6 +7,7 @@
  */
 #include "vast_types.h"               /* Basic types (u8, u32, ...)    */
 #include "vast.h"                     /* Platform State                */
+#include "vast_string_builder.h"      /* String printing               */
 #include "vast_profiler.h"            /* Profiler metrics              */
 #include "vast_tiles.h"               /* Toriodal Tiling Grid logic    */
 #include "vast_camera.h"              /* Camera                        */
@@ -289,9 +290,12 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static u32 tile_vao;
     static i32 tile_rendered_lod[VAST_TILES_TOTAL];
 
+    static u32 usable_max_lod = 0;
+
     if (!tiles_initialized)
     {
         u32 i;
+
         for (i = 0; i < VAST_TILES_TOTAL; ++i)
         {
             tile_rendered_lod[i] = -1; /* -1 = Uninitialized texture state */
@@ -301,6 +305,44 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         VAST_PROFILER_BEGIN(tile_init);
         vast_tiles_init(&t, camera_tile_x, camera_tile_z);
         VAST_PROFILER_END(tile_init);
+
+        /* Calculate tile count per lod */
+        {
+            static u32 tile_lod_count[LOD_COUNT];
+            static s8 tmp[128];
+
+            for (i = 0; i < VAST_TILES_TOTAL; ++i)
+            {
+                tile_lod_count[t.tile_lod[i]]++;
+            }
+
+            for (i = 0; i < LOD_COUNT; ++i)
+            {
+                vast_sb t = {0};
+                t.size = sizeof(tmp);
+                t.buffer = tmp;
+
+                if (tile_lod_count[i] == 0)
+                {
+                    usable_max_lod = i;
+
+                    vast_sb_s8(&t, "usable_max_lod =");
+                    vast_sb_i32(&t, (i32)usable_max_lod);
+                    vast_sb_s8(&t, "\n");
+                    state->api.io_print(t.buffer);
+
+                    break;
+                }
+
+                vast_sb_s8(&t, "tile_lod_count [");
+                vast_sb_i32(&t, (i32)i);
+                vast_sb_s8(&t, "] = ");
+                vast_sb_i32(&t, (i32)tile_lod_count[i]);
+                vast_sb_s8(&t, "\n");
+
+                state->api.io_print(t.buffer);
+            }
+        }
 
         /* Setup tiles shaders */
         vast_tile_shader_heightmap_load(state, &tiles_hm_shader);
@@ -320,7 +362,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             glGenVertexArrays(1, &grid_vao);
             glBindVertexArray(grid_vao);
 
-            for (i = 0; i < LOD_COUNT; ++i)
+            for (i = 0; i < usable_max_lod; ++i)
             {
                 i32 grid_resolution = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)i)) + 1;
 

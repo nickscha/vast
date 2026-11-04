@@ -510,7 +510,7 @@ VAST_API void vast_ui_render(
 
                 if (i == 0)
                 {
-                    vast_sb_s8_pad(&t, " ", 25, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&t, " ", 24, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8_pad(&t, "last", 10, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8_pad(&t, "min", 10, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8_pad(&t, "max", 10, ' ', VAST_SB_PAD_LEFT);
@@ -524,7 +524,7 @@ VAST_API void vast_ui_render(
                 }
 
                 vast_sb_s8_pad(&t, entry.name, 23, ' ', VAST_SB_PAD_RIGHT);
-                vast_sb_s8(&t, ": ");
+                vast_sb_s8(&t, ":");
                 vast_sb_f64_pad(&t, entry.time_ms_last, 4, 10, ' ', VAST_SB_PAD_LEFT);
                 vast_sb_f64_pad(&t, entry.time_ms_min, 4, 10, ' ', VAST_SB_PAD_LEFT);
                 vast_sb_f64_pad(&t, entry.time_ms_max, 4, 10, ' ', VAST_SB_PAD_LEFT);
