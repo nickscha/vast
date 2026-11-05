@@ -512,15 +512,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             i32 hm_layer = vast_tile_acquire_slot(tile_idx, tile_lod_required, pool_size);
             i32 nm_layer = hm_layer;
 
-            /* TODO(nickscha): Allocate tiles texture pool once and then reuse from pool       */
-            /* TODO(nickscha): Far away normal maps only need RG8 to save memory
-            if (tile_lod_current != tile_lod_required)
-            {
-                glBindTexture(GL_TEXTURE_2D, tile_heightmap_tex[tile_idx]);
-
-                glBindTexture(GL_TEXTURE_2D, tile_normalmap_tex[tile_idx]);
-            } */
-
             glBindVertexArray(scratch_vao);
             glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
 
