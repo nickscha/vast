@@ -460,8 +460,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
                 glUseProgram(tiles_hm_shader.header.program);
                 glUniform3f(tiles_hm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], 0.0f);
-                glUniform1f(tiles_hm_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
                 glUniform1f(tiles_hm_shader.loc_texture_size, (f32)height_tex_size);
+
+                /* TODO(nickscha): only need to be set once and not every frame! */
+                glUniform1f(tiles_hm_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
 
                 glDrawArrays(GL_TRIANGLES, 0, 3);
             }
@@ -475,8 +477,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
                 glUseProgram(tiles_nm_shader.header.program);
                 glUniform3f(tiles_nm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], 0.0f);
-                glUniform1f(tiles_nm_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
                 glUniform1f(tiles_nm_shader.loc_texture_size, (f32)normal_tex_size);
+
+                /* TODO(nickscha): only need to be set once and not every frame! */
+                glUniform1f(tiles_nm_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
 
                 glDrawArrays(GL_TRIANGLES, 0, 3);
             }
