@@ -94,6 +94,7 @@ typedef struct win32_vast_state
   void *window_handle;
   void *device_context;
   WINDOWPLACEMENT g_wpPrev;
+  i32 thread_count;
 
   s8 *gl_version;
   s8 *gl_renderer;
@@ -1186,10 +1187,39 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     }
   }
 
-  /* Render */
+  /******************************/
+  /* Application Rendering      */
+  /******************************/
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   vast_sky_render(&state->platform_state, &camera, sun_dir);
   vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls);
+
+  /******************************/
+  /* UI Rendering (F1 pressed)  */
+  /******************************/
+  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F1] && !state->platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F1])
+  {
+    state->ui_enabled = !state->ui_enabled;
+  }
+
+  if (state->ui_enabled)
+  {
+    static u32 handle_count = 0;
+    static win32_process_memory_info mem = {0};
+
+    GetProcessHandleCount(GetCurrentProcess(), &handle_count);
+    win32_process_memory(&mem);
+
+    vast_ui_render(
+        &state->platform_state,
+        state->thread_count,
+        (i32)handle_count,
+        (i32)(mem.working_set / 1024), (i32)(mem.peak_working_set / 1024), (i32)(mem.private_bytes / 1024),
+        state->gl_version, state->gl_renderer, state->gl_vendor,
+        state->borderless_enabled, state->fullscreen_enabled, state->shader_paused, state->screen_recording_enabled,
+        state->draw_calls,
+        &camera);
+  }
 }
 
 /* #############################################################################
@@ -1295,7 +1325,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
     i64 time_start_fps_cap;
     i64 time_last;
 
-    i32 thread_count = win32_process_thread_count();
+    state.thread_count = win32_process_thread_count();
 
     QueryPerformanceFrequency(&perf_freq);
     QueryPerformanceCounter(&time_start);
@@ -1550,31 +1580,6 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
       if (state.platform_state.window.title_changed)
       {
         SetWindowTextA(state.window_handle, state.platform_state.window.title);
-      }
-
-      /******************************/
-      /* UI Rendering (F1 pressed)  */
-      /******************************/
-      if (state.platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F1] && !state.platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F1])
-      {
-        state.ui_enabled = !state.ui_enabled;
-      }
-
-      if (state.ui_enabled)
-      {
-        static u32 handle_count = 0;
-        static win32_process_memory_info mem = {0};
-
-        GetProcessHandleCount(GetCurrentProcess(), &handle_count);
-        win32_process_memory(&mem);
-
-        vast_ui_render(
-            &state.platform_state,
-            thread_count, (i32)handle_count,
-            (i32)(mem.working_set / 1024), (i32)(mem.peak_working_set / 1024), (i32)(mem.private_bytes / 1024),
-            state.gl_version, state.gl_renderer, state.gl_vendor,
-            state.borderless_enabled, state.fullscreen_enabled, state.shader_paused, state.screen_recording_enabled,
-            state.draw_calls);
       }
 
       /******************************/

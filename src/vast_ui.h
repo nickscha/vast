@@ -10,6 +10,7 @@
 #include "vast_font.h"           /* Font Bitmap data            */
 #include "vast_string_builder.h" /* String parsing              */
 #include "vast_profiler.h"       /* Profiler metrics to display */
+#include "vast_camera.h"         /* Camera Stats                */
 #include "vast_opengl.h"         /* OpenGL functions            */
 
 /* #############################################################################
@@ -179,7 +180,8 @@ VAST_API void vast_ui_render(
     u8 fullscreen_enabled,
     u8 shader_paused,
     u8 screen_recording_enabled,
-    u32 draw_calls)
+    u32 draw_calls,
+    vast_camera *camera)
 {
     static u8 ui_initialized = 0;
     static u32 ui_font_texture_id;
@@ -194,7 +196,7 @@ VAST_API void vast_ui_render(
     static u16 offset_x = 0;
     static u16 offset_y = 0;
     static u8 glyph_initialized = 0;
-    static s8 tmp[128];
+    static s8 tmp[256];
     static f32 font_scale = 2.0f;
     static u16 advance_x;
     static u16 advance_y;
@@ -315,14 +317,24 @@ VAST_API void vast_ui_render(
                 "STICK R X/Y\n"
                 "TRIGGER L/R\n"
                 "BUTTONS\n"
-                "GL ERROR FS\n",
-                &offset_x, &offset_y, default_color, GLYPH_STATE_NONE, font_scale);
+                "GL ERROR FS\n"
+                "CAM. POS\n"
+                "CAM. FRONT\n"
+                "CAM. RIGHT\n"
+                "CAM. UP\n"
+                "CAM. YAW\n"
+                "CAM. PITCH\n"
+                "CAM. FOV\n"
+                "CAM. ROLL\n",
+                &offset_x,
+                &offset_y,
+                default_color, GLYPH_STATE_NONE, font_scale);
 
             offset_x = (u16)(offset_x_start + advance_x * separator_start_col);
             offset_y = offset_y_start;
 
             /* Vertical ":" separator*/
-            for (i = 0; i < 25; ++i)
+            for (i = 0; i < 33; ++i)
             {
 
                 if (i == 15)
@@ -498,6 +510,46 @@ VAST_API void vast_ui_render(
 
         vast_sb_s8(&t, "NONE");
         CALC_GLYPH(t, vast_ui_pack_rgb565(0, 255, 0));
+
+        vast_sb_f64(&t, camera->position.x, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->position.y, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->position.z, 2);
+        CALC_GLYPH(t, default_color);
+
+        vast_sb_f64(&t, camera->forward.x, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->forward.y, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->forward.z, 2);
+        CALC_GLYPH(t, default_color);
+
+        vast_sb_f64(&t, camera->right.x, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->right.y, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->right.z, 2);
+        CALC_GLYPH(t, default_color);
+
+        vast_sb_f64(&t, camera->up.x, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->up.y, 2);
+        vast_sb_s8(&t, "/");
+        vast_sb_f64(&t, camera->up.z, 2);
+        CALC_GLYPH(t, default_color);
+
+        vast_sb_f64(&t, camera->yaw, 2);
+        CALC_GLYPH(t, default_color);
+
+        vast_sb_f64(&t, camera->pitch, 2);
+        CALC_GLYPH(t, default_color);
+
+        vast_sb_f64(&t, camera->fov, 2);
+        CALC_GLYPH(t, default_color);
+
+        vast_sb_f64(&t, camera->roll, 2);
+        CALC_GLYPH(t, default_color);
 
 #undef CALC_GLYPH
 
