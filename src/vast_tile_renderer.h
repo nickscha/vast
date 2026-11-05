@@ -238,57 +238,6 @@ VAST_API void vast_tile_shader_hot_reload(
     }
 }
 
-VAST_API u32 vast_tile_framebuffer_create(u32 tex)
-{
-    u32 fbo;
-
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
-
-    return fbo;
-}
-
-VAST_API void vast_tile_render_texture_heightmap(vast_platform_state *state, vast_tile_shader_heightmap *tile_hm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
-{
-    VAST_PROFILER_BEGIN(tile_render_heightmap);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, (i32)size, (i32)size);
-
-    glUseProgram(tile_hm_shader->header.program);
-    glUniform3f(tile_hm_shader->loc_tile_offset, tileWorldX, tileWorldZ, 0.0f);
-    glUniform1f(tile_hm_shader->loc_tile_size, (f32)tile_size);
-    glUniform1f(tile_hm_shader->loc_texture_size, (f32)size);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    VAST_PROFILER_END(tile_render_heightmap);
-}
-
-VAST_API void vast_tile_render_texture_normalmap(vast_platform_state *state, vast_tile_shader_normalmap *tile_nm_shader, f32 tile_size, u32 fbo, u32 size, f32 tileWorldX, f32 tileWorldZ)
-{
-    VAST_PROFILER_BEGIN(tile_render_normalmap);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, (i32)size, (i32)size);
-
-    glUseProgram(tile_nm_shader->header.program);
-    glUniform3f(tile_nm_shader->loc_tile_offset, tileWorldX, tileWorldZ, 0.0f);
-    glUniform1f(tile_nm_shader->loc_tile_size, (f32)tile_size);
-    glUniform1f(tile_nm_shader->loc_texture_size, (f32)size);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    VAST_PROFILER_END(tile_render_normalmap);
-}
-
 VAST_API u8 vast_tile_is_visible(
     vast_frustum *f,
     f32 tileX,
@@ -387,10 +336,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static i32 gridIndexCounts[LOD_COUNT][16] = {0};
     static u32 grid_ibos[LOD_COUNT][16] = {0};
 
+    static u32 scratch_fbo;
     static u32 tile_heightmap_tex[VAST_TILES_TOTAL];
-    static u32 tile_heightmap_fbo[VAST_TILES_TOTAL];
     static u32 tile_normalmap_tex[VAST_TILES_TOTAL];
-    static u32 tile_normalmap_fbo[VAST_TILES_TOTAL];
 
     static u32 tile_dummy_vao;
 
@@ -408,8 +356,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tile_shader_normalmap_load(state, &tiles_nm_shader);
         vast_tile_shader_final_load(state, &tiles_shader);
 
-        /* Dummy tiles vertex buffer object */
+        /* Dummy vertex and framebuffer object */
         glGenVertexArrays(1, &tile_dummy_vao);
+        glGenFramebuffers(1, &scratch_fbo);
 
         /* Generate Grid for all LOD edge mask combinations */
         {
@@ -501,25 +450,42 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             }
 
-            if (tile_heightmap_fbo[tile_idx] == 0)
-            {
-                tile_heightmap_fbo[tile_idx] = vast_tile_framebuffer_create(tile_heightmap_tex[tile_idx]);
-            }
-
-            if (tile_normalmap_fbo[tile_idx] == 0)
-            {
-                tile_normalmap_fbo[tile_idx] = vast_tile_framebuffer_create(tile_normalmap_tex[tile_idx]);
-            }
-
             glBindVertexArray(tile_dummy_vao);
+            glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
 
-            vast_tile_render_texture_heightmap(
-                state, &tiles_hm_shader, VAST_TILE_WORLD_SIZE, tile_heightmap_fbo[tile_idx], height_tex_size,
-                (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
+            /* Render Height Map to Framebuffer */
+            VAST_PROFILER_BEGIN(tile_render_heightmap);
+            {
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tile_heightmap_tex[tile_idx], 0);
+                glViewport(0, 0, (i32)height_tex_size, (i32)height_tex_size);
 
-            vast_tile_render_texture_normalmap(
-                state, &tiles_nm_shader, VAST_TILE_WORLD_SIZE, tile_normalmap_fbo[tile_idx], normal_tex_size,
-                (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
+                glUseProgram(tiles_hm_shader.header.program);
+                glUniform3f(tiles_hm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], 0.0f);
+                glUniform1f(tiles_hm_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
+                glUniform1f(tiles_hm_shader.loc_texture_size, (f32)height_tex_size);
+
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+            }
+            VAST_PROFILER_END(tile_render_heightmap);
+
+            /* Render Normal Map to Framebuffer */
+            VAST_PROFILER_BEGIN(tile_render_normalmap);
+            {
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tile_normalmap_tex[tile_idx], 0);
+                glViewport(0, 0, (i32)normal_tex_size, (i32)normal_tex_size);
+
+                glUseProgram(tiles_nm_shader.header.program);
+                glUniform3f(tiles_nm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], 0.0f);
+                glUniform1f(tiles_nm_shader.loc_tile_size, VAST_TILE_WORLD_SIZE);
+                glUniform1f(tiles_nm_shader.loc_texture_size, (f32)normal_tex_size);
+
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+            }
+            VAST_PROFILER_END(tile_render_normalmap);
+
+            /* Restore Viewport state */
+            glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             /* Mark that texture update is complete for this LOD */
             t.tile_lod_current[tile_idx] = tile_lod_required;

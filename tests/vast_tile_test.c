@@ -88,7 +88,7 @@ i32 main(void)
   printf("tile_tiles_total   : %10d\n", VAST_TILES_TOTAL);
   printf("tile_max_lod       : %10d\n", tile_lod_max);
   printf("tile_world_size    : %10d\n", tile_world_size);
-  printf("total_vertices     : %10d\n", total_vertices_needed);
+  printf("total_vertices     : %10d\n\n", total_vertices_needed);
 
   return 0;
 }
