@@ -47,7 +47,9 @@ typedef struct vast_tile_shader_final
     i32 loc_view_projection;
     i32 loc_is_dirty;
     i32 loc_heightmap;
+    i32 loc_heightmap_layer;
     i32 loc_normalmap;
+    i32 loc_normalmap_layer;
     i32 loc_iResolution;
     i32 loc_iTime;
     i32 loc_iMouse;
@@ -98,7 +100,7 @@ VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_t
 
     if (opengl_shader_load(&tiles_hm_shader->header, vast_tile_texture_vertex_data, (s8 *)shader_data_fragment, state->api.io_print))
     {
-        tiles_hm_shader->loc_tile_offset = glGetUniformLocation(tiles_hm_shader->header.program, "u_tile_origin");
+        tiles_hm_shader->loc_tile_offset = glGetUniformLocation(tiles_hm_shader->header.program, "u_tile_offset");
         tiles_hm_shader->loc_tile_size = glGetUniformLocation(tiles_hm_shader->header.program, "u_tile_size");
         tiles_hm_shader->loc_texture_size = glGetUniformLocation(tiles_hm_shader->header.program, "u_texture_size");
     }
@@ -122,7 +124,7 @@ VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_t
 
     if (opengl_shader_load(&tiles_nm_shader->header, vast_tile_texture_vertex_data, (s8 *)shader_data_fragment, state->api.io_print))
     {
-        tiles_nm_shader->loc_tile_offset = glGetUniformLocation(tiles_nm_shader->header.program, "u_tile_origin");
+        tiles_nm_shader->loc_tile_offset = glGetUniformLocation(tiles_nm_shader->header.program, "u_tile_offset");
         tiles_nm_shader->loc_tile_size = glGetUniformLocation(tiles_nm_shader->header.program, "u_tile_size");
         tiles_nm_shader->loc_texture_size = glGetUniformLocation(tiles_nm_shader->header.program, "u_texture_size");
     }
@@ -153,6 +155,8 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
         tiles_shader->loc_is_dirty = glGetUniformLocation(tiles_shader->header.program, "u_is_dirty");
         tiles_shader->loc_heightmap = glGetUniformLocation(tiles_shader->header.program, "u_heightmap");
         tiles_shader->loc_normalmap = glGetUniformLocation(tiles_shader->header.program, "u_normalmap");
+        tiles_shader->loc_heightmap_layer = glGetUniformLocation(tiles_shader->header.program, "u_heightmap_layer");
+        tiles_shader->loc_normalmap_layer = glGetUniformLocation(tiles_shader->header.program, "u_normalmap_layer");
         tiles_shader->loc_tile_size = glGetUniformLocation(tiles_shader->header.program, "u_tile_size");
         tiles_shader->loc_grid_res = glGetUniformLocation(tiles_shader->header.program, "u_grid_res");
 
@@ -271,8 +275,19 @@ VAST_API u8 vast_tile_is_visible(
     return 1;
 }
 
+/* #############################################################################
+ * # [SECTION] Texture Pool Slot Allocations and Ownership Tracking
+ * #############################################################################
+ */
+typedef struct vast_tile_pool_slot
+{
+    i32 current_lod;
+    i32 physical_layer;
+} vast_tile_pool_slot;
+
 /* TODO(nickscha) use calculated max lod level from tiles struct */
 #define LOD_COUNT 6
+#define VAST_MAX_POOL_SIZE 750 /* Accommodates max pool size for LOD 5 */
 
 /* TODO(nickscha) hardcoded for now */
 static i32 lod_texture_pool_size[LOD_COUNT] = {
@@ -284,10 +299,72 @@ static i32 lod_texture_pool_size[LOD_COUNT] = {
     /* steady */ 728 + /* burst headroom */ 22  /* LOD 5:   4x4   height,   32x32   normal */
 };
 
-/* Per-LOD Texture Array Handles */
-static u32 lod_heightmap_arrays[LOD_COUNT];
-static u32 lod_normalmap_arrays[LOD_COUNT];
+/* TODO(nickscha) temporary for prototyping */
+static vast_tile_pool_slot tile_pool_slots[VAST_TILES_TOTAL];
+static i32 lod_pool_owners[LOD_COUNT][VAST_MAX_POOL_SIZE];
+static i32 lod_pool_rover[LOD_COUNT] = {0}; /* Simple eviction rover per LOD */
 
+VAST_API i32 vast_tile_acquire_slot(u32 tile_idx, i32 new_lod, i32 pool_size)
+{
+    vast_tile_pool_slot *slot = &tile_pool_slots[tile_idx];
+    i32 i;
+
+    /* If tile has valid slot at this exact LOD, keep it */
+    if (slot->current_lod == new_lod && slot->physical_layer >= 0 && slot->physical_layer < pool_size)
+    {
+        if (lod_pool_owners[new_lod][slot->physical_layer] == (i32)tile_idx)
+        {
+            return slot->physical_layer;
+        }
+    }
+
+    if (slot->current_lod >= 0 && slot->current_lod < LOD_COUNT)
+    {
+        i32 old_lod = slot->current_lod;
+        i32 old_layer = slot->physical_layer;
+        if (old_layer >= 0 && old_layer < lod_texture_pool_size[old_lod])
+        {
+            if (lod_pool_owners[old_lod][old_layer] == (i32)tile_idx)
+            {
+                lod_pool_owners[old_lod][old_layer] = -1;
+            }
+        }
+    }
+
+    for (i = 0; i < pool_size; ++i)
+    {
+        if (lod_pool_owners[new_lod][i] == -1 || lod_pool_owners[new_lod][i] == (i32)tile_idx)
+        {
+            lod_pool_owners[new_lod][i] = (i32)tile_idx;
+            slot->current_lod = new_lod;
+            slot->physical_layer = i;
+            return i;
+        }
+    }
+
+    {
+        i32 layer = lod_pool_rover[new_lod];
+        i32 victim = lod_pool_owners[new_lod][layer];
+
+        if (victim >= 0 && victim < VAST_TILES_TOTAL)
+        {
+            tile_pool_slots[victim].current_lod = -1;
+            tile_pool_slots[victim].physical_layer = -1;
+        }
+
+        lod_pool_owners[new_lod][layer] = (i32)tile_idx;
+        slot->current_lod = new_lod;
+        slot->physical_layer = layer;
+
+        lod_pool_rover[new_lod] = (lod_pool_rover[new_lod] + 1) % pool_size;
+        return layer;
+    }
+}
+
+/* #############################################################################
+ * # [SECTION] Tile Rendering
+ * #############################################################################
+ */
 /* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
 VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir)
 {
@@ -307,8 +384,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
     static u32 scratch_vao;
     static u32 scratch_fbo;
-    static u32 tile_heightmap_tex[VAST_TILES_TOTAL];
-    static u32 tile_normalmap_tex[VAST_TILES_TOTAL];
+
+    /* Per-LOD Texture Array Handles */
+    static u32 lod_heightmap_arrays[LOD_COUNT];
+    static u32 lod_normalmap_arrays[LOD_COUNT];
 
     if (!tiles_initialized)
     {
@@ -317,13 +396,32 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tiles_init(&t, camera_tile_x, camera_tile_z);
         VAST_PROFILER_END(tile_init);
 
+        /* Setup texture slot layers */
+        {
+            u32 lod, i;
+
+            /* Initialize pool owners and slot trackers */
+            for (lod = 0; lod < LOD_COUNT; ++lod)
+            {
+                for (i = 0; i < (u32)lod_texture_pool_size[lod]; ++i)
+                {
+                    lod_pool_owners[lod][i] = -1;
+                }
+            }
+            for (i = 0; i < VAST_TILES_TOTAL; ++i)
+            {
+                tile_pool_slots[i].current_lod = -1;
+                tile_pool_slots[i].physical_layer = -1;
+            }
+        }
+
         /* Setup tiles texture pools */
         {
             u32 lod;
 
             for (lod = 0; lod < LOD_COUNT; ++lod)
             {
-                i32 resolution_heightmap = 128 / (1 << lod);
+                i32 resolution_heightmap = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
                 i32 resolution_normalmap = 1024 / (1 << lod);
                 i32 texture_pool_size = lod_texture_pool_size[lod];
 
@@ -407,44 +505,21 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             u32 last_idx = t.dirty_indices_count - 1;
             u32 tile_idx = t.dirty_indices[last_idx];
             i32 tile_lod_required = t.tile_lod_required[tile_idx];
-            i32 tile_lod_current = t.tile_lod_current[tile_idx];
-            u32 height_tex_size = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
+            i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
             u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
 
-            /* Height Texture */
-            if (tile_heightmap_tex[tile_idx] == 0)
-            {
-                glGenTextures(1, &tile_heightmap_tex[tile_idx]);
-            }
-
-            /* Normal Map */
-            if (tile_normalmap_tex[tile_idx] == 0)
-            {
-                glGenTextures(1, &tile_normalmap_tex[tile_idx]);
-            }
+            i32 pool_size = lod_texture_pool_size[tile_lod_required];
+            i32 hm_layer = vast_tile_acquire_slot(tile_idx, tile_lod_required, pool_size);
+            i32 nm_layer = hm_layer;
 
             /* TODO(nickscha): Allocate tiles texture pool once and then reuse from pool       */
+            /* TODO(nickscha): Far away normal maps only need RG8 to save memory
             if (tile_lod_current != tile_lod_required)
             {
                 glBindTexture(GL_TEXTURE_2D, tile_heightmap_tex[tile_idx]);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (i32)height_tex_size, (i32)height_tex_size, 0, GL_RED, GL_FLOAT, VAST_NULL);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            }
 
-            /* TODO(nickscha): Allocate tiles texture pool once and then reuse from pool       */
-            /* TODO(nickscha): Far away normal maps only need RG8 to save memory               */
-            if (tile_lod_current != tile_lod_required)
-            {
                 glBindTexture(GL_TEXTURE_2D, tile_normalmap_tex[tile_idx]);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (i32)normal_tex_size, (i32)normal_tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            }
+            } */
 
             glBindVertexArray(scratch_vao);
             glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
@@ -452,7 +527,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             /* Render Height Map to Framebuffer */
             VAST_PROFILER_BEGIN(tile_render_heightmap);
             {
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tile_heightmap_tex[tile_idx], 0);
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_heightmap_arrays[tile_lod_required], 0, hm_layer);
                 glViewport(0, 0, (i32)height_tex_size, (i32)height_tex_size);
 
                 glUseProgram(tiles_hm_shader.header.program);
@@ -469,7 +544,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             /* Render Normal Map to Framebuffer */
             VAST_PROFILER_BEGIN(tile_render_normalmap);
             {
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tile_normalmap_tex[tile_idx], 0);
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_normalmap_arrays[tile_lod_required], 0, nm_layer);
                 glViewport(0, 0, (i32)normal_tex_size, (i32)normal_tex_size);
 
                 glUseProgram(tiles_nm_shader.header.program);
@@ -549,6 +624,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             u8 mask;
             i32 tile_lod;
             u32 grid_res;
+            i32 physical_layer;
 
             if (t.tile_lod_current[i] < 0)
             {
@@ -562,6 +638,12 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
             tile_lod = t.tile_lod_current[i];
 
+            physical_layer = tile_pool_slots[i].physical_layer;
+            if (physical_layer < 0)
+            {
+                continue;
+            }
+
             mask = vast_get_rendered_edge_mask(&t, i);
             grid_res = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod)) + 1;
 
@@ -569,11 +651,14 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             glUniform1f(tiles_shader.loc_is_dirty, (f32)vast_tile_is_dirty(&t, i));
             glUniform1f(tiles_shader.loc_grid_res, (f32)grid_res);
 
+            glUniform1f(tiles_shader.loc_heightmap_layer, (f32)physical_layer);
+            glUniform1f(tiles_shader.loc_normalmap_layer, (f32)physical_layer);
+
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, tile_heightmap_tex[i]);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[tile_lod]);
 
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, tile_normalmap_tex[i]);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[tile_lod]);
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod][mask]);
             glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod][mask], GL_UNSIGNED_SHORT, VAST_NULL);

@@ -3,7 +3,7 @@
 in vec2 v_uv;
 layout(location = 0) out vec3 outNormal;
 
-uniform vec2 u_tile_origin; /* where the tile starts */
+uniform vec2 u_tile_offset; /* where the tile starts */
 uniform float u_tile_size; /* size of a tile (e.g 256.0f world units) */
 uniform float u_texture_size; /* size of the output normal map */
 
@@ -62,7 +62,7 @@ float Terrain(vec2 p)
 }
 
 void main() {
-    vec2 worldPos = u_tile_origin * u_tile_size + (v_uv - vec2(0.5)) * u_tile_size;
+    vec2 worldPos = u_tile_offset * u_tile_size + (v_uv - vec2(0.5)) * u_tile_size;
     
     vec2 e = vec2(u_tile_size / u_texture_size, 0.0); 
     float hx = Terrain(worldPos + e.xy) - Terrain(worldPos - e.xy);
