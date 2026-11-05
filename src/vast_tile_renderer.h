@@ -596,44 +596,33 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         for (i = 0; i < VAST_TILES_TOTAL; ++i)
         {
             u8 mask;
-            i32 tile_lod;
+            i32 tile_lod_current = t.tile_lod_current[i];
             u32 grid_res;
-            i32 physical_layer;
+            i32 texture_array_layer = texture_layer[i];
 
-            if (t.tile_lod_current[i] < 0)
-            {
-                continue;
-            }
-
-            if (!vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -100.0f, 600.0f))
-            {
-                continue;
-            }
-
-            tile_lod = t.tile_lod_current[i];
-            physical_layer = texture_layer[i];
-
-            if (physical_layer < 0)
+            if (tile_lod_current < 0 ||
+                !vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -100.0f, 600.0f) ||
+                texture_array_layer < 0)
             {
                 continue;
             }
 
             mask = vast_get_rendered_edge_mask(&t, i);
-            grid_res = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod)) + 1;
+            grid_res = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_current)) + 1;
 
             glUniform3f(tiles_shader.loc_tile_offset, (f32)t.tile_x[i], (f32)t.tile_z[i], 0.0f);
             glUniform1f(tiles_shader.loc_is_dirty, (f32)vast_tile_is_dirty(&t, i));
             glUniform1f(tiles_shader.loc_grid_res, (f32)grid_res);
-            glUniform1f(tiles_shader.loc_texture_array_layer, (f32)physical_layer);
+            glUniform1f(tiles_shader.loc_texture_array_layer, (f32)texture_array_layer);
 
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[tile_lod]);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[tile_lod_current]);
 
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[tile_lod]);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[tile_lod_current]);
 
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod][mask]);
-            glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod][mask], GL_UNSIGNED_SHORT, VAST_NULL);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod_current][mask]);
+            glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod_current][mask], GL_UNSIGNED_SHORT, VAST_NULL);
 
             (*draw_calls)++;
         }
