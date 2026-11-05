@@ -1120,7 +1120,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     /* Tiles */
     camera = vast_camera_init();
     camera.position.y = 10.0f;
-    camera_speed = 50.0f;
+    camera_speed = 100.0f;
 
     scene_initialized = 1;
   }

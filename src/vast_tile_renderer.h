@@ -277,7 +277,6 @@ typedef struct vast_tile_pool_slot
 
 /* TODO(nickscha) use calculated max lod level from tiles struct */
 #define LOD_COUNT 6
-#define VAST_MAX_POOL_SIZE 750 /* Accommodates max pool size for LOD 5 */
 
 /* TODO(nickscha) hardcoded for now */
 static i32 lod_texture_pool_size[LOD_COUNT] = {
@@ -289,66 +288,76 @@ static i32 lod_texture_pool_size[LOD_COUNT] = {
     /* steady */ 728 + /* burst headroom */ 22  /* LOD 5:   4x4   height,   32x32   normal */
 };
 
-/* TODO(nickscha) temporary for prototyping */
-static vast_tile_pool_slot tile_pool_slots[VAST_TILES_TOTAL];
-static i32 lod_pool_owners[LOD_COUNT][VAST_MAX_POOL_SIZE];
-static i32 lod_pool_rover[LOD_COUNT] = {0}; /* Simple eviction rover per LOD */
+static i32 texture_layer[VAST_TILES_TOTAL] = {0};
 
-VAST_API i32 vast_tile_acquire_slot(u32 tile_idx, i32 new_lod, i32 pool_size)
+VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
 {
-    vast_tile_pool_slot *slot = &tile_pool_slots[tile_idx];
-    i32 i;
+    static u8 initialized = 0;
 
-    /* If tile has valid slot at this exact LOD, keep it */
-    if (slot->current_lod == new_lod && slot->physical_layer >= 0 && slot->physical_layer < pool_size)
+    static u8 texture_layer_used[LOD_COUNT][VAST_TILES_TOTAL] = {0};
+    static i32 texture_layer_next_free[LOD_COUNT] = {0};
+
+    u32 i;
+
+    i32 lod_current;
+    i32 lod_required;
+    i32 texture_layer_current;
+    i32 texture_array_layer_capacity_required;
+    i32 texture_layer_assigned;
+
+    if (!initialized)
     {
-        if (lod_pool_owners[new_lod][slot->physical_layer] == (i32)tile_idx)
+
+        for (i = 0; i < VAST_TILES_TOTAL; ++i)
         {
-            return slot->physical_layer;
+            texture_layer[i] = -1;
+        }
+
+        initialized = 1;
+    }
+
+    lod_current = t->tile_lod_current[tile_index];
+    lod_required = t->tile_lod_required[tile_index];
+
+    /* Nothing changes */
+    if (lod_current == lod_required && texture_layer[tile_index] >= 0)
+    {
+        return texture_layer[tile_index];
+    }
+
+    if (lod_current == -1)
+    {
+        lod_current = lod_required;
+    }
+
+    texture_layer_current = texture_layer[tile_index];
+    texture_array_layer_capacity_required = lod_texture_pool_size[lod_required];
+
+    /* Current LOD has texture layer assigned. Free it. */
+    if (texture_layer_current >= 0)
+    {
+        texture_layer_used[lod_current][texture_layer_current] = 0;
+        texture_layer_next_free[lod_current] = texture_layer_current;
+    }
+
+    texture_layer_assigned = texture_layer_next_free[lod_required];
+
+    /* Mark as used */
+    texture_layer_used[lod_required][texture_layer_assigned] = 1;
+
+    /* Find the next free texture layer */
+    for (i = 0; i < (u32)texture_array_layer_capacity_required; ++i)
+    {
+        if (!texture_layer_used[lod_required][i])
+        {
+            texture_layer_next_free[lod_required] = (i32)i;
+            break;
         }
     }
 
-    if (slot->current_lod >= 0 && slot->current_lod < LOD_COUNT)
-    {
-        i32 old_lod = slot->current_lod;
-        i32 old_layer = slot->physical_layer;
-        if (old_layer >= 0 && old_layer < lod_texture_pool_size[old_lod])
-        {
-            if (lod_pool_owners[old_lod][old_layer] == (i32)tile_idx)
-            {
-                lod_pool_owners[old_lod][old_layer] = -1;
-            }
-        }
-    }
+    texture_layer[tile_index] = texture_layer_assigned;
 
-    for (i = 0; i < pool_size; ++i)
-    {
-        if (lod_pool_owners[new_lod][i] == -1 || lod_pool_owners[new_lod][i] == (i32)tile_idx)
-        {
-            lod_pool_owners[new_lod][i] = (i32)tile_idx;
-            slot->current_lod = new_lod;
-            slot->physical_layer = i;
-            return i;
-        }
-    }
-
-    {
-        i32 layer = lod_pool_rover[new_lod];
-        i32 victim = lod_pool_owners[new_lod][layer];
-
-        if (victim >= 0 && victim < VAST_TILES_TOTAL)
-        {
-            tile_pool_slots[victim].current_lod = -1;
-            tile_pool_slots[victim].physical_layer = -1;
-        }
-
-        lod_pool_owners[new_lod][layer] = (i32)tile_idx;
-        slot->current_lod = new_lod;
-        slot->physical_layer = layer;
-
-        lod_pool_rover[new_lod] = (lod_pool_rover[new_lod] + 1) % pool_size;
-        return layer;
-    }
+    return texture_layer_assigned;
 }
 
 /* #############################################################################
@@ -387,25 +396,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         VAST_PROFILER_BEGIN(tile_init);
         vast_tiles_init(&t, camera_tile_x, camera_tile_z);
         VAST_PROFILER_END(tile_init);
-
-        /* Setup texture slot layers */
-        {
-            u32 lod, i;
-
-            /* Initialize pool owners and slot trackers */
-            for (lod = 0; lod < LOD_COUNT; ++lod)
-            {
-                for (i = 0; i < (u32)lod_texture_pool_size[lod]; ++i)
-                {
-                    lod_pool_owners[lod][i] = -1;
-                }
-            }
-            for (i = 0; i < VAST_TILES_TOTAL; ++i)
-            {
-                tile_pool_slots[i].current_lod = -1;
-                tile_pool_slots[i].physical_layer = -1;
-            }
-        }
 
         /* Setup tiles texture pools */
         {
@@ -496,12 +486,13 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         {
             u32 last_idx = t.dirty_indices_count - 1;
             u32 tile_idx = t.dirty_indices[last_idx];
+
             i32 tile_lod_required = t.tile_lod_required[tile_idx];
+
             i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
             u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
 
-            i32 pool_size = lod_texture_pool_size[tile_lod_required];
-            i32 texture_array_layer = vast_tile_acquire_slot(tile_idx, tile_lod_required, pool_size);
+            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx);
 
             glBindVertexArray(scratch_vao);
             glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
@@ -618,7 +609,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             }
 
             tile_lod = t.tile_lod_current[i];
-            physical_layer = tile_pool_slots[i].physical_layer;
+            physical_layer = texture_layer[i];
 
             if (physical_layer < 0)
             {
