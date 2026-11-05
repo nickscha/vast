@@ -63,20 +63,13 @@ typedef struct vast_tile_shader_final
 
 static s8 *vast_tile_texture_vertex_data =
     "#version 330 core\n"
-    "\n"
     "out vec2 v_uv;\n"
-    "\n"
-    "const vec2 verts[3] = vec2[](\n"
-    "    vec2(-1.0, -1.0),\n"
-    "    vec2( 3.0, -1.0),\n"
-    "    vec2(-1.0,  3.0)\n"
-    ");\n"
-    "\n"
+    "const vec2 verts[3] = vec2[](vec2(-1.0, -1.0),vec2( 3.0, -1.0),vec2(-1.0,  3.0));\n"
     "void main()\n"
     "{\n"
-    "    vec2 p = verts[gl_VertexID];\n"
-    "    v_uv = p * 0.5 + 0.5;\n"
-    "    gl_Position = vec4(p, 0.0, 1.0);\n"
+    "  vec2 p = verts[gl_VertexID];\n"
+    "  v_uv = p * 0.5 + 0.5;\n"
+    "  gl_Position = vec4(p, 0.0, 1.0);\n"
     "}";
 
 /* #############################################################################
@@ -553,7 +546,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
             /* Mark that texture update is complete for this LOD */
             t.tile_lod_current[tile_idx] = tile_lod_required;
-
             t.dirty_indices_count--;
             updates_per_frame--;
         }
@@ -567,7 +559,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
         u32 i;
 
-        vast_mat4x4 projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(camera->fov), (f32)state->window.width / (f32)state->window.height, 0.1f, 64000.0f);
+        vast_mat4x4 projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(camera->fov), (f32)state->window.width / (f32)state->window.height, 0.1f, 8192.0f);
         vast_mat4x4 view = vast_mat4x4_look_at(camera->position, vast_vec3_add(camera->position, camera->forward), camera->up);
         vast_mat4x4 mvp = vast_mat4x4_mul(projection, view);
         vast_frustum frustum = vast_frustum_extract(mvp);
