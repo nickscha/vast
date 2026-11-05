@@ -487,7 +487,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             u32 last_idx = t.dirty_indices_count - 1;
             u32 tile_idx = t.dirty_indices[last_idx];
 
-            i32 tile_lod_required = t.tile_lod_required[tile_idx];
+            i8 tile_lod_required = t.tile_lod_required[tile_idx];
 
             i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
             u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
@@ -500,7 +500,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             /* Render Height Map to Framebuffer */
             VAST_PROFILER_BEGIN(tile_render_heightmap);
             {
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_heightmap_arrays[tile_lod_required], 0, texture_array_layer);
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_heightmap_arrays[(u32)tile_lod_required], 0, texture_array_layer);
                 glViewport(0, 0, (i32)height_tex_size, (i32)height_tex_size);
 
                 glUseProgram(tiles_hm_shader.header.program);
@@ -517,7 +517,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             /* Render Normal Map to Framebuffer */
             VAST_PROFILER_BEGIN(tile_render_normalmap);
             {
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_normalmap_arrays[tile_lod_required], 0, texture_array_layer);
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_normalmap_arrays[(u32)tile_lod_required], 0, texture_array_layer);
                 glViewport(0, 0, (i32)normal_tex_size, (i32)normal_tex_size);
 
                 glUseProgram(tiles_nm_shader.header.program);

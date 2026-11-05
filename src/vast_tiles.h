@@ -38,8 +38,8 @@ typedef struct vast_tiles
     /* Data Arrays (Indexed via toroidal wrapping) */
     i32 tile_x[VAST_TILES_TOTAL];
     i32 tile_z[VAST_TILES_TOTAL];
-    i32 tile_lod_required[VAST_TILES_TOTAL]; /* The LOD required after update */
-    i32 tile_lod_current[VAST_TILES_TOTAL];  /* The current LOD used (has to be updated by application) */
+    i8 tile_lod_required[VAST_TILES_TOTAL]; /* The LOD required after update */
+    i8 tile_lod_current[VAST_TILES_TOTAL];  /* The current LOD used (has to be updated by application) */
 
     /* Sparse Dirty flag tracking */
     u16 dirty_indices[VAST_TILES_TOTAL]; /* Which index ot the tile_x/z is marked dirty */
@@ -70,14 +70,14 @@ VAST_API VAST_INLINE u32 vast_tile_index(i32 x, i32 z)
     return (u32)(slot_z * VAST_TILES_PER_SIDE + slot_x);
 }
 
-VAST_API VAST_INLINE i32 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
+VAST_API VAST_INLINE i8 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
 {
     i32 dx = vast_absi(x - center_x);
     i32 dz = vast_absi(z - center_z);
     i32 distance = vast_maxi(dx, dz);
 
     /* TODO(nickscha): apply better distance distribution */
-    i32 lod = distance / 2;
+    i8 lod = (i8)(distance / 2);
 
     if (lod >= VAST_TILES_MAX_LOD_LEVELS)
     {
@@ -222,14 +222,14 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, i32 camera_tile_x, i32 
         for (x = t->origin_x; x < t->origin_x + VAST_TILES_PER_SIDE; ++x)
         {
             u32 i = vast_tile_index(x, z);
-            i32 lod = vast_tile_lod(x, z, camera_tile_x, camera_tile_z);
+            i8 lod = vast_tile_lod(x, z, camera_tile_x, camera_tile_z);
 
             t->tile_x[i] = x;
             t->tile_z[i] = z;
             t->tile_lod_required[i] = lod;
             t->tile_lod_current[i] = -1; /* -1 = Uninitialized/Unknown */
             t->dirty_indices[t->dirty_indices_count++] = (u16)i;
-            t->tile_per_lod_count[lod]++;
+            t->tile_per_lod_count[(i32)lod]++;
 
             if (lod > t->tile_lod_max)
             {
@@ -345,7 +345,7 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, i32 camera_tile_x, i3
     for (i = 0; i < VAST_TILES_TOTAL; ++i)
     {
         i32 distance_old = t->tile_lod_required[i];
-        i32 distance_new = vast_tile_lod(t->tile_x[i], t->tile_z[i], camera_tile_x, camera_tile_z);
+        i8 distance_new = vast_tile_lod(t->tile_x[i], t->tile_z[i], camera_tile_x, camera_tile_z);
 
         if (distance_old != distance_new)
         {
