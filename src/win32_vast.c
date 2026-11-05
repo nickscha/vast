@@ -100,6 +100,8 @@ typedef struct win32_vast_state
   s8 *gl_vendor;
   i32 gl_max_3d_texture_size;
 
+  u32 draw_calls;
+
 } win32_vast_state;
 
 typedef struct win32_process_memory_info
@@ -1187,7 +1189,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   /* Render */
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   vast_sky_render(&state->platform_state, &camera, sun_dir);
-  vast_tile_render(&state->platform_state, &camera, sun_dir);
+  vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls);
 }
 
 /* #############################################################################
@@ -1571,7 +1573,8 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
             thread_count, (i32)handle_count,
             (i32)(mem.working_set / 1024), (i32)(mem.peak_working_set / 1024), (i32)(mem.private_bytes / 1024),
             state.gl_version, state.gl_renderer, state.gl_vendor,
-            state.borderless_enabled, state.fullscreen_enabled, state.shader_paused, state.screen_recording_enabled);
+            state.borderless_enabled, state.fullscreen_enabled, state.shader_paused, state.screen_recording_enabled,
+            state.draw_calls);
       }
 
       /******************************/

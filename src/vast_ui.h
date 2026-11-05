@@ -178,7 +178,8 @@ VAST_API void vast_ui_render(
     u8 borderless_enabled,
     u8 fullscreen_enabled,
     u8 shader_paused,
-    u8 screen_recording_enabled)
+    u8 screen_recording_enabled,
+    u32 draw_calls)
 {
     static u8 ui_initialized = 0;
     static u32 ui_font_texture_id;
@@ -271,6 +272,7 @@ VAST_API void vast_ui_render(
     /* Calculate Glpyhs */
     {
         u16 default_color = vast_ui_pack_rgb565(255, 255, 255);
+        u16 green_color = vast_ui_pack_rgb565(0, 255, 0);
         u16 separator_start_col = 11;
         u16 text_start_col = separator_start_col + 2;
         u16 offset_x_start = 10;
@@ -295,6 +297,7 @@ VAST_API void vast_ui_render(
                 "FPS RAW\n"
                 "FRAME\n"
                 "DELTA\n"
+                "DRAW_CALLS\n"
                 "TIME\n"
                 "MOUSE X/Y\n"
                 "MOUSE DX/DY\n"
@@ -319,7 +322,7 @@ VAST_API void vast_ui_render(
             offset_y = offset_y_start;
 
             /* Vertical ":" separator*/
-            for (i = 0; i < 24; ++i)
+            for (i = 0; i < 25; ++i)
             {
 
                 if (i == 15)
@@ -418,6 +421,8 @@ VAST_API void vast_ui_render(
         CALC_GLYPH(t, default_color);
         vast_sb_f64(&t, state->timing.time_delta, 6);
         CALC_GLYPH(t, default_color);
+        vast_sb_i32(&t, (i32)draw_calls);
+        CALC_GLYPH(t, green_color);
         vast_sb_f64(&t, state->timing.time_elapsed, 6);
         CALC_GLYPH(t, default_color);
         vast_sb_i32(&t, state->input.mouse.x);

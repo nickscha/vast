@@ -365,7 +365,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
  * #############################################################################
  */
 /* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
-VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir)
+VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 *draw_calls)
 {
     static u8 tiles_initialized = 0;
     static vast_tiles t = {0};
@@ -555,6 +555,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_mat4x4 mvp = vast_mat4x4_mul(projection, view);
         vast_frustum frustum = vast_frustum_extract(mvp);
 
+        *draw_calls = 0;
+
         if (state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_TAB] && !state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_TAB])
         {
             wireframe_enabled = !wireframe_enabled;
@@ -632,6 +634,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod][mask]);
             glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod][mask], GL_UNSIGNED_SHORT, VAST_NULL);
+
+            (*draw_calls)++;
         }
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
