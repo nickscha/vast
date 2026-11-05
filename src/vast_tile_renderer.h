@@ -288,37 +288,6 @@ static i32 lod_texture_pool_size[LOD_COUNT] = {
 static u32 lod_heightmap_arrays[LOD_COUNT];
 static u32 lod_normalmap_arrays[LOD_COUNT];
 
-VAST_API void vast_tile_setup_texture_pools(void)
-{
-
-    u32 lod;
-
-    for (lod = 0; lod < LOD_COUNT; ++lod)
-    {
-        i32 resolution_heightmap = 128 / (1 << lod);
-        i32 resolution_normalmap = 1024 / (1 << lod);
-        i32 pool_size = lod_texture_pool_size[lod];
-
-        /* Heightmap Texture Array (GL_R32F / 4 byte) */
-        glGenTextures(1, &lod_heightmap_arrays[lod]);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[lod]);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32F, resolution_heightmap, resolution_heightmap, pool_size, 0, GL_RED, GL_FLOAT, VAST_NULL);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        /* Normalmap Texture Array (GL_RGB8 / 3 byte) */
-        glGenTextures(1, &lod_normalmap_arrays[lod]);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[lod]);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB8, resolution_normalmap, resolution_normalmap, pool_size, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    }
-}
-
 /* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
 VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir)
 {
@@ -348,7 +317,35 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tiles_init(&t, camera_tile_x, camera_tile_z);
         VAST_PROFILER_END(tile_init);
 
-        (void)vast_tile_setup_texture_pools;
+        /* Setup tiles texture pools */
+        {
+            u32 lod;
+
+            for (lod = 0; lod < LOD_COUNT; ++lod)
+            {
+                i32 resolution_heightmap = 128 / (1 << lod);
+                i32 resolution_normalmap = 1024 / (1 << lod);
+                i32 texture_pool_size = lod_texture_pool_size[lod];
+
+                /* Heightmap Texture Array (GL_R32F / 4 byte) */
+                glGenTextures(1, &lod_heightmap_arrays[lod]);
+                glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[lod]);
+                glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32F, resolution_heightmap, resolution_heightmap, texture_pool_size, 0, GL_RED, GL_FLOAT, VAST_NULL);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                /* Normalmap Texture Array (GL_RGB8 / 3 byte) */
+                glGenTextures(1, &lod_normalmap_arrays[lod]);
+                glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[lod]);
+                glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB8, resolution_normalmap, resolution_normalmap, texture_pool_size, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            }
+        }
 
         /* Setup tiles shaders */
         vast_tile_shader_heightmap_load(state, &tiles_hm_shader);
@@ -459,7 +456,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glViewport(0, 0, (i32)height_tex_size, (i32)height_tex_size);
 
                 glUseProgram(tiles_hm_shader.header.program);
-                glUniform3f(tiles_hm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], 0.0f);
+                glUniform2f(tiles_hm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
                 glUniform1f(tiles_hm_shader.loc_texture_size, (f32)height_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */
@@ -476,7 +473,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glViewport(0, 0, (i32)normal_tex_size, (i32)normal_tex_size);
 
                 glUseProgram(tiles_nm_shader.header.program);
-                glUniform3f(tiles_nm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx], 0.0f);
+                glUniform2f(tiles_nm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
                 glUniform1f(tiles_nm_shader.loc_texture_size, (f32)normal_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */

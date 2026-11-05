@@ -4,7 +4,7 @@ in vec2 v_uv;
 
 layout(location = 0) out float outHeight;
 
-uniform vec3 u_tile_origin;
+uniform vec2 u_tile_origin;
 uniform float u_tile_size;
 uniform float u_texture_size;
 
@@ -57,7 +57,7 @@ void main()
 {
     vec2 grid_pos = gl_FragCoord.xy - vec2(0.5);
     vec2 local_pos = (grid_pos / (u_texture_size - 1.0) - vec2(0.5)) * u_tile_size;
-    vec2 worldPos = local_pos + (u_tile_origin.xy * u_tile_size);
+    vec2 worldPos = local_pos + (u_tile_origin * u_tile_size);
 
     outHeight = Terrain(worldPos);
 }

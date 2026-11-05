@@ -208,6 +208,9 @@ static PFNGLUNIFORM1FPROC glUniform1f;
 typedef void (*PFNGLUNIFORM1IPROC)(i32 location, i32 v0);
 static PFNGLUNIFORM1IPROC glUniform1i;
 
+typedef void (*PFNGLUNIFORM2FPROC)(i32 location, f32 v0, f32 v1);
+static PFNGLUNIFORM2FPROC glUniform2f;
+
 typedef void (*PFNGLUNIFORM3FPROC)(i32 location, f32 v0, f32 v1, f32 v2);
 static PFNGLUNIFORM3FPROC glUniform3f;
 
@@ -342,6 +345,7 @@ VAST_API VAST_INLINE u8 vast_opengl_load_functions(vast_opengl_function_loader l
     glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)load("glGetUniformLocation");
     glUniform1f = (PFNGLUNIFORM1FPROC)load("glUniform1f");
     glUniform1i = (PFNGLUNIFORM1IPROC)load("glUniform1i");
+    glUniform2f = (PFNGLUNIFORM2FPROC)load("glUniform2f");
     glUniform3f = (PFNGLUNIFORM3FPROC)load("glUniform3f");
     glUniform3i = (PFNGLUNIFORM3IPROC)load("glUniform3i");
     glUniform4f = (PFNGLUNIFORM4FPROC)load("glUniform4f");
