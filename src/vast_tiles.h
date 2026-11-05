@@ -20,6 +20,7 @@
 #define VAST_EDGE_SOUTH 1 << 1
 #define VAST_EDGE_WEST 1 << 2
 #define VAST_EDGE_EAST 1 << 3
+#define VAST_EDGE_COMBINATIONS 16
 
 /* SoA tiles setup */
 typedef struct vast_tiles

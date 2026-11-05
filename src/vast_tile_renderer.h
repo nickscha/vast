@@ -333,14 +333,13 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static vast_tile_shader_normalmap tiles_nm_shader = {0};
 
     static u32 grid_vao;
-    static i32 gridIndexCounts[LOD_COUNT][16] = {0};
-    static u32 grid_ibos[LOD_COUNT][16] = {0};
+    static i32 gridIndexCounts[LOD_COUNT][VAST_EDGE_COMBINATIONS] = {0};
+    static u32 grid_ibos[LOD_COUNT][VAST_EDGE_COMBINATIONS] = {0};
 
+    static u32 scratch_vao;
     static u32 scratch_fbo;
     static u32 tile_heightmap_tex[VAST_TILES_TOTAL];
     static u32 tile_normalmap_tex[VAST_TILES_TOTAL];
-
-    static u32 tile_dummy_vao;
 
     if (!tiles_initialized)
     {
@@ -357,7 +356,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tile_shader_final_load(state, &tiles_shader);
 
         /* Dummy vertex and framebuffer object */
-        glGenVertexArrays(1, &tile_dummy_vao);
+        glGenVertexArrays(1, &scratch_vao);
         glGenFramebuffers(1, &scratch_fbo);
 
         /* Generate Grid for all LOD edge mask combinations */
@@ -374,7 +373,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             {
                 i32 grid_resolution = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)i)) + 1;
 
-                for (mask = 0; mask < 16; ++mask)
+                for (mask = 0; mask < VAST_EDGE_COMBINATIONS; ++mask)
                 {
                     gridIndexCounts[i][mask] = vast_geometry_grid_lod(grid_resolution, (u32)mask, gridIndices);
 
@@ -421,6 +420,12 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glGenTextures(1, &tile_heightmap_tex[tile_idx]);
             }
 
+            /* Normal Map */
+            if (tile_normalmap_tex[tile_idx] == 0)
+            {
+                glGenTextures(1, &tile_normalmap_tex[tile_idx]);
+            }
+
             /* TODO(nickscha): Allocate tiles texture pool once and then reuse from pool       */
             if (tile_lod_current != tile_lod_required)
             {
@@ -430,12 +435,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            }
-
-            /* Normal Map */
-            if (tile_normalmap_tex[tile_idx] == 0)
-            {
-                glGenTextures(1, &tile_normalmap_tex[tile_idx]);
             }
 
             /* TODO(nickscha): Allocate tiles texture pool once and then reuse from pool       */
@@ -450,7 +449,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             }
 
-            glBindVertexArray(tile_dummy_vao);
+            glBindVertexArray(scratch_vao);
             glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
 
             /* Render Height Map to Framebuffer */
