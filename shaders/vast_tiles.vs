@@ -6,12 +6,13 @@ uniform float u_is_dirty;
 uniform float u_tile_size;
 uniform float u_grid_res;
 uniform sampler2DArray u_heightmap;
-uniform float u_heightmap_layer;
+uniform float u_texture_array_layer;
 uniform float visualization_mode; /* just for testing */
 
 out float v_is_dirty_pass;
 out vec2 v_uv;
 out vec3 v_worldPos;
+flat out float v_texture_array_layer;
 
 void main()
 {
@@ -23,13 +24,14 @@ void main()
     vec2 local_pos = (v_uv - vec2(0.5)) * u_tile_size;
     vec2 world_pos = local_pos + (u_tile_offset.xy * u_tile_size);
 
-    float height = texelFetch(u_heightmap, ivec3(v_x, v_z, u_heightmap_layer), 0).r;
+    float height = texelFetch(u_heightmap, ivec3(v_x, v_z, u_texture_array_layer), 0).r;
 
     if (visualization_mode > 3.5 && visualization_mode < 4.5) {
         height = 0.0;
     }
     
-    v_is_dirty_pass = u_is_dirty;
-    v_worldPos      = vec3(world_pos.x, height, world_pos.y);
-    gl_Position     = u_vp * vec4(v_worldPos, 1.0);
+    v_is_dirty_pass       = u_is_dirty;
+    v_texture_array_layer = u_texture_array_layer;
+    v_worldPos            = vec3(world_pos.x, height, world_pos.y);
+    gl_Position           = u_vp * vec4(v_worldPos, 1.0);
 }

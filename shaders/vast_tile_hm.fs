@@ -8,8 +8,9 @@ uniform vec2 u_tile_offset;
 uniform float u_tile_size;
 uniform float u_texture_size;
 
-vec2 add = vec2(1.0, 0.0);
 #define HASHSCALE1 0.1031
+
+const vec2 add = vec2(1.0, 0.0);
 const mat2 rotate2D = mat2(1.3623, 1.7531, -1.7131, 1.4623);
 
 float Hash12(vec2 p)

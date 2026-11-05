@@ -47,9 +47,8 @@ typedef struct vast_tile_shader_final
     i32 loc_view_projection;
     i32 loc_is_dirty;
     i32 loc_heightmap;
-    i32 loc_heightmap_layer;
     i32 loc_normalmap;
-    i32 loc_normalmap_layer;
+    i32 loc_texture_array_layer;
     i32 loc_iResolution;
     i32 loc_iTime;
     i32 loc_iMouse;
@@ -155,8 +154,7 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
         tiles_shader->loc_is_dirty = glGetUniformLocation(tiles_shader->header.program, "u_is_dirty");
         tiles_shader->loc_heightmap = glGetUniformLocation(tiles_shader->header.program, "u_heightmap");
         tiles_shader->loc_normalmap = glGetUniformLocation(tiles_shader->header.program, "u_normalmap");
-        tiles_shader->loc_heightmap_layer = glGetUniformLocation(tiles_shader->header.program, "u_heightmap_layer");
-        tiles_shader->loc_normalmap_layer = glGetUniformLocation(tiles_shader->header.program, "u_normalmap_layer");
+        tiles_shader->loc_texture_array_layer = glGetUniformLocation(tiles_shader->header.program, "u_texture_array_layer");
         tiles_shader->loc_tile_size = glGetUniformLocation(tiles_shader->header.program, "u_tile_size");
         tiles_shader->loc_grid_res = glGetUniformLocation(tiles_shader->header.program, "u_grid_res");
 
@@ -509,8 +507,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
 
             i32 pool_size = lod_texture_pool_size[tile_lod_required];
-            i32 hm_layer = vast_tile_acquire_slot(tile_idx, tile_lod_required, pool_size);
-            i32 nm_layer = hm_layer;
+            i32 texture_array_layer = vast_tile_acquire_slot(tile_idx, tile_lod_required, pool_size);
 
             glBindVertexArray(scratch_vao);
             glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
@@ -518,7 +515,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             /* Render Height Map to Framebuffer */
             VAST_PROFILER_BEGIN(tile_render_heightmap);
             {
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_heightmap_arrays[tile_lod_required], 0, hm_layer);
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_heightmap_arrays[tile_lod_required], 0, texture_array_layer);
                 glViewport(0, 0, (i32)height_tex_size, (i32)height_tex_size);
 
                 glUseProgram(tiles_hm_shader.header.program);
@@ -535,7 +532,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             /* Render Normal Map to Framebuffer */
             VAST_PROFILER_BEGIN(tile_render_normalmap);
             {
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_normalmap_arrays[tile_lod_required], 0, nm_layer);
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_normalmap_arrays[tile_lod_required], 0, texture_array_layer);
                 glViewport(0, 0, (i32)normal_tex_size, (i32)normal_tex_size);
 
                 glUseProgram(tiles_nm_shader.header.program);
@@ -628,8 +625,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             }
 
             tile_lod = t.tile_lod_current[i];
-
             physical_layer = tile_pool_slots[i].physical_layer;
+
             if (physical_layer < 0)
             {
                 continue;
@@ -641,9 +638,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             glUniform3f(tiles_shader.loc_tile_offset, (f32)t.tile_x[i], (f32)t.tile_z[i], 0.0f);
             glUniform1f(tiles_shader.loc_is_dirty, (f32)vast_tile_is_dirty(&t, i));
             glUniform1f(tiles_shader.loc_grid_res, (f32)grid_res);
-
-            glUniform1f(tiles_shader.loc_heightmap_layer, (f32)physical_layer);
-            glUniform1f(tiles_shader.loc_normalmap_layer, (f32)physical_layer);
+            glUniform1f(tiles_shader.loc_texture_array_layer, (f32)physical_layer);
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[tile_lod]);
