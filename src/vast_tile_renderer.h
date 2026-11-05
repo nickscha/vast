@@ -254,7 +254,7 @@ VAST_API u8 vast_tile_is_visible(
 
     i32 i;
 
-    for (i = 0; i < 6; ++i)
+    for (i = 0; i < VAST_FRUSTUM_COUNT; ++i)
     {
         vast_vec4 *p = &f->planes[i];
 

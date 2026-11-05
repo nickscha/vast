@@ -376,12 +376,6 @@ typedef struct vast_vec4
 
 } vast_vec4;
 
-typedef struct vast_frustum
-{
-    vast_vec4 planes[6];
-
-} vast_frustum;
-
 typedef enum vast_frustum_plane
 {
     VAST_FRUSTUM_LEFT = 0,
@@ -393,6 +387,12 @@ typedef enum vast_frustum_plane
     VAST_FRUSTUM_COUNT
 
 } vast_frustum_plane;
+
+typedef struct vast_frustum
+{
+    vast_vec4 planes[VAST_FRUSTUM_COUNT];
+
+} vast_frustum;
 
 VAST_API vast_frustum vast_frustum_extract(vast_mat4x4 m)
 {
