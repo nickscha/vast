@@ -379,9 +379,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
     static f32 tile_world_size = 256.0f;
 
-    static u32 grid_vao;
-    static i32 gridIndexCounts[LOD_COUNT][VAST_EDGE_COMBINATIONS] = {0};
-    static u32 grid_ibos[LOD_COUNT][VAST_EDGE_COMBINATIONS] = {0};
+    static u32 grid_vaos[LOD_COUNT];
+    static u32 grid_vbos[LOD_COUNT];
+    static u32 grid_ibos[LOD_COUNT];
+    static i32 gridIndexCounts[LOD_COUNT] = {0};
 
     static u32 scratch_vao;
     static u32 scratch_fbo;
@@ -436,28 +437,36 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         glGenVertexArrays(1, &scratch_vao);
         glGenFramebuffers(1, &scratch_fbo);
 
-        /* Generate Grid for all LOD edge mask combinations */
+        /* Generate Grid with Skirts for all LOD */
         {
-            u8 mask;
             u32 i;
-
-            u16 gridIndices[VAST_TILE_MAX_INDICES];
-
-            glGenVertexArrays(1, &grid_vao);
-            glBindVertexArray(grid_vao);
 
             for (i = 0; i < (u32)t.tile_lod_max + 1; ++i)
             {
-                i32 grid_resolution = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)i)) + 1;
+                i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)i)) + 1;
+                vast_geometry_vertex_skirt vertices[VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE + 600];
+                u16 indices[VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE * 6 + 1200];
 
-                for (mask = 0; mask < VAST_EDGE_COMBINATIONS; ++mask)
-                {
-                    gridIndexCounts[i][mask] = vast_geometry_grid_lod(grid_resolution, (u32)mask, gridIndices);
+                gridIndexCounts[i] = vast_geometry_grid_skirt(grid_res, vertices, indices);
 
-                    glGenBuffers(1, &grid_ibos[i][mask]);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[i][mask]);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, gridIndexCounts[i][mask] * (i32)sizeof(u16), gridIndices, GL_STATIC_DRAW);
-                }
+                glGenVertexArrays(1, &grid_vaos[i]);
+                glBindVertexArray(grid_vaos[i]);
+
+                glGenBuffers(1, &grid_vbos[i]);
+                glBindBuffer(GL_ARRAY_BUFFER, grid_vbos[i]);
+                glBufferData(GL_ARRAY_BUFFER, (i32)sizeof(vast_geometry_vertex_skirt) * (grid_res * grid_res + 600), vertices, GL_STATIC_DRAW);
+
+                glGenBuffers(1, &grid_ibos[i]);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[i]);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, gridIndexCounts[i] * (i32)sizeof(u16), indices, GL_STATIC_DRAW);
+
+                /* Attribute 0: UV (vec2) */
+                glEnableVertexAttribArray(0);
+                glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vast_geometry_vertex_skirt), VAST_NULL);
+
+                /* Attribute 1: Is Skirt Flag (float) */
+                glEnableVertexAttribArray(1);
+                glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(vast_geometry_vertex_skirt), (void *)(sizeof(f32) * 2));
             }
         }
 
@@ -590,25 +599,20 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         glUniform1i(tiles_shader.loc_heightmap, 0);
         glUniform1i(tiles_shader.loc_normalmap, 1);
 
-        glBindVertexArray(grid_vao);
         glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled ? GL_LINE : GL_FILL);
 
         for (i = 0; i < VAST_TILES_TOTAL; ++i)
         {
-            u8 mask;
             i32 tile_lod_current = t.tile_lod_current[i];
-            u32 grid_res;
             i32 texture_array_layer = texture_layer[i];
+            i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_current)) + 1;
 
             if (tile_lod_current < 0 ||
-                !vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -100.0f, 600.0f) ||
+                !vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -200.0f, 600.0f) ||
                 texture_array_layer < 0)
             {
                 continue;
             }
-
-            mask = vast_get_rendered_edge_mask(&t, i);
-            grid_res = (u32)((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_current)) + 1;
 
             glUniform3f(tiles_shader.loc_tile_offset, (f32)t.tile_x[i], (f32)t.tile_z[i], 0.0f);
             glUniform1f(tiles_shader.loc_is_dirty, (f32)vast_tile_is_dirty(&t, i));
@@ -621,8 +625,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[tile_lod_current]);
 
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod_current][mask]);
-            glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod_current][mask], GL_UNSIGNED_SHORT, VAST_NULL);
+            glBindVertexArray(grid_vaos[tile_lod_current]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod_current]);
+
+            glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod_current], GL_UNSIGNED_SHORT, VAST_NULL);
 
             (*draw_calls)++;
         }

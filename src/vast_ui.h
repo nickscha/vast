@@ -511,44 +511,44 @@ VAST_API void vast_ui_render(
         vast_sb_s8(&t, "NONE");
         CALC_GLYPH(t, vast_ui_pack_rgb565(0, 255, 0));
 
-        vast_sb_f64(&t, camera->position.x, 2);
+        vast_sb_f64(&t, (f64)camera->position.x, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->position.y, 2);
+        vast_sb_f64(&t, (f64)camera->position.y, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->position.z, 2);
+        vast_sb_f64(&t, (f64)camera->position.z, 2);
         CALC_GLYPH(t, default_color);
 
-        vast_sb_f64(&t, camera->forward.x, 2);
+        vast_sb_f64(&t, (f64)camera->forward.x, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->forward.y, 2);
+        vast_sb_f64(&t, (f64)camera->forward.y, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->forward.z, 2);
+        vast_sb_f64(&t, (f64)camera->forward.z, 2);
         CALC_GLYPH(t, default_color);
 
-        vast_sb_f64(&t, camera->right.x, 2);
+        vast_sb_f64(&t, (f64)camera->right.x, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->right.y, 2);
+        vast_sb_f64(&t, (f64)camera->right.y, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->right.z, 2);
+        vast_sb_f64(&t, (f64)camera->right.z, 2);
         CALC_GLYPH(t, default_color);
 
-        vast_sb_f64(&t, camera->up.x, 2);
+        vast_sb_f64(&t, (f64)camera->up.x, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->up.y, 2);
+        vast_sb_f64(&t, (f64)camera->up.y, 2);
         vast_sb_s8(&t, "/");
-        vast_sb_f64(&t, camera->up.z, 2);
+        vast_sb_f64(&t, (f64)camera->up.z, 2);
         CALC_GLYPH(t, default_color);
 
-        vast_sb_f64(&t, camera->yaw, 2);
+        vast_sb_f64(&t, (f64)camera->yaw, 2);
         CALC_GLYPH(t, default_color);
 
-        vast_sb_f64(&t, camera->pitch, 2);
+        vast_sb_f64(&t, (f64)camera->pitch, 2);
         CALC_GLYPH(t, default_color);
 
-        vast_sb_f64(&t, camera->fov, 2);
+        vast_sb_f64(&t, (f64)camera->fov, 2);
         CALC_GLYPH(t, default_color);
 
-        vast_sb_f64(&t, camera->roll, 2);
+        vast_sb_f64(&t, (f64)camera->roll, 2);
         CALC_GLYPH(t, default_color);
 
 #undef CALC_GLYPH

@@ -1,5 +1,8 @@
 #version 330 core
 
+layout (location = 0) in vec2 a_uv;
+layout (location = 1) in float a_is_skirt;
+
 uniform vec3 u_tile_offset;
 uniform mat4 u_vp;
 uniform float u_is_dirty;
@@ -16,18 +19,23 @@ flat out float v_texture_array_layer;
 
 void main()
 {
-    float v_x = float(gl_VertexID % int(u_grid_res));
-    float v_z = float(gl_VertexID / int(u_grid_res));
-
-    v_uv = vec2(v_x, v_z) / (u_grid_res - 1.0);
-
+    v_uv = a_uv;
+    
     vec2 local_pos = (v_uv - vec2(0.5)) * u_tile_size;
     vec2 world_pos = local_pos + (u_tile_offset.xy * u_tile_size);
 
-    float height = texelFetch(u_heightmap, ivec3(v_x, v_z, u_texture_array_layer), 0).r;
+    int v_x = int(round(v_uv.x * (u_grid_res - 1.0)));
+    int v_z = int(round(v_uv.y * (u_grid_res - 1.0)));
+
+    float height = texelFetch(u_heightmap, ivec3(v_x, v_z, int(u_texture_array_layer)), 0).r;
 
     if (visualization_mode > 3.5 && visualization_mode < 4.5) {
         height = 0.0;
+    }
+
+    /* Drop skirt vertices downward to seal LOD gaps */
+    if (a_is_skirt > 0.5f) {
+        height -= 100.0f; /* Skirt depth in world units */
     }
     
     v_is_dirty_pass       = u_is_dirty;
