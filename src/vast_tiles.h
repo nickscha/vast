@@ -8,7 +8,7 @@
  * #############################################################################
  */
 #ifndef VAST_TILES_PER_SIDE
-#define VAST_TILES_PER_SIDE 13
+#define VAST_TILES_PER_SIDE 33
 #endif
 #define VAST_TILES_HALF VAST_TILES_PER_SIDE / 2;
 #define VAST_TILES_TOTAL (VAST_TILES_PER_SIDE * VAST_TILES_PER_SIDE)
@@ -87,7 +87,7 @@ VAST_API VAST_INLINE i8 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
     return lod;
 }
 
-VAST_API VAST_INLINE u8 vast_get_rendered_edge_mask(vast_tiles *t, u32 tile_idx)
+VAST_API VAST_INLINE u8 vast_tile_get_lod_edge_mask(vast_tiles *t, u32 tile_idx)
 {
     i32 current_lod = t->tile_lod_current[tile_idx];
     i32 x, z;

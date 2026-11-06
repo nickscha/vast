@@ -11,7 +11,7 @@
 #include "vast_profiler.h"            /* Profiler metrics              */
 #include "vast_tiles.h"               /* Toriodal Tiling Grid logic    */
 #include "vast_camera.h"              /* Camera                        */
-#include "vast_geometry.h"            /* Calc. Grid with Edge LOD Mask */
+#include "vast_geometry.h"            /* Calc. Grid with Skirts        */
 #include "vast_math_linear_algebra.h" /* Linear Algebra                */
 #include "vast_opengl.h"              /* OpenGL functions              */
 
@@ -60,6 +60,15 @@ typedef struct vast_tile_shader_final
     i32 loc_visualization_mode;
 
 } vast_tile_shader_final;
+
+typedef struct vast_tile_instance_data
+{
+    f32 offset_x;
+    f32 offset_z;
+    f32 texture_array_layer;
+    f32 is_dirty;
+
+} vast_tile_instance_data;
 
 static s8 *vast_tile_texture_vertex_data =
     "#version 330 core\n"
@@ -149,6 +158,7 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
         tiles_shader->loc_texture_array_layer = glGetUniformLocation(tiles_shader->header.program, "u_texture_array_layer");
         tiles_shader->loc_tile_size = glGetUniformLocation(tiles_shader->header.program, "u_tile_size");
         tiles_shader->loc_grid_res = glGetUniformLocation(tiles_shader->header.program, "u_grid_res");
+        tiles_shader->loc_visualization_mode = glGetUniformLocation(tiles_shader->header.program, "u_visualization_mode");
 
         tiles_shader->loc_iResolution = glGetUniformLocation(tiles_shader->header.program, "iResolution");
         tiles_shader->loc_iTime = glGetUniformLocation(tiles_shader->header.program, "iTime");
@@ -156,8 +166,6 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
         tiles_shader->loc_sun_dir = glGetUniformLocation(tiles_shader->header.program, "sunDir");
         tiles_shader->loc_camera = glGetUniformLocation(tiles_shader->header.program, "iCamera");
         tiles_shader->loc_camera_view_dir = glGetUniformLocation(tiles_shader->header.program, "iViewDir");
-
-        tiles_shader->loc_visualization_mode = glGetUniformLocation(tiles_shader->header.program, "visualization_mode");
     }
     else
     {
@@ -371,7 +379,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static vast_tiles t = {0};
     static i32 camera_tile_x = 0;
     static i32 camera_tile_z = 0;
-    static u32 visualization_mode = 0;
 
     static vast_tile_shader_final tiles_shader = {0};
     static vast_tile_shader_heightmap tiles_hm_shader = {0};
@@ -383,6 +390,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static u32 grid_vbos[LOD_COUNT];
     static u32 grid_ibos[LOD_COUNT];
     static i32 gridIndexCounts[LOD_COUNT] = {0};
+    static u32 lod_instance_vbos[LOD_COUNT];
 
     static u32 scratch_vao;
     static u32 scratch_fbo;
@@ -452,21 +460,40 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glGenVertexArrays(1, &grid_vaos[i]);
                 glBindVertexArray(grid_vaos[i]);
 
+                /* 1. Vertex Buffer */
                 glGenBuffers(1, &grid_vbos[i]);
                 glBindBuffer(GL_ARRAY_BUFFER, grid_vbos[i]);
                 glBufferData(GL_ARRAY_BUFFER, (i32)sizeof(vast_geometry_vertex_skirt) * (grid_res * grid_res + 600), vertices, GL_STATIC_DRAW);
 
+                /* 2. Index Buffer */
                 glGenBuffers(1, &grid_ibos[i]);
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[i]);
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, gridIndexCounts[i] * (i32)sizeof(u16), indices, GL_STATIC_DRAW);
 
-                /* Attribute 0: UV (vec2) */
+                /* Attribute 0: UV (vec2) - Per-vertex */
                 glEnableVertexAttribArray(0);
                 glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vast_geometry_vertex_skirt), VAST_NULL);
 
-                /* Attribute 1: Is Skirt Flag (float) */
+                /* Attribute 1: Is Skirt Flag (float) - Per-vertex */
                 glEnableVertexAttribArray(1);
                 glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(vast_geometry_vertex_skirt), (void *)(sizeof(f32) * 2));
+
+                /* 3. Instance VBO */
+                glGenBuffers(1, &lod_instance_vbos[i]);
+                glBindBuffer(GL_ARRAY_BUFFER, lod_instance_vbos[i]);
+                glBufferData(GL_ARRAY_BUFFER, (i32)sizeof(vast_tile_instance_data) * VAST_TILES_TOTAL, VAST_NULL, GL_DYNAMIC_DRAW);
+
+                /* Attribute 2: Instance Offset (vec2) - Per-instance */
+                glEnableVertexAttribArray(2);
+                glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vast_tile_instance_data), VAST_NULL);
+                glVertexAttribDivisor(2, 1);
+
+                /* Attribute 3: Instance Data (vec2: texture_layer, is_dirty) - Per-instance */
+                glEnableVertexAttribArray(3);
+                glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(vast_tile_instance_data), (void *)(sizeof(f32) * 2));
+                glVertexAttribDivisor(3, 1);
+
+                glBindVertexArray(0);
             }
         }
 
@@ -556,8 +583,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     VAST_PROFILER_BEGIN(tile_render);
     {
         static u8 wireframe_enabled = 0;
+        static u32 visualization_mode = 0;
+        static vast_tile_instance_data instance_buffer[VAST_TILES_TOTAL];
 
-        u32 i;
+        u32 lod;
 
         vast_mat4x4 projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(camera->fov), (f32)state->window.width / (f32)state->window.height, 0.1f, 8192.0f);
         vast_mat4x4 view = vast_mat4x4_look_at(camera->position, vast_vec3_add(camera->position, camera->forward), camera->up);
@@ -594,41 +623,56 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         glUniform3f(tiles_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
         glUniform1f(tiles_shader.loc_visualization_mode, (f32)visualization_mode);
 
-        /* TODO(nickscha): these only need to be set once and not every frame! */
         glUniform1f(tiles_shader.loc_tile_size, tile_world_size);
         glUniform1i(tiles_shader.loc_heightmap, 0);
         glUniform1i(tiles_shader.loc_normalmap, 1);
 
         glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled ? GL_LINE : GL_FILL);
 
-        for (i = 0; i < VAST_TILES_TOTAL; ++i)
+        for (lod = 0; lod < LOD_COUNT; ++lod)
         {
-            i32 tile_lod_current = t.tile_lod_current[i];
-            i32 texture_array_layer = texture_layer[i];
-            i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_current)) + 1;
 
-            if (tile_lod_current < 0 ||
-                !vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -200.0f, 600.0f) ||
-                texture_array_layer < 0)
+            i32 instance_count = 0;
+            u32 i;
+            i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
+
+            for (i = 0; i < VAST_TILES_TOTAL; ++i)
+            {
+                i32 tile_lod_current = t.tile_lod_current[i];
+                i32 texture_array_layer = texture_layer[i];
+
+                if (tile_lod_current != (i32)lod ||
+                    texture_array_layer < 0 ||
+                    !vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -200.0f, 600.0f))
+                {
+                    continue;
+                }
+
+                instance_buffer[instance_count].offset_x = (f32)t.tile_x[i];
+                instance_buffer[instance_count].offset_z = (f32)t.tile_z[i];
+                instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
+                instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, i);
+                instance_count++;
+            }
+
+            if (instance_count == 0)
             {
                 continue;
             }
 
-            glUniform3f(tiles_shader.loc_tile_offset, (f32)t.tile_x[i], (f32)t.tile_z[i], 0.0f);
-            glUniform1f(tiles_shader.loc_is_dirty, (f32)vast_tile_is_dirty(&t, i));
             glUniform1f(tiles_shader.loc_grid_res, (f32)grid_res);
-            glUniform1f(tiles_shader.loc_texture_array_layer, (f32)texture_array_layer);
 
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[tile_lod_current]);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[lod]);
 
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[tile_lod_current]);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[lod]);
 
-            glBindVertexArray(grid_vaos[tile_lod_current]);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[tile_lod_current]);
+            glBindBuffer(GL_ARRAY_BUFFER, lod_instance_vbos[lod]);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, instance_count * (i32)sizeof(vast_tile_instance_data), instance_buffer);
 
-            glDrawElements(GL_TRIANGLES, gridIndexCounts[tile_lod_current], GL_UNSIGNED_SHORT, VAST_NULL);
+            glBindVertexArray(grid_vaos[lod]);
+            glDrawElementsInstanced(GL_TRIANGLES, gridIndexCounts[lod], GL_UNSIGNED_SHORT, VAST_NULL, instance_count);
 
             (*draw_calls)++;
         }

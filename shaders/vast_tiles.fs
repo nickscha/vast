@@ -1,20 +1,21 @@
 #version 330 core
 
-in float v_is_dirty_pass;
-in vec2 v_uv;
-in vec3 v_worldPos;
+in float      v_is_dirty_pass;
+in vec2       v_uv;
+in vec3       v_worldPos;
 flat in float v_texture_array_layer;
 
-out vec4 FragColor;
-
-uniform vec3 iResolution;
-uniform vec3 iMouse;
-uniform float iTime;
-uniform vec3 sunDir;
-uniform vec3 iCamera;
-uniform vec3 iViewDir;
-uniform float visualization_mode; /* just for testing */
+uniform float          u_visualization_mode;
 uniform sampler2DArray u_normalmap;
+
+uniform vec3  iResolution;
+uniform vec3  iMouse;
+uniform float iTime;
+uniform vec3  sunDir;
+uniform vec3  iCamera;
+uniform vec3  iViewDir;
+
+out vec4 FragColor;
 
 float hash21(vec2 p)
 {
@@ -249,15 +250,15 @@ void main()
     // Gamma Correction
     col = pow(col, vec3(0.4545));
 
-    if (visualization_mode < 0.5f) {
+    if (u_visualization_mode < 0.5f) {
         FragColor = vec4(col, 1.0);
-    } else if (visualization_mode < 1.5f) {
+    } else if (u_visualization_mode < 1.5f) {
         FragColor = vec4(normal * 0.5 + 0.5, 1.0); /* map normal to 0 - 1 range */
-    }  else if (visualization_mode < 2.5f) {
+    }  else if (u_visualization_mode < 2.5f) {
         FragColor = v_is_dirty_pass > 0.5 ? vec4(1.0, 0.1, 0.1, 1.0) : vec4(col, 1.0);
-    }  else if (visualization_mode < 3.5f) {
+    }  else if (u_visualization_mode < 3.5f) {
         FragColor = vec4(cloudShadow, cloudShadow, cloudShadow, 1.0);
-    } else if (visualization_mode < 4.5f) {
+    } else if (u_visualization_mode < 4.5f) {
         FragColor = vec4(normal * 0.5 + 0.5, 1.0);
     } 
 }

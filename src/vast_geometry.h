@@ -21,7 +21,7 @@ VAST_API i32 vast_geometry_grid_skirt(i32 n, vast_geometry_vertex_skirt *vertice
     i32 v_idx = 0;
     i32 i_idx = 0;
 
-    /* 1. Core Vertices */
+    /* Core Vertices */
     for (z = 0; z < n; ++z)
     {
         for (x = 0; x < n; ++x)
@@ -33,7 +33,7 @@ VAST_API i32 vast_geometry_grid_skirt(i32 n, vast_geometry_vertex_skirt *vertice
         }
     }
 
-    /* 2. Core Indices */
+    /*  Core Indices */
     for (z = 0; z < n - 1; ++z)
     {
         for (x = 0; x < n - 1; ++x)
@@ -53,7 +53,7 @@ VAST_API i32 vast_geometry_grid_skirt(i32 n, vast_geometry_vertex_skirt *vertice
         }
     }
 
-    /* 3. Skirt Top Edge (z = 0) - Outward normal points -Z */
+    /* Skirt Top Edge (z = 0) */
     for (x = 0; x < n - 1; ++x)
     {
         u16 p0 = (u16)(0 * n + x);
@@ -76,7 +76,7 @@ VAST_API i32 vast_geometry_grid_skirt(i32 n, vast_geometry_vertex_skirt *vertice
         indices_out[i_idx++] = s0;
     }
 
-    /* 4. Skirt Bottom Edge (z = n - 1) - Outward normal points +Z */
+    /* Skirt Bottom Edge (z = n - 1) */
     for (x = 0; x < n - 1; ++x)
     {
         u16 p0 = (u16)((n - 1) * n + x);
@@ -99,7 +99,7 @@ VAST_API i32 vast_geometry_grid_skirt(i32 n, vast_geometry_vertex_skirt *vertice
         indices_out[i_idx++] = s1;
     }
 
-    /* 5. Skirt Left Edge (x = 0) - Outward normal points -X */
+    /* Skirt Left Edge (x = 0) */
     for (z = 0; z < n - 1; ++z)
     {
         u16 p0 = (u16)(z * n + 0);
@@ -122,7 +122,7 @@ VAST_API i32 vast_geometry_grid_skirt(i32 n, vast_geometry_vertex_skirt *vertice
         indices_out[i_idx++] = s1;
     }
 
-    /* 6. Skirt Right Edge (x = n - 1) - Outward normal points +X */
+    /* Skirt Right Edge (x = n - 1) */
     for (z = 0; z < n - 1; ++z)
     {
         u16 p0 = (u16)(z * n + (n - 1));
