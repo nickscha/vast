@@ -17,6 +17,38 @@ typedef enum vast_geometry_lod_edge
 
 } vast_geometry_lod_edge;
 
+/* Creates a fixed unit grid for the specified edge flags.
+   When edge flags are specified the borders of the grid create on the edges degenerate indices at half
+   resolution for allowing seamless stiching of differen LOD grids.
+
+   Usage:
+
+   static u32 grid_vao;
+   static i32 gridIndexCounts[LOD_COUNT][VAST_EDGE_COMBINATIONS] = {0};
+   static u32 grid_ibos[LOD_COUNT][VAST_EDGE_COMBINATIONS] = {0};
+
+   u8 mask;
+   u32 i;
+
+   u16 gridIndices[VAST_TILE_MAX_INDICES];
+
+   glGenVertexArrays(1, &grid_vao);
+   glBindVertexArray(grid_vao);
+
+   for (i = 0; i < (u32)t.tile_lod_max + 1; ++i)
+   {
+       i32 grid_resolution = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)i)) + 1;
+
+       for (mask = 0; mask < VAST_EDGE_COMBINATIONS; ++mask)
+       {
+           gridIndexCounts[i][mask] = vast_geometry_grid_lod(grid_resolution, (u32)mask, gridIndices);
+
+           glGenBuffers(1, &grid_ibos[i][mask]);
+           glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[i][mask]);
+           glBufferData(GL_ELEMENT_ARRAY_BUFFER, gridIndexCounts[i][mask] * (i32)sizeof(u16), gridIndices, GL_STATIC_DRAW);
+       }
+   }
+*/
 VAST_API VAST_INLINE i32 vast_geometry_grid_lod(i32 grid_resolution, u32 edge_flags, u16 *grid_indices)
 {
     i32 x, z;
