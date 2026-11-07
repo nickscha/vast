@@ -119,10 +119,10 @@ float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
     vec3 cloudPos = pos + sun_dir * t;
 
     vec2 windDir2D = normalize(vec2(1.0, 1.0)); 
-    float windSpeed = 0.02;
+    float windSpeed = 0.04;
     vec2 windOffset = windDir2D * time * windSpeed;
     
-    vec2 uv = cloudPos.xz * 0.0003 + windOffset;
+    vec2 uv = cloudPos.xz * 0.0012 + windOffset;
 
     float density = 0.0;
     float a = 0.5;
@@ -140,7 +140,7 @@ float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
     float horizonFade = smoothstep(0.0, 0.15, sun_dir.y);
     shadowMask *= horizonFade;
 
-    return mix(1.0, 0.1, shadowMask);
+    return mix(1.0, 0.4, shadowMask);
 }
 
 void main()
@@ -246,6 +246,10 @@ void main()
     float distant = smoothstep(100.0, 500.0, dist);
     float luminance =  dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(luminance), distant * 0.15);
+
+    // Tone mapping
+    col = max(col, vec3(0.0));  
+    col = col / (col + vec3(1.0));
 
     // Gamma Correction
     col = pow(col, vec3(0.4545));

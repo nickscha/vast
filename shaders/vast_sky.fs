@@ -11,7 +11,7 @@ uniform mat3 cameraBasis; /* right, up, forward */
 uniform vec3 sunDir;
 
 const vec3 wind_dir = vec3(1.0, 0.0, 1.0);   
-const float wind_speed = 0.02;
+const float wind_speed = 0.04;
 
 float hash3D(vec3 p) {
     return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
@@ -61,10 +61,10 @@ vec4 getClouds(vec3 ro, vec3 rd, vec3 skyBg) {
     vec3 cloudPos = ro + rd * t;
 
     vec2 windDir2D = normalize(wind_dir.xz);
-    float windSpeed = wind_speed > 0.0 ? wind_speed : 0.02; 
+    float windSpeed = wind_speed; 
     vec2 windOffset = windDir2D * iTime * windSpeed;
 
-    vec2 uv = cloudPos.xz * 0.0003 + windOffset;
+    vec2 uv = cloudPos.xz * 0.0012 + windOffset;
 
     float density = cloudFbm(uv);
     density = smoothstep(0.38, 0.75, density);
