@@ -582,8 +582,11 @@ VAST_API VAST_INLINE i64 win32_window_callback(void *window, u32 message, u64 wP
       {
         /*key->was_down = key->is_down;*/
         i32 vast_key = win32_vk_to_vast_key(vKey);
-
-        state->platform_state.input.keyboard.keys_is_down[vast_key] = !(keyboard->Flags & RI_KEY_BREAK); /* 1 if pressed, 0 if released */
+        
+        if (vast_key >= 0 && vast_key < VAST_KEYBORD_KEYS_COUNT)
+        {
+          state->platform_state.input.keyboard.keys_is_down[vast_key] = !(keyboard->Flags & RI_KEY_BREAK); /* 1 if pressed, 0 if released */
+        }
       }
     }
     else if (raw->header.dwType == RIM_TYPEMOUSE)
