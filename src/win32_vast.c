@@ -91,11 +91,13 @@ typedef struct win32_vast_state
   u8 screen_recording_enabled;
   u8 screen_recording_initialized;
 
+  /* Win32 specific information */
   void *window_handle;
   void *device_context;
   WINDOWPLACEMENT g_wpPrev;
   i32 thread_count;
 
+  /* OpenGL information */
   s8 *gl_version;
   s8 *gl_renderer;
   s8 *gl_vendor;
@@ -107,6 +109,7 @@ typedef struct win32_vast_state
   i32 gl_max_array_texture_layer;
   i32 gl_max_texture_image_units;
 
+  /* TODO(nickscha): temporary. should be application state */
   u32 draw_calls;
 
 } win32_vast_state;

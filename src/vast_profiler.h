@@ -1,6 +1,15 @@
 #ifndef VAST_PROFILER_H
 #define VAST_PROFILER_H
 
+#ifdef VAST_RELEASE
+
+/* On Release build the profiler is disabled */
+#define VAST_PROFILER_BEGIN(name)
+#define VAST_PROFILER_END(name)
+#define VAST_PROFILER_COUNT(name)
+
+#else
+
 #include "vast_types.h"
 
 /* #############################################################################
@@ -150,5 +159,7 @@ VAST_API VAST_INLINE void vast_profiler_end(s8 *name)
 #define VAST_PROFILER_BEGIN(name) vast_profiler_begin(#name, __FILE__, __LINE__)
 #define VAST_PROFILER_END(name) vast_profiler_end(#name)
 #define VAST_PROFILER_COUNT(name) vast_profiler_count(#name, __FILE__, __LINE__)
+
+#endif /* VAST_RELEASE */
 
 #endif /* VAST_PROFILER_H */
