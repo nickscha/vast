@@ -337,17 +337,17 @@ VAST_API void vast_ui_render(
             for (i = 0; i < 33; ++i)
             {
 
-                if (i == 15)
+                if (i == 16)
                 {
                     u16 offset_x_new = (u16)(offset_x_start + advance_x * text_start_col);
                     vast_ui_glyph_add(glyph_buffer, GLYPH_BUFFER_SIZE, &glyph_buffer_count, gl_vendor, &offset_x_new, &offset_y, default_color, GLYPH_STATE_NONE, font_scale);
                 }
-                else if (i == 16)
+                else if (i == 17)
                 {
                     u16 offset_x_new = (u16)(offset_x_start + advance_x * text_start_col);
                     vast_ui_glyph_add(glyph_buffer, GLYPH_BUFFER_SIZE, &glyph_buffer_count, gl_renderer, &offset_x_new, &offset_y, default_color, GLYPH_STATE_NONE, font_scale);
                 }
-                else if (i == 17)
+                else if (i == 18)
                 {
                     u16 offset_x_new = (u16)(offset_x_start + advance_x * text_start_col);
                     vast_ui_glyph_add(glyph_buffer, GLYPH_BUFFER_SIZE, &glyph_buffer_count, gl_version, &offset_x_new, &offset_y, default_color, GLYPH_STATE_NONE, font_scale);
