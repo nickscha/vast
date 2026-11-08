@@ -140,7 +140,7 @@ float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
     float horizonFade = smoothstep(0.0, 0.15, sun_dir.y);
     shadowMask *= horizonFade;
 
-    return mix(1.0, 0.4, shadowMask);
+    return mix(1.0, 0.5, shadowMask);
 }
 
 void main()
