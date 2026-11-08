@@ -4,13 +4,13 @@ in vec2 vUV;
 
 out vec4 FragColor;
 
-uniform vec3 iResolution;
-uniform float iTime;
-uniform vec3 cameraPos;
-uniform mat3 cameraBasis; /* right, up, forward */
-uniform vec3 sunDir;
+uniform vec3   iResolution;
+uniform float  iTime;
+uniform vec3   cameraPos;
+uniform mat3   cameraBasis; /* right, up, forward */
+uniform vec3   sunDir;
 
-const vec3 wind_dir = vec3(1.0, 0.0, 1.0);   
+const vec3 wind_dir    = vec3(1.0, 0.0, 1.0);   
 const float wind_speed = 0.04;
 
 float hash3D(vec3 p) {
