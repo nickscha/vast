@@ -1222,8 +1222,11 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     static u32 handle_count = 0;
     static win32_process_memory_info mem = {0};
 
-    GetProcessHandleCount(GetCurrentProcess(), &handle_count);
-    win32_process_memory(&mem);
+    if (((u32)state->platform_state.timing.time_elapsed) % 5 == 0) 
+    {
+      GetProcessHandleCount(GetCurrentProcess(), &handle_count);
+      win32_process_memory(&mem);
+    }
 
     vast_ui_render(
         &state->platform_state,
