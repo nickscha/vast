@@ -33,7 +33,7 @@ void main()
     }
 
     if (a_is_skirt > 0.5f) {
-        height -= 200.0f;
+        height -= 50.0f;
     }
     
     v_is_dirty_pass       = a_instance_data.y;
