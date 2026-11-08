@@ -770,6 +770,11 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
   /* https://pubs.opengroup.org/onlinepubs/009695399/functions/dlsym.html */
   *(void **)(&vast_update) = GetProcAddress(state->application.hDLL, "vast_update");
 
+  if (!vast_update) 
+  {
+    return 0;
+  }
+
   return 1;
 }
 
