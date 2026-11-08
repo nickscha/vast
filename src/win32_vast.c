@@ -99,7 +99,7 @@ typedef struct win32_vast_state
   s8 *gl_version;
   s8 *gl_renderer;
   s8 *gl_vendor;
-  s8* gl_shading_language_version;
+  s8 *gl_shading_language_version;
   i32 gl_context_profile_mask;
   i32 gl_num_extensions;
   i32 gl_max_texture_size;
@@ -588,7 +588,7 @@ VAST_API VAST_INLINE i64 win32_window_callback(void *window, u32 message, u64 wP
       {
         /*key->was_down = key->is_down;*/
         i32 vast_key = win32_vk_to_vast_key(vKey);
-        
+
         if (vast_key >= 0 && vast_key < VAST_KEYBORD_KEYS_COUNT)
         {
           state->platform_state.input.keyboard.keys_is_down[vast_key] = !(keyboard->Flags & RI_KEY_BREAK); /* 1 if pressed, 0 if released */
@@ -774,7 +774,7 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
   /* https://pubs.opengroup.org/onlinepubs/009695399/functions/dlsym.html */
   *(void **)(&vast_update) = GetProcAddress(state->application.hDLL, "vast_update");
 
-  if (!vast_update) 
+  if (!vast_update)
   {
     return 0;
   }
@@ -1016,19 +1016,19 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
 
     vast_sb_s8(&sb, "[opengl] gl_vendor                  : ");
     vast_sb_s8(&sb, state->gl_vendor);
-    vast_sb_s8(&sb, "\n"); 
+    vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_renderer                : ");
     vast_sb_s8(&sb, state->gl_renderer);
-    vast_sb_s8(&sb, "\n"); 
-  
+    vast_sb_s8(&sb, "\n");
+
     vast_sb_s8(&sb, "[opengl] gl_version                 : ");
     vast_sb_s8(&sb, state->gl_version);
-    vast_sb_s8(&sb, "\n"); 
+    vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_shading_language_version: ");
     vast_sb_s8(&sb, state->gl_shading_language_version);
-    vast_sb_s8(&sb, "\n"); 
+    vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_context_profile_mask    : ");
     vast_sb_i32(&sb, state->gl_context_profile_mask);
@@ -1057,11 +1057,11 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
     win32_print(sb.buffer);
   }
 
-  if ((state->gl_context_profile_mask & GL_CONTEXT_CORE_PROFILE_BIT) == 0) {
-    win32_print("[opengl][error] OpenGL core profile required but not found! (GL_CONTEXT_CORE_PROFILE_BIT)\n"); 
+  if ((state->gl_context_profile_mask & GL_CONTEXT_CORE_PROFILE_BIT) == 0)
+  {
+    win32_print("[opengl][error] OpenGL core profile required but not found! (GL_CONTEXT_CORE_PROFILE_BIT)\n");
     return 0;
   }
-
 
   return 1;
 }
@@ -1274,7 +1274,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     static u32 handle_count = 0;
     static win32_process_memory_info mem = {0};
 
-    if (((u32)state->platform_state.timing.time_elapsed) % 5 == 0) 
+    if (((u32)state->platform_state.timing.time_elapsed) % 5 == 0)
     {
       GetProcessHandleCount(GetCurrentProcess(), &handle_count);
       win32_process_memory(&mem);
