@@ -99,7 +99,9 @@ typedef struct win32_vast_state
   s8 *gl_version;
   s8 *gl_renderer;
   s8 *gl_vendor;
+  i32 gl_max_texture_size;
   i32 gl_max_3d_texture_size;
+  i32 gl_max_texture_image_units;
 
   u32 draw_calls;
 
@@ -982,11 +984,16 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
     wglSwapIntervalEXT(0);
   }
 
-  /* Print opengl information */
+  /* Get opengl capabilities */
   state->gl_vendor = (s8 *)glGetString(GL_VENDOR);
   state->gl_renderer = (s8 *)glGetString(GL_RENDERER);
   state->gl_version = (s8 *)glGetString(GL_VERSION);
 
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_max_texture_size);
+  glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &state->gl_max_3d_texture_size);
+  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &state->gl_max_texture_image_units);
+
+  /* Print opengl information */
   win32_print("[opengl] vendor  : ");
   win32_print(state->gl_vendor);
   win32_print("\n");

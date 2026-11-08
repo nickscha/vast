@@ -82,6 +82,9 @@
 #define GL_CULL_FACE 0x0B44
 #define GL_FRAMEBUFFER 0x8D40
 #define GL_COLOR_ATTACHMENT0 0x8CE0
+#define GL_MAX_TEXTURE_SIZE 0x0D33
+#define GL_MAX_3D_TEXTURE_SIZE 0x8073
+#define GL_MAX_TEXTURE_IMAGE_UNITS 0x8872
 
 /* OpenGL 1.1 functions */
 typedef void (*PFNGLCLEARCOLORPROC)(f32 red, f32 green, f32 blue, f32 alpha);
