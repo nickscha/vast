@@ -609,6 +609,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_mat4x4 view = vast_mat4x4_look_at(camera->position, vast_vec3_add(camera->position, camera->forward), camera->up);
         vast_mat4x4 mvp = vast_mat4x4_mul(projection, view);
         vast_frustum frustum = vast_frustum_extract(mvp);
+        f32 dt = (f32)state->timing.time_delta;
 
         *draw_calls = 0;
 
@@ -624,24 +625,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             if (visualization_mode > 4)
             {
                 visualization_mode = 0;
-            }
-        }
-
-        {
-            f32 dt = (f32)state->timing.time_delta;
-            u32 idx;
-
-            for (idx = 0; idx < VAST_TILES_TOTAL; ++idx)
-            {
-                if (tile_transition_timer[idx] < 1.0f)
-                {
-                    tile_transition_timer[idx] += dt * 3.33f;
-
-                    if (tile_transition_timer[idx] > 1.0f)
-                    {
-                        tile_transition_timer[idx] = 1.0f;
-                    }
-                }
             }
         }
 
@@ -676,11 +659,29 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 i32 tile_lod_current = t.tile_lod_current[i];
                 i32 texture_array_layer = texture_layer[i];
 
-                if (tile_lod_current != (i32)lod ||
-                    texture_array_layer < 0 ||
-                    !vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -200.0f, 600.0f))
+                if (tile_lod_current != (i32)lod || texture_array_layer < 0)
                 {
                     continue;
+                }
+
+                if (!vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -200.0f, 600.0f))
+                {
+                    /* Stop LOD geomorphing since the tile is not visible */
+                    tile_transition_timer[i] = 1.0f;
+                    continue;
+                }
+
+                /* TODO(nickscha): Add Fine to Coarse LOD transition */
+                /* TODO(nickscha): Use camera distance instead of a fixed time animation */
+                /* LOD Geomorphing from Coarse to Fine (e.g. from higher LOD to lower LOD) */
+                if (tile_transition_timer[i] < 1.0f)
+                {
+                    tile_transition_timer[i] += dt * 3.33f;
+
+                    if (tile_transition_timer[i] > 1.0f)
+                    {
+                        tile_transition_timer[i] = 1.0f;
+                    }
                 }
 
                 instance_buffer[instance_count].offset_x = (f32)t.tile_x[i];
