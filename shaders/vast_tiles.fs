@@ -3,10 +3,12 @@
 in float      v_is_dirty_pass;
 in vec2       v_uv;
 in vec3       v_worldPos;
+in float      v_transition_factor;
 flat in float v_texture_array_layer;
 
 uniform float          u_visualization_mode;
 uniform sampler2DArray u_normalmap;
+uniform float          u_grid_res;
 
 uniform vec3  iResolution;
 uniform vec3  iMouse;
@@ -146,7 +148,7 @@ float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
 void main()
 {
     vec3 normal = texture(u_normalmap, vec3(v_uv, v_texture_array_layer)).rgb * 2.0 - 1.0;
-    
+
     vec3 matGrass = vec3(0.06, 0.10, 0.03);
     vec3 matSnow  = vec3(0.90, 0.92, 0.95);
 

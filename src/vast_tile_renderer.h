@@ -67,6 +67,7 @@ typedef struct vast_tile_instance_data
     f32 offset_z;
     f32 texture_array_layer;
     f32 is_dirty;
+    f32 transition_factor;
 
 } vast_tile_instance_data;
 
@@ -392,6 +393,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static u32 grid_ibos[LOD_COUNT];
     static i32 gridIndexCounts[LOD_COUNT] = {0};
     static u32 lod_instance_vbos[LOD_COUNT];
+    static f32 tile_transition_timer[VAST_TILES_TOTAL] = {0};
 
     static u32 scratch_vao;
     static u32 scratch_fbo;
@@ -406,6 +408,15 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         VAST_PROFILER_BEGIN(tile_init);
         vast_tiles_init(&t, camera_tile_x, camera_tile_z);
         VAST_PROFILER_END(tile_init);
+
+        {
+            u32 i;
+
+            for (i = 0; i < VAST_TILES_TOTAL; ++i)
+            {
+                tile_transition_timer[i] = 1.0f;
+            }
+        }
 
         /* Setup tiles texture pools */
         {
@@ -489,9 +500,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vast_tile_instance_data), VAST_NULL);
                 glVertexAttribDivisor(2, 1);
 
-                /* Attribute 3: Instance Data (vec2: texture_layer, is_dirty) - Per-instance */
+                /* Attribute 3: Instance Data (vec2: texture_layer, is_dirty, transition_factor) - Per-instance */
                 glEnableVertexAttribArray(3);
-                glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(vast_tile_instance_data), (void *)(sizeof(f32) * 2));
+                glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(vast_tile_instance_data), (void *)(sizeof(f32) * 2));
                 glVertexAttribDivisor(3, 1);
 
                 glBindVertexArray(0);
@@ -525,6 +536,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             u32 tile_idx = t.dirty_indices[last_idx];
 
             i8 tile_lod_required = t.tile_lod_required[tile_idx];
+            i8 tile_lod_current = t.tile_lod_current[tile_idx];
 
             i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
             u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
@@ -573,6 +585,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             /* Mark that texture update is complete for this LOD */
+            if (tile_lod_current > tile_lod_required)
+            {
+                tile_transition_timer[tile_idx] = 0.0f;
+            }
             t.tile_lod_current[tile_idx] = tile_lod_required;
             t.dirty_indices_count--;
             updates_per_frame--;
@@ -608,6 +624,24 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             if (visualization_mode > 4)
             {
                 visualization_mode = 0;
+            }
+        }
+
+        {
+            f32 dt = (f32)state->timing.time_delta;
+            u32 idx;
+
+            for (idx = 0; idx < VAST_TILES_TOTAL; ++idx)
+            {
+                if (tile_transition_timer[idx] < 1.0f)
+                {
+                    tile_transition_timer[idx] += dt * 3.33f;
+
+                    if (tile_transition_timer[idx] > 1.0f)
+                    {
+                        tile_transition_timer[idx] = 1.0f;
+                    }
+                }
             }
         }
 
@@ -653,6 +687,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 instance_buffer[instance_count].offset_z = (f32)t.tile_z[i];
                 instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
                 instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, i);
+                instance_buffer[instance_count].transition_factor = tile_transition_timer[i];
                 instance_count++;
             }
 
