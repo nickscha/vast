@@ -298,6 +298,7 @@ static i32 lod_texture_pool_size[LOD_COUNT] = {
 
 static i32 texture_layer[VAST_TILES_TOTAL] = {0};
 
+/* TODO(nickscha): Not bulletproof yet */
 VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
 {
     static u8 initialized = 0;
