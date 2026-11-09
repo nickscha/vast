@@ -6,6 +6,13 @@
 
 #include "stdio.h"
 
+VAST_API VAST_INLINE void vast_test(u8 expression_result, s8 *expression_string, s8 *file, u32 line)
+{
+  printf("%s:%-4d (%s) = %s\n", file, line, expression_string, expression_result ? "OK" : "ERROR");
+}
+
+#define VAST_TEST(exp) vast_test((exp), (#exp), __FILE__, __LINE__);
+
 /* #############################################################################
  * # [TEST] Calculate Memory / Vertex / Tile requirements
  * #############################################################################
@@ -102,6 +109,9 @@ VAST_API VAST_INLINE void vast_test_tile_transition_factor_calculation(void)
   i32 camera_tile_x = (i32)vast_floorf((camera_x + tile_world_size * 0.5f) / tile_world_size);
   i32 camera_tile_z = (i32)vast_floorf((camera_z + tile_world_size * 0.5f) / tile_world_size);
 
+  VAST_TEST(camera_tile_x == 0);
+  VAST_TEST(camera_tile_z == 0);
+
   vast_tiles_init(&t, camera_tile_x, camera_tile_z);
 
   printf("\n");
@@ -114,11 +124,17 @@ VAST_API VAST_INLINE void vast_test_tile_transition_factor_calculation(void)
   printf("tile_index_1_n : %10d | tile_lod_1_n: %10d\n", vast_tile_index(camera_tile_x, camera_tile_z - 1), t.tile_lod_required[vast_tile_index(camera_tile_x, camera_tile_z - 1)]);
   printf("tile_index_2_n : %10d | tile_lod_2_n: %10d\n", vast_tile_index(camera_tile_x, camera_tile_z - 2), t.tile_lod_required[vast_tile_index(camera_tile_x, camera_tile_z - 2)]);
   printf("\n");
+
+  camera_z = -128.0f;
+  VAST_TEST((i32)vast_floorf((camera_z + tile_world_size * 0.5f) / tile_world_size) == 0);
+  camera_z = -129.0f;
+  VAST_TEST((i32)vast_floorf((camera_z + tile_world_size * 0.5f) / tile_world_size) == -1);
 }
 
 i32 main(void)
 {
   vast_test_tile_memory_requirements();
   vast_test_tile_transition_factor_calculation();
+
   return 0;
 }
