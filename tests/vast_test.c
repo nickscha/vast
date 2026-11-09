@@ -1,5 +1,5 @@
-#define VAST_TILES_PER_SIDE 33
 #include "../src/vast_tiles.h"
+#include "../src/vast_math_basic.h"
 
 #define VAST_KB(s) (((f64)s) / 1024.0)
 #define VAST_MB(s) (((f64)s) / 1024.0 / 1024.0)
@@ -29,7 +29,8 @@
   total_vertices     :     432000
 
  */
-i32 main(void)
+
+VAST_API VAST_INLINE void vast_test_tile_memory_requirements(void)
 {
   vast_tiles t = {0};
 
@@ -45,7 +46,7 @@ i32 main(void)
 
   u32 i;
 
-  u32 tile_lod_max = 0;
+  u32 tile_lod_count = 0;
 
   i32 total_bytes_heightmap = 0;
   i32 total_bytes_normalmap = 0;
@@ -53,12 +54,12 @@ i32 main(void)
 
   vast_tiles_init(&t, camera_x, camera_z);
 
-  tile_lod_max = (u32)t.tile_lod_max + 1;
+  tile_lod_count = (u32)t.tile_lod_max + 1;
 
   /* Print LOD stats */
   printf("\n%4s %15s %15s %11s %13s %13s\n", "LOD", "Height Texture", "Normal Texture", "Tile Count", "Height Bytes", "Normal Bytes");
 
-  for (i = 0; i < tile_lod_max; ++i)
+  for (i = 0; i < tile_lod_count; ++i)
   {
     i32 lod_res_heightmap = resolution_heightmap / (1 << i);
     i32 lod_res_normalmap = resolution_normalmap / (1 << i);
@@ -86,9 +87,38 @@ i32 main(void)
 
   printf("tile_tiles_per_side: %10d\n", VAST_TILES_PER_SIDE);
   printf("tile_tiles_total   : %10d\n", VAST_TILES_TOTAL);
-  printf("tile_max_lod       : %10d\n", tile_lod_max);
+  printf("tile_lod_count     : %10d\n", tile_lod_count);
   printf("tile_world_size    : %10d\n", tile_world_size);
   printf("total_vertices     : %10d\n\n", total_vertices_needed);
+}
 
+VAST_API VAST_INLINE void vast_test_tile_transition_factor_calculation(void)
+{
+  vast_tiles t = {0};
+
+  f32 tile_world_size = 256.0f;
+  f32 camera_x = 0.0f;
+  f32 camera_z = 0.0f;
+  i32 camera_tile_x = (i32)vast_floorf((camera_x + tile_world_size * 0.5f) / tile_world_size);
+  i32 camera_tile_z = (i32)vast_floorf((camera_z + tile_world_size * 0.5f) / tile_world_size);
+
+  vast_tiles_init(&t, camera_tile_x, camera_tile_z);
+
+  printf("\n");
+  printf("tile_world_size: %10.4f |\n", (f64)tile_world_size);
+  printf("camera_x       : %10.4f |\n", (f64)camera_x);
+  printf("camera_z       : %10.4f |\n", (f64)camera_z);
+  printf("camera_tile_x  : %10d |\n", camera_tile_x);
+  printf("camera_tile_z  : %10d |\n", camera_tile_z);
+  printf("tile_index     : %10d | tile_lod    : %10d\n", vast_tile_index(camera_tile_x, camera_tile_z), t.tile_lod_required[vast_tile_index(camera_tile_x, camera_tile_z)]);
+  printf("tile_index_1_n : %10d | tile_lod_1_n: %10d\n", vast_tile_index(camera_tile_x, camera_tile_z - 1), t.tile_lod_required[vast_tile_index(camera_tile_x, camera_tile_z - 1)]);
+  printf("tile_index_2_n : %10d | tile_lod_2_n: %10d\n", vast_tile_index(camera_tile_x, camera_tile_z - 2), t.tile_lod_required[vast_tile_index(camera_tile_x, camera_tile_z - 2)]);
+  printf("\n");
+}
+
+i32 main(void)
+{
+  vast_test_tile_memory_requirements();
+  vast_test_tile_transition_factor_calculation();
   return 0;
 }

@@ -5,7 +5,7 @@ set DEF_COMPILER_FLAGS=-std=c89 -pedantic ^
 -Wmissing-field-initializers -Wuninitialized -Winit-self -Wunused -Wunused-macros -Wunused-local-typedefs
 
 REM Compile
-cc -s -O2 %DEF_COMPILER_FLAGS% vast_tile_test.c -o vast_tile_test.exe
+cc -s -O2 %DEF_COMPILER_FLAGS% vast_test.c -o vast_test.exe
 
 REM Execute
-vast_tile_test.exe
+vast_test.exe
