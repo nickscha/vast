@@ -58,6 +58,7 @@ WIN32_VAST_API_TYPES_STATIC_ASSERT(sizeof(i64) == 8, i64_size_must_be_8);
 #define WM_QUIT 0x0012
 #define WM_SIZE 0x0005
 #define WM_INPUT 0x00FF
+#define WM_MOUSEWHEEL 0x020A
 #define WM_DEVICECHANGE 0x0219
 
 #define WM_LBUTTONDOWN 0x0201

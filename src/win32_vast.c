@@ -619,6 +619,19 @@ VAST_API VAST_INLINE i64 win32_window_callback(void *window, u32 message, u64 wP
     }
   }
   break;
+  case WM_MOUSEWHEEL:
+  {
+    i16 wheelDelta;
+
+    if (!state)
+    {
+      break;
+    }
+
+    wheelDelta = ((i16)(((u64)(wParam) >> 16) & 0xffff));
+    state->platform_state.input.mouse.scroll += (f32)wheelDelta / (f32)WHEEL_DELTA;
+  }
+  break;
   case WM_DEVICECHANGE:
   {
     /* Check if a device notification arrived in order to find out when to requery XInput controller states */
@@ -1080,56 +1093,57 @@ VAST_API VAST_INLINE void vast_update_camera_movement(win32_vast_state *state, v
   static u8 mouse_attached = 0;
 
   f32 cam_speed = camera_speed * (f32)state->platform_state.timing.time_delta;
+  vast_platform_input_keyboard *kb = &state->platform_state.input.keyboard;
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_W])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_W])
   {
     camera->position = vast_vec3_add(camera->position, vast_vec3_mulf(camera->forward, cam_speed));
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_S])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_S])
   {
     camera->position = vast_vec3_sub(camera->position, vast_vec3_mulf(camera->forward, cam_speed));
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_A])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_A])
   {
     camera->position = vast_vec3_sub(camera->position, vast_vec3_mulf(camera->right, cam_speed));
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_D])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_D])
   {
     camera->position = vast_vec3_add(camera->position, vast_vec3_mulf(camera->right, cam_speed));
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_SPACE])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_SPACE])
   {
     camera->position = vast_vec3_add(camera->position, vast_vec3_mulf(camera->worldUp, cam_speed));
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_CONTROL])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_CONTROL])
   {
     camera->position = vast_vec3_sub(camera->position, vast_vec3_mulf(camera->worldUp, cam_speed));
   }
 
   /* Roll handling */
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_Q])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_Q])
   {
     camera->roll -= 1.0f;
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_E])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_E])
   {
     camera->roll += 1.0f;
   }
 
   /* FOV handling */
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F] && !state->platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_F] && !kb->keys_was_down[VAST_KEYBOARD_KEY_F])
   {
     camera->fov = 90.0f;
     camera->roll = 0.0f;
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_PLUS])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_PLUS])
   {
     camera->fov -= 1.0f;
 
@@ -1139,7 +1153,7 @@ VAST_API VAST_INLINE void vast_update_camera_movement(win32_vast_state *state, v
     }
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_MINUS])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_MINUS])
   {
     camera->fov += 1.0f;
 
@@ -1149,12 +1163,12 @@ VAST_API VAST_INLINE void vast_update_camera_movement(win32_vast_state *state, v
     }
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_LEFT])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_LEFT])
   {
     camera->yaw -= vast_minf(cam_speed * 0.1f, 89.0f);
   }
 
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_RIGHT])
+  if (kb->keys_is_down[VAST_KEYBOARD_KEY_RIGHT])
   {
     camera->yaw += vast_minf(cam_speed * 0.1f, 89.0f);
   }
@@ -1482,6 +1496,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
         state.platform_state.input.mouse.keys_was_down[VAST_MOUSE_KEY_RIGHT] = state.platform_state.input.mouse.keys_is_down[VAST_MOUSE_KEY_RIGHT];
         state.platform_state.input.mouse.dx = 0;
         state.platform_state.input.mouse.dy = 0;
+        state.platform_state.input.mouse.scroll = 0;
 
         while (PeekMessageA(&message, state.window_handle, 0, 0, PM_REMOVE))
         {
