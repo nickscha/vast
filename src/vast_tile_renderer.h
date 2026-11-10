@@ -176,6 +176,7 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
     state->memory.offset = 0;
 }
 
+#ifndef VAST_RELEASE
 VAST_API void vast_tile_shader_hot_reload(
     vast_platform_state *state,
     vast_tiles *tiles,
@@ -240,6 +241,7 @@ VAST_API void vast_tile_shader_hot_reload(
         VAST_PROFILER_END(tile_hot_reload);
     }
 }
+#endif
 
 VAST_API u8 vast_tile_is_visible(
     vast_frustum *f,
@@ -512,8 +514,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         tiles_initialized = 1;
     }
 
-    /* Hot reload tile shaders */
+#ifndef VAST_RELEASE
     vast_tile_shader_hot_reload(state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, camera_tile_x, camera_tile_z);
+#endif
 
     /* Update camera tile based on camera world position */
     camera_tile_x = (i32)vast_floorf((camera->position.x + tile_world_size * 0.5f) / tile_world_size);
