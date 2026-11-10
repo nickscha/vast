@@ -278,6 +278,7 @@ typedef struct vast_platform_state
 void vast_update(vast_platform_state *platform_state);
 #else
 
+#ifndef VAST_RELEASE
 VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state)
 {
     platform_state->api.io_print("[vast][error] No 'vast_update' function has been set! Using 'vast_update_stub'!\n");
@@ -297,6 +298,9 @@ VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state)
 typedef void (*vast_update_function)(vast_platform_state *platform_state);
 
 static vast_update_function vast_update = vast_update_stub;
+#else
+#include "vast.c"
+#endif /* VAST_RELEASE */
 
 #endif /* VAST_APPLICATION */
 

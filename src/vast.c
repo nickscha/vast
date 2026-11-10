@@ -33,6 +33,7 @@ void vast_update(vast_platform_state *platform_state)
     }
 }
 
+#ifndef VAST_RELEASE
 #ifdef _WIN32
 #ifdef __clang__
 #elif __GNUC__
@@ -42,4 +43,5 @@ i32 DllMainCRTStartup(void)
 {
     return 1;
 }
-#endif
+#endif /* _WIN32 */
+#endif /* VAST_RELEASE */

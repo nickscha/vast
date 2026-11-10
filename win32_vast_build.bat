@@ -13,9 +13,13 @@ set DEF_COMPILER_FLAGS=-mwindows -march=native -mtune=native ^
 
 set DEF_FLAGS_LINKER=-lkernel32 -luser32 -lgdi32
 
-REM Compile
-cc -s -O2 -shared %DEF_COMPILER_FLAGS%  src/%APPLICATION_NAME%.c -o %APPLICATION_NAME%.dll
-cc -s -O2 %DEF_COMPILER_FLAGS% src/%PLATFORM_NAME%.c %ICON_DATA% -o %PLATFORM_NAME%.exe %DEF_FLAGS_LINKER%
+REM Compile Dev
+cc -s -O2 -shared %DEF_COMPILER_FLAGS%  src/%APPLICATION_NAME%.c -o %APPLICATION_NAME%_dev.dll
+cc -s -O2 %DEF_COMPILER_FLAGS% src/%PLATFORM_NAME%.c %ICON_DATA% -o %PLATFORM_NAME%_dev.exe %DEF_FLAGS_LINKER%
+
+REM Compile Release
+REM cc -s -O2 %DEF_COMPILER_FLAGS% -DVAST_RELEASE src/%PLATFORM_NAME%.c %ICON_DATA% -o %PLATFORM_NAME%.exe %DEF_FLAGS_LINKER%
 
 REM Execute
-%PLATFORM_NAME%.exe
+%PLATFORM_NAME%_dev.exe
+REM %PLATFORM_NAME%.exe

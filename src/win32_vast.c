@@ -37,6 +37,7 @@ void *memset(void *dest, i32 c, u32 count)
   return dest;
 }
 
+#ifndef VAST_RELEASE
 /* Implementation for vast_profiler.h */
 VAST_API f64 vast_profiler_time_ms(void)
 {
@@ -53,6 +54,7 @@ VAST_API f64 vast_profiler_time_ms(void)
 
   return ((f64)time * 1000.0) / (f64)freq;
 }
+#endif /* VAST_RELEASE */
 
 /* #############################################################################
  * # [SECTION] Force Discrete GPU
@@ -737,9 +739,9 @@ VAST_API void win32_window_enter_windowed(win32_vast_state *state)
   }
 }
 
+#ifndef VAST_RELEASE
 VAST_API u8 win32_load_application(win32_vast_state *state)
 {
-  s8 *dllName = "vast.dll";
   s8 *dllTempName = "vast_temp.dll";
 
   win32_print("[win32] load application\n");
@@ -756,17 +758,16 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
     state->application.hDLL = VAST_NULL;
   }
 
-  if (!CopyFileA(dllName, dllTempName, 0))
+  if (!CopyFileA(state->application.dllName, dllTempName, 0))
   {
     win32_print("[win32] cannot copy file: ");
-    win32_print(dllName);
+    win32_print(state->application.dllName);
     win32_print("\n");
     return 0;
   }
 
   state->application.hDLL = LoadLibraryA(dllTempName);
-  state->application.dllName = dllName;
-  state->application.lastWriteTime = win32_file_mod_time(dllName);
+  state->application.lastWriteTime = win32_file_mod_time(state->application.dllName);
 
   if (!state->application.hDLL)
   {
@@ -784,6 +785,7 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
 
   return 1;
 }
+#endif
 
 /* #############################################################################
  * # [SECTION] OpenGL Context Creation and Shader Management
@@ -1303,6 +1305,8 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
 {
   win32_vast_state state = {0};
 
+  state.application.dllName = (argv && argc > 1) ? (s8 *)argv[1] : "vast_dev.dll";
+
   state.platform_state.running = 1;
   state.platform_state.window.title = "vast v0.1 (F1=Debug UI, F2=Screen Recording, R=Reset, P=Pause, F9=Borderless, F11=Fullscreen)";
   state.platform_state.timing.frame_rate_target = 30; /* 30 FPS, 0 = unlimited */
@@ -1325,17 +1329,18 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   state.platform_state.memory.size = 1024 * 1024 * 8; /* 8 MB */
   state.platform_state.memory.data = VirtualAlloc(0, state.platform_state.memory.size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
-  (void)argc;
-  (void)argv;
-
-  /******************************/
-  /* Load application once      */
-  /******************************/
+/******************************/
+/* Load application once      */
+/******************************/
+#ifndef VAST_RELEASE
   if (!win32_load_application(&state))
   {
-    win32_print("[ERROR] Could not load application!\n");
+    win32_print("[ERROR] Could not load application dll '");
+    win32_print(state.application.dllName);
+    win32_print("' !\n");
     return 1;
   }
+#endif
 
   /******************************/
   /* Set Process Priorities     */
@@ -1438,6 +1443,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
         continue;
       }
 
+#ifndef VAST_RELEASE
       /******************************/
       /* Hot Reload Application     */
       /******************************/
@@ -1451,6 +1457,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
           state.platform_state.application_initialized = 0;
         }
       }
+#endif
 
       /******************************/
       /* Input Processing           */

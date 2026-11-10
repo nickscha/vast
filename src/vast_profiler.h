@@ -1,12 +1,28 @@
 #ifndef VAST_PROFILER_H
 #define VAST_PROFILER_H
 
+typedef struct vast_profiler_entry
+{
+    f64 time_ms_last;
+    f64 time_ms_min;
+    f64 time_ms_max;
+    f64 time_ms_total;
+    u32 line;
+    u32 counter;
+    s8 *name;
+    s8 *file;
+
+} vast_profiler_entry;
+
 #ifdef VAST_RELEASE
 
 /* On Release build the profiler is disabled */
 #define VAST_PROFILER_BEGIN(name)
 #define VAST_PROFILER_END(name)
 #define VAST_PROFILER_COUNT(name)
+
+static vast_profiler_entry vast_profiler_entries[1];
+static u32 vast_profiler_entries_count = 0;
 
 #else
 
@@ -21,19 +37,6 @@
 #endif
 
 #define VAST_PROFILER_ENTRY_INVALID 0xFFFFFFFF
-
-typedef struct vast_profiler_entry
-{
-    f64 time_ms_last;
-    f64 time_ms_min;
-    f64 time_ms_max;
-    f64 time_ms_total;
-    u32 line;
-    u32 counter;
-    s8 *name;
-    s8 *file;
-
-} vast_profiler_entry;
 
 static vast_profiler_entry vast_profiler_entries[VAST_PROFILER_MAX_ENTRIES];
 static u32 vast_profiler_entries_count = 0;
