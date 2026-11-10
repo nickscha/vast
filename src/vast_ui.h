@@ -444,6 +444,8 @@ VAST_API void vast_ui_render(
         vast_sb_i32(&t, state->input.mouse.dx);
         vast_sb_s8(&t, "/");
         vast_sb_i32(&t, state->input.mouse.dy);
+        vast_sb_s8(&t, "/");
+        vast_sb_i32(&t, (i32)state->input.mouse.scroll);
         CALC_GLYPH(t, default_color);
         vast_sb_i32(&t, (i32)state->window.width);
         vast_sb_s8(&t, "/");
