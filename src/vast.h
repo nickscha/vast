@@ -254,16 +254,29 @@ typedef struct vast_platform_timing
 } vast_platform_timing;
 
 /* #############################################################################
+ * # [SECTION] Temporary OpenGL calls
+ * #############################################################################
+ */
+#include "vast_opengl_api.h"
+
+typedef struct vast_platform_graphics
+{
+    vast_opengl_api opengl;
+
+} vast_platform_graphics;
+
+/* #############################################################################
  * # [SECTION] Single Source of Truth coming from the platform layer
  * #############################################################################
  */
 typedef struct vast_platform_state
 {
-    vast_platform_api api;       /* Platform provided functions */
-    vast_platform_window window; /* Platform window information */
-    vast_platform_input input;   /* Platform input */
-    vast_platform_memory memory; /* Platform memory */
-    vast_platform_timing timing; /* Platform timing */
+    vast_platform_api api;           /* Platform provided functions */
+    vast_platform_window window;     /* Platform window information */
+    vast_platform_input input;       /* Platform input              */
+    vast_platform_memory memory;     /* Platform memory             */
+    vast_platform_timing timing;     /* Platform timing             */
+    vast_platform_graphics graphics; /* Platform provided graphics  */
 
     u8 running;
     u8 application_initialized;

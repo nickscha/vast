@@ -201,6 +201,8 @@ VAST_API void vast_ui_render(
     static u16 advance_x;
     static u16 advance_y;
 
+    vast_opengl_api *gl = &state->graphics.opengl;
+
     if (!ui_initialized)
     {
         advance_x = vast_ui_glyph_advance_x(font_scale);
@@ -213,26 +215,26 @@ VAST_API void vast_ui_render(
             /* OpenGL does not allow 1bit packed texture data so we convert each bit to 1 byte */
             vast_font_unpack_1bit_to_8bit(vast_ui_font_pixels, vast_font, VAST_FONT_WIDTH, VAST_FONT_HEIGHT);
 
-            glGenTextures(1, &ui_font_texture_id);
-            glBindTexture(GL_TEXTURE_2D, ui_font_texture_id);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, VAST_FONT_WIDTH, VAST_FONT_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, vast_ui_font_pixels);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glActiveTexture(GL_TEXTURE0);
+            gl->glGenTextures(1, &ui_font_texture_id);
+            gl->glBindTexture(GL_TEXTURE_2D, ui_font_texture_id);
+            gl->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, VAST_FONT_WIDTH, VAST_FONT_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, vast_ui_font_pixels);
+            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            gl->glActiveTexture(GL_TEXTURE0);
         }
 
         /* Load font shader */
         {
-            if (opengl_shader_load(&font_shader.header, vast_ui_shader_vertex, vast_ui_shader_fragment, state->api.io_print))
+            if (opengl_shader_load(&font_shader.header, vast_ui_shader_vertex, vast_ui_shader_fragment, state->api.io_print, gl))
             {
-                font_shader.loc_iResolution = glGetUniformLocation(font_shader.header.program, "r");
-                font_shader.loc_iTextureInfo = glGetUniformLocation(font_shader.header.program, "t");
-                font_shader.loc_iFontScale = glGetUniformLocation(font_shader.header.program, "s");
-                font_shader.loc_iTime = glGetUniformLocation(font_shader.header.program, "iTime");
-                font_shader.loc_iTexture = glGetUniformLocation(font_shader.header.program, "iTexture");
+                font_shader.loc_iResolution = gl->glGetUniformLocation(font_shader.header.program, "r");
+                font_shader.loc_iTextureInfo = gl->glGetUniformLocation(font_shader.header.program, "t");
+                font_shader.loc_iFontScale = gl->glGetUniformLocation(font_shader.header.program, "s");
+                font_shader.loc_iTime = gl->glGetUniformLocation(font_shader.header.program, "iTime");
+                font_shader.loc_iTexture = gl->glGetUniformLocation(font_shader.header.program, "iTexture");
             }
         }
 
@@ -241,32 +243,32 @@ VAST_API void vast_ui_render(
             static f32 quad_vertices[] = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
             static u32 quad_vbo;
 
-            glGenVertexArrays(1, &font_vao);
-            glBindVertexArray(font_vao);
+            gl->glGenVertexArrays(1, &font_vao);
+            gl->glBindVertexArray(font_vao);
 
-            glGenBuffers(1, &quad_vbo);
-            glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
+            gl->glGenBuffers(1, &quad_vbo);
+            gl->glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
+            gl->glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
 
             /* pos (location = 0) */
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), VAST_NULL);
-            glVertexAttribDivisor(0, 0);
+            gl->glEnableVertexAttribArray(0);
+            gl->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), VAST_NULL);
+            gl->glVertexAttribDivisor(0, 0);
 
-            glGenBuffers(1, &glyph_vbo);
-            glBindBuffer(GL_ARRAY_BUFFER, glyph_vbo);
+            gl->glGenBuffers(1, &glyph_vbo);
+            gl->glBindBuffer(GL_ARRAY_BUFFER, glyph_vbo);
 
             /* iGlyph (location = 1) */
-            glEnableVertexAttribArray(1);
-            glVertexAttribIPointer(1, 4, GL_UNSIGNED_SHORT, sizeof(vast_ui_glyph), VAST_NULL);
-            glVertexAttribDivisor(1, 1);
+            gl->glEnableVertexAttribArray(1);
+            gl->glVertexAttribIPointer(1, 4, GL_UNSIGNED_SHORT, sizeof(vast_ui_glyph), VAST_NULL);
+            gl->glVertexAttribDivisor(1, 1);
         }
 
         /* Setup Fixed Shader Uniform constants */
-        glUseProgram(font_shader.header.program);
-        glUniform4f(font_shader.loc_iTextureInfo, VAST_FONT_WIDTH, VAST_FONT_HEIGHT, VAST_FONT_GLYPH_WIDTH, VAST_FONT_GLYPH_HEIGHT);
-        glUniform1i(font_shader.loc_iTexture, 0);
-        glUniform1f(font_shader.loc_iFontScale, font_scale);
+        gl->glUseProgram(font_shader.header.program);
+        gl->glUniform4f(font_shader.loc_iTextureInfo, VAST_FONT_WIDTH, VAST_FONT_HEIGHT, VAST_FONT_GLYPH_WIDTH, VAST_FONT_GLYPH_HEIGHT);
+        gl->glUniform1i(font_shader.loc_iTexture, 0);
+        gl->glUniform1f(font_shader.loc_iFontScale, font_scale);
 
         ui_initialized = 1;
     }
@@ -600,24 +602,24 @@ VAST_API void vast_ui_render(
     /* Rendering */
     VAST_PROFILER_BEGIN(ui_render);
 
-    glUseProgram(font_shader.header.program);
-    glUniform3f(font_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
-    glUniform1f(font_shader.loc_iTime, (f32)state->timing.time_elapsed);
+    gl->glUseProgram(font_shader.header.program);
+    gl->glUniform3f(font_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
+    gl->glUniform1f(font_shader.loc_iTime, (f32)state->timing.time_elapsed);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    gl->glEnable(GL_BLEND);
+    gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glBindVertexArray(font_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, glyph_vbo);
-    glBufferData(GL_ARRAY_BUFFER, (i32)(glyph_buffer_count * sizeof(vast_ui_glyph)), glyph_buffer, GL_STREAM_DRAW);
+    gl->glBindVertexArray(font_vao);
+    gl->glBindBuffer(GL_ARRAY_BUFFER, glyph_vbo);
+    gl->glBufferData(GL_ARRAY_BUFFER, (i32)(glyph_buffer_count * sizeof(vast_ui_glyph)), glyph_buffer, GL_STREAM_DRAW);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, ui_font_texture_id);
+    gl->glActiveTexture(GL_TEXTURE0);
+    gl->glBindTexture(GL_TEXTURE_2D, ui_font_texture_id);
 
-    glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, glyph_buffer_count);
-    glBindVertexArray(0);
+    gl->glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, glyph_buffer_count);
+    gl->glBindVertexArray(0);
 
-    glDisable(GL_BLEND);
+    gl->glDisable(GL_BLEND);
 
     VAST_PROFILER_END(ui_render);
 }

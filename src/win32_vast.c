@@ -949,7 +949,7 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
   win32_vast_opengl_load_functions(win32_opengl_load_function, 0);
 
   /* Load common opengl functions (platform independant) */
-  vast_opengl_load_functions(win32_opengl_load_function);
+  vast_opengl_load_functions(win32_opengl_load_function, &state->platform_state.graphics.opengl);
 
   if (win32_opengl_failed_function_load_count > 0)
   {
@@ -959,7 +959,6 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
 
   /* Set Pixel Format */
   {
-
     i32 pixel_attributes[] = {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
         WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
@@ -1012,17 +1011,21 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
   }
 
   /* Get opengl capabilities */
-  state->gl_vendor = (s8 *)glGetString(GL_VENDOR);
-  state->gl_renderer = (s8 *)glGetString(GL_RENDERER);
-  state->gl_version = (s8 *)glGetString(GL_VERSION);
-  state->gl_shading_language_version = (s8 *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+  {
+    vast_opengl_api *gl = &state->platform_state.graphics.opengl;
 
-  glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &state->gl_context_profile_mask);
-  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_num_extensions);
-  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_max_texture_size);
-  glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &state->gl_max_3d_texture_size);
-  glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &state->gl_max_array_texture_layer);
-  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &state->gl_max_texture_image_units);
+    state->gl_vendor = (s8 *)gl->glGetString(GL_VENDOR);
+    state->gl_renderer = (s8 *)gl->glGetString(GL_RENDERER);
+    state->gl_version = (s8 *)gl->glGetString(GL_VERSION);
+    state->gl_shading_language_version = (s8 *)gl->glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+    gl->glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &state->gl_context_profile_mask);
+    gl->glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_num_extensions);
+    gl->glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_max_texture_size);
+    gl->glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &state->gl_max_3d_texture_size);
+    gl->glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &state->gl_max_array_texture_layer);
+    gl->glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &state->gl_max_texture_image_units);
+  }
 
   /* Print opengl information */
   {
@@ -1276,7 +1279,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   /******************************/
   /* Application Rendering      */
   /******************************/
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   vast_sky_render(&state->platform_state, &camera, sun_dir);
   vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls);
 
@@ -1397,14 +1400,12 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
     return 1;
   }
 
-  glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &state.gl_max_3d_texture_size);
-
   /* Avoid clear color flickering */
-  glViewport(0, 0, (i32)state.platform_state.window.width, (i32)state.platform_state.window.height);
-  glClearColor(state.platform_state.window.clear_color_r, state.platform_state.window.clear_color_g, state.platform_state.window.clear_color_b, state.platform_state.window.clear_color_a);
-  glDisable(GL_FRAMEBUFFER_SRGB);
-  glDisable(GL_MULTISAMPLE);
-  glClear(GL_COLOR_BUFFER_BIT);
+  state.platform_state.graphics.opengl.glViewport(0, 0, (i32)state.platform_state.window.width, (i32)state.platform_state.window.height);
+  state.platform_state.graphics.opengl.glClearColor(state.platform_state.window.clear_color_r, state.platform_state.window.clear_color_g, state.platform_state.window.clear_color_b, state.platform_state.window.clear_color_a);
+  state.platform_state.graphics.opengl.glDisable(GL_FRAMEBUFFER_SRGB);
+  state.platform_state.graphics.opengl.glDisable(GL_MULTISAMPLE);
+  state.platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT);
 
   SwapBuffers(state.device_context);
 
@@ -1627,9 +1628,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
       {
         state.platform_state.window.width = state.window_width_pending;
         state.platform_state.window.height = state.window_height_pending;
-
-        glViewport(0, 0, (i32)state.platform_state.window.width, (i32)state.platform_state.window.height);
-
+        state.platform_state.graphics.opengl.glViewport(0, 0, (i32)state.platform_state.window.width, (i32)state.platform_state.window.height);
         state.platform_state.window.size_changed = 0;
       }
 
@@ -1667,7 +1666,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
       /* Application updated the window clear color */
       if (state.platform_state.window.clear_color_changed)
       {
-        glClearColor(state.platform_state.window.clear_color_r, state.platform_state.window.clear_color_g, state.platform_state.window.clear_color_b, state.platform_state.window.clear_color_a);
+        state.platform_state.graphics.opengl.glClearColor(state.platform_state.window.clear_color_r, state.platform_state.window.clear_color_g, state.platform_state.window.clear_color_b, state.platform_state.window.clear_color_a);
         state.platform_state.window.clear_color_changed = 0;
       }
 

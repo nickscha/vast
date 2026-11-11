@@ -65,33 +65,35 @@ VAST_API void vast_screen_recording_render(
     static vast_screen_recording_shader recording_shader = {0};
     static u32 screeen_recording_vao;
 
+    vast_opengl_api *gl = &state->graphics.opengl;
+
     if (!screen_recording_initialized)
     {
         /* Generate a dummy vao with no buffer */
-        glGenVertexArrays(1, &screeen_recording_vao);
-        glBindVertexArray(screeen_recording_vao);
+        gl->glGenVertexArrays(1, &screeen_recording_vao);
+        gl->glBindVertexArray(screeen_recording_vao);
 
         /* Load recording shader */
-        if (opengl_shader_load(&recording_shader.header, vast_screen_recording_shader_vertex, vast_screen_recording_shader_fragment, state->api.io_print))
+        if (opengl_shader_load(&recording_shader.header, vast_screen_recording_shader_vertex, vast_screen_recording_shader_fragment, state->api.io_print, gl))
         {
-            recording_shader.loc_iResolution = glGetUniformLocation(recording_shader.header.program, "iRes");
-            recording_shader.loc_iTime = glGetUniformLocation(recording_shader.header.program, "iTime");
+            recording_shader.loc_iResolution = gl->glGetUniformLocation(recording_shader.header.program, "iRes");
+            recording_shader.loc_iTime = gl->glGetUniformLocation(recording_shader.header.program, "iTime");
         }
 
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        gl->glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
         screen_recording_initialized = 1;
     }
 
     /* Readback current image pixels to CPU */
-    glReadPixels(0, 0, (i32)state->window.width, (i32)state->window.height, GL_RGB, GL_UNSIGNED_BYTE, framebuffer);
+    gl->glReadPixels(0, 0, (i32)state->window.width, (i32)state->window.height, GL_RGB, GL_UNSIGNED_BYTE, framebuffer);
 
     /* Render recording indicator */
-    glUseProgram(recording_shader.header.program);
-    glUniform3f(recording_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
-    glUniform1f(recording_shader.loc_iTime, (f32)state->timing.time_elapsed);
-    glBindVertexArray(screeen_recording_vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    gl->glUseProgram(recording_shader.header.program);
+    gl->glUniform3f(recording_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
+    gl->glUniform1f(recording_shader.loc_iTime, (f32)state->timing.time_elapsed);
+    gl->glBindVertexArray(screeen_recording_vao);
+    gl->glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
 #endif /* VAST_SCREEN_RECORDING_H */
