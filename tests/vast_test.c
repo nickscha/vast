@@ -131,10 +131,74 @@ VAST_API VAST_INLINE void vast_test_tile_transition_factor_calculation(void)
   VAST_TEST((i32)vast_floorf((camera_z + tile_world_size * 0.5f) / tile_world_size) == -1);
 }
 
+VAST_API VAST_INLINE void vast_test_tile_camera_back_face_transition_factor(void)
+{
+  vast_tiles t = {0};
+
+  f32 tile_world_size = 256.0f;
+  f32 tile_world_size_half = tile_world_size * 0.5f;
+  f32 camera_x = 0.0f;
+  f32 camera_z = 0.0f;
+  i32 camera_tile_x = (i32)vast_floorf((camera_x + tile_world_size * 0.5f) / tile_world_size);
+  i32 camera_tile_z = (i32)vast_floorf((camera_z + tile_world_size * 0.5f) / tile_world_size);
+
+  vast_tiles_init(&t, camera_tile_x, camera_tile_z);
+
+  printf("\n");
+  printf("tile_world_size: %10.4f |\n", (f64)tile_world_size);
+  printf("camera_x       : %10.4f |\n", (f64)camera_x);
+  printf("camera_z       : %10.4f |\n", (f64)camera_z);
+  printf("camera_tile_x  : %10d |\n", camera_tile_x);
+  printf("camera_tile_z  : %10d |\n", camera_tile_z);
+  printf("tile_origin_x  : %10.4f |\n", (f64)t.origin_x);
+  printf("tile_origin_z  : %10.4f |\n", (f64)t.origin_z);
+  printf("tile_origin_x w: %10.4f |\n", (f64)t.origin_x * (f64)tile_world_size);
+  printf("tile_origin_z w: %10.4f |\n", (f64)t.origin_z * (f64)tile_world_size);
+
+  {
+    f32 tile_x_min = (f32)camera_tile_x * tile_world_size - tile_world_size_half;
+    f32 tile_x_max = (f32)tile_x_min + tile_world_size;
+    f32 tile_z_min = (f32)camera_tile_z * tile_world_size - tile_world_size_half;
+    f32 tile_z_max = (f32)tile_z_min + tile_world_size;
+
+    printf("tile_x_min     : %10.4f | tile_x_max     : %10.4f\n", (f64)tile_x_min, (f64)tile_x_max);
+    printf("tile_z_min     : %10.4f | tile_z_max     : %10.4f\n", (f64)tile_z_min, (f64)tile_z_max);
+  }
+
+  /* Move south */
+  camera_z = 129.0f;
+  camera_tile_x = (i32)vast_floorf((camera_x + tile_world_size * 0.5f) / tile_world_size);
+  camera_tile_z = (i32)vast_floorf((camera_z + tile_world_size * 0.5f) / tile_world_size);
+
+  vast_tiles_update(&t, camera_tile_x, camera_tile_z);
+
+  printf("\n");
+  printf("tile_world_size: %10.4f |\n", (f64)tile_world_size);
+  printf("camera_x       : %10.4f |\n", (f64)camera_x);
+  printf("camera_z       : %10.4f |\n", (f64)camera_z);
+  printf("camera_tile_x  : %10d |\n", camera_tile_x);
+  printf("camera_tile_z  : %10d |\n", camera_tile_z);
+  printf("tile_origin_x  : %10.4f |\n", (f64)t.origin_x);
+  printf("tile_origin_z  : %10.4f |\n", (f64)t.origin_z);
+  printf("tile_origin_x w: %10.4f |\n", (f64)t.origin_x * (f64)tile_world_size);
+  printf("tile_origin_z w: %10.4f |\n", (f64)t.origin_z * (f64)tile_world_size);
+
+  {
+    f32 tile_x_min = (f32)camera_tile_x * tile_world_size - tile_world_size_half;
+    f32 tile_x_max = (f32)tile_x_min + tile_world_size;
+    f32 tile_z_min = (f32)camera_tile_z * tile_world_size - tile_world_size_half;
+    f32 tile_z_max = (f32)tile_z_min + tile_world_size;
+
+    printf("tile_x_min     : %10.4f | tile_x_max     : %10.4f\n", (f64)tile_x_min, (f64)tile_x_max);
+    printf("tile_z_min     : %10.4f | tile_z_max     : %10.4f\n", (f64)tile_z_min, (f64)tile_z_max);
+  }
+}
+
 i32 main(void)
 {
   vast_test_tile_memory_requirements();
   vast_test_tile_transition_factor_calculation();
+  vast_test_tile_camera_back_face_transition_factor();
 
   return 0;
 }
