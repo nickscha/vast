@@ -46,7 +46,8 @@ void main()
         float fz = float(v_z - coarse_z1) / 2.0;
         float height_coarse = mix(mix(h00, h10, fx), mix(h01, h11, fx), fz);
 
-        height = mix(height_coarse, height, a_instance_data.z);
+        float morph = smoothstep(0.0, 1.0, a_instance_data.z);
+        height = mix(height_coarse, height, morph);
     }
 
     if (u_visualization_mode > 3.5 && u_visualization_mode < 4.5) {
