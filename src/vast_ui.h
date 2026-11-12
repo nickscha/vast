@@ -257,6 +257,7 @@ VAST_API void vast_ui_render(
 
             gl->glGenBuffers(1, &glyph_vbo);
             gl->glBindBuffer(GL_ARRAY_BUFFER, glyph_vbo);
+            gl->glBufferData(GL_ARRAY_BUFFER, GLYPH_BUFFER_SIZE * sizeof(vast_ui_glyph), VAST_NULL, GL_DYNAMIC_DRAW);
 
             /* iGlyph (location = 1) */
             gl->glEnableVertexAttribArray(1);
@@ -611,7 +612,7 @@ VAST_API void vast_ui_render(
 
     gl->glBindVertexArray(font_vao);
     gl->glBindBuffer(GL_ARRAY_BUFFER, glyph_vbo);
-    gl->glBufferData(GL_ARRAY_BUFFER, (i32)(glyph_buffer_count * sizeof(vast_ui_glyph)), glyph_buffer, GL_STREAM_DRAW);
+    gl->glBufferSubData(GL_ARRAY_BUFFER, 0, (i32)(glyph_buffer_count * sizeof(vast_ui_glyph)), glyph_buffer);
 
     gl->glActiveTexture(GL_TEXTURE0);
     gl->glBindTexture(GL_TEXTURE_2D, ui_font_texture_id);
