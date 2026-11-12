@@ -87,6 +87,38 @@ VAST_API VAST_INLINE i8 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
     return lod;
 }
 
+VAST_API VAST_INLINE u8 vast_tile_is_on_lod_edge(vast_tiles *t, u32 tile_idx)
+{
+    i32 current_lod = t->tile_lod_current[tile_idx];
+    i32 x, z;
+    u32 n_idx, e_idx, s_idx, w_idx;
+
+    if (current_lod < 0)
+    {
+        return 0;
+    }
+
+    x = t->tile_x[tile_idx];
+    z = t->tile_z[tile_idx];
+
+    /* Get neighbors */
+    n_idx = vast_tile_index(x, z - 1);
+    e_idx = vast_tile_index(x + 1, z);
+    s_idx = vast_tile_index(x, z + 1);
+    w_idx = vast_tile_index(x - 1, z);
+
+    /* Does a neighbor has a different lod? */
+    if ((t->tile_x[n_idx] == x && t->tile_z[n_idx] == z - 1 && t->tile_lod_current[n_idx] > current_lod) ||
+        (t->tile_x[e_idx] == x + 1 && t->tile_z[e_idx] == z && t->tile_lod_current[e_idx] > current_lod) ||
+        (t->tile_x[s_idx] == x && t->tile_z[s_idx] == z + 1 && t->tile_lod_current[s_idx] > current_lod) ||
+        (t->tile_x[w_idx] == x - 1 && t->tile_z[w_idx] == z && t->tile_lod_current[w_idx] > current_lod))
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
 VAST_API VAST_INLINE u8 vast_tile_get_lod_edge_mask(vast_tiles *t, u32 tile_idx)
 {
     i32 current_lod = t->tile_lod_current[tile_idx];
@@ -239,7 +271,6 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, i32 camera_tile_x, i32 
     }
 
     /* TODO(nickscha): Check that tile_lod_max is less than VAST_TILES_MAX_LOD_LEVELS */
-
     vast_tiles_sort_dirty_by_distance(t);
 }
 
