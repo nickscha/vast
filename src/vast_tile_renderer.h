@@ -379,6 +379,96 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
  * # [SECTION] Tile Rendering
  * #############################################################################
  */
+VAST_API VAST_INLINE f32 vast_tile_camera_backface_edge_factor(
+    f32 camera_x,
+    f32 camera_z,
+    f32 forward_x,
+    f32 forward_z,
+    f32 min_x,
+    f32 min_z,
+    f32 max_x,
+    f32 max_z,
+    f32 threshold)
+{
+    f32 distance;
+    f32 threshold_distance;
+    f32 dx;
+    f32 dz;
+
+    threshold_distance = (max_x - min_x) * threshold;
+
+    if ((max_z - min_z) * threshold > threshold_distance)
+    {
+        threshold_distance = (max_z - min_z) * threshold;
+    }
+
+    if (threshold_distance <= 0.0f)
+    {
+        return 1.0f;
+    }
+
+    distance = 1.0e30f;
+
+    /* Opposite X direction. */
+    if (forward_x > 0.0f)
+    {
+        dx = camera_x - min_x;
+
+        if (dx < distance)
+        {
+            distance = dx;
+        }
+    }
+    else if (forward_x < 0.0f)
+    {
+        dx = max_x - camera_x;
+
+        if (dx < distance)
+        {
+            distance = dx;
+        }
+    }
+
+    /* Opposite Z direction. */
+    if (forward_z > 0.0f)
+    {
+        dz = camera_z - min_z;
+
+        if (dz < distance)
+        {
+            distance = dz;
+        }
+    }
+    else if (forward_z < 0.0f)
+    {
+        dz = max_z - camera_z;
+
+        if (dz < distance)
+        {
+            distance = dz;
+        }
+    }
+
+    if (distance == 1.0e30f)
+    {
+        return 1.0f;
+    }
+
+    distance /= threshold_distance;
+
+    if (distance > 1.0f)
+    {
+        distance = 1.0f;
+    }
+
+    if (distance < 0.0f)
+    {
+        distance = 0.0f;
+    }
+
+    return distance;
+}
+
 /* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
 VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 *draw_calls)
 {
@@ -392,6 +482,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static vast_tile_shader_normalmap tiles_nm_shader = {0};
 
     static f32 tile_world_size = 256.0f;
+    static f32 tile_world_size_half = 256.0f * 0.5f;
 
     static u32 grid_vaos[LOD_COUNT];
     static u32 grid_vbos[LOD_COUNT];
@@ -523,6 +614,26 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     vast_tile_shader_hot_reload(state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, camera_tile_x, camera_tile_z);
 #endif
 
+    /* Test camera movement tile change */
+    if (state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_I] && !state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_I])
+    {
+        static u8 camera_sim_enabled = 0;
+
+        if (!camera_sim_enabled)
+        {
+            camera->position = vast_vec3_init(-128.0f, 146.0f, 51.0f);
+            camera->forward = vast_vec3_init(1.0f, 0.0f, 0.0f);
+            camera->right = vast_vec3_init(0.0f, 0.0f, 1.0f);
+            camera->yaw = 2.8f;
+            camera->fov = 29.0f;
+            camera_sim_enabled = 1;
+        }
+        else
+        {
+            camera->position.x = camera->position.x < -128.0f ? -128.0f : -129.0f;
+        }
+    }
+
     /* Update camera tile based on camera world position */
     camera_tile_x = (i32)vast_floorf((camera->position.x + tile_world_size * 0.5f) / tile_world_size);
     camera_tile_z = (i32)vast_floorf((camera->position.z + tile_world_size * 0.5f) / tile_world_size);
@@ -536,7 +647,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     VAST_PROFILER_BEGIN(tile_process_dirty);
     {
         /* When no tiles calculated process everything in one frame otherwise introduce frame pacing */
-        i32 updates_per_frame = t.dirty_indices_count == VAST_TILES_TOTAL ? VAST_TILES_TOTAL : 4;
+        i32 updates_per_frame = t.dirty_indices_count == VAST_TILES_TOTAL ? VAST_TILES_TOTAL : 6;
 
         while (updates_per_frame > 0 && t.dirty_indices_count > 0)
         {
@@ -544,7 +655,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             u32 tile_idx = t.dirty_indices[last_idx];
 
             i8 tile_lod_required = t.tile_lod_required[tile_idx];
-            i8 tile_lod_current = t.tile_lod_current[tile_idx];
 
             i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
             u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
@@ -592,11 +702,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             gl->glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
             gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            /* Mark that texture update is complete for this LOD */
-            if (tile_lod_current > tile_lod_required)
-            {
-                tile_transition_timer[tile_idx] = 0.0f;
-            }
             t.tile_lod_current[tile_idx] = tile_lod_required;
             t.dirty_indices_count--;
             updates_per_frame--;
@@ -617,7 +722,6 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_mat4x4 view = vast_mat4x4_look_at(camera->position, vast_vec3_add(camera->position, camera->forward), camera->up);
         vast_mat4x4 mvp = vast_mat4x4_mul(projection, view);
         vast_frustum frustum = vast_frustum_extract(mvp);
-        f32 dt = (f32)state->timing.time_delta;
 
         *draw_calls = 0;
 
@@ -679,17 +783,26 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                     continue;
                 }
 
-                /* TODO(nickscha): Add Fine to Coarse LOD transition */
-                /* TODO(nickscha): Use camera distance instead of a fixed time animation */
-                /* LOD Geomorphing from Coarse to Fine (e.g. from higher LOD to lower LOD) */
-                if (tile_transition_timer[i] < 1.0f)
+                /* LOD Geomorphing: Fine to Coarse transition when moving backwards */
+                if (vast_tile_is_on_lod_outer_edge(&t, i))
                 {
-                    tile_transition_timer[i] += dt * 3.33f;
+                    f32 tile_x_min = (f32)camera_tile_x * tile_world_size - tile_world_size_half;
+                    f32 tile_x_max = (f32)tile_x_min + tile_world_size;
+                    f32 tile_z_min = (f32)camera_tile_z * tile_world_size - tile_world_size_half;
+                    f32 tile_z_max = (f32)tile_z_min + tile_world_size;
 
-                    if (tile_transition_timer[i] > 1.0f)
-                    {
-                        tile_transition_timer[i] = 1.0f;
-                    }
+                    f32 threshold = 0.1f;
+
+                    /* 1.0f at boundary - 0.0f at edge */
+                    f32 camera_tile_factor = vast_tile_camera_backface_edge_factor(
+                        camera->position.x, camera->position.z,
+                        camera->forward.x, camera->forward.z,
+                        tile_x_min, tile_z_min, tile_x_max, tile_z_max,
+                        threshold);
+
+                    (void) camera_tile_factor;
+
+                    /*tile_transition_timer[i] = camera_tile_factor;*/
                 }
 
                 instance_buffer[instance_count].offset_x = (f32)t.tile_x[i];

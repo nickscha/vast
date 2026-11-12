@@ -87,7 +87,7 @@ VAST_API VAST_INLINE i8 vast_tile_lod(i32 x, i32 z, i32 center_x, i32 center_z)
     return lod;
 }
 
-VAST_API VAST_INLINE u8 vast_tile_is_on_lod_edge(vast_tiles *t, u32 tile_idx)
+VAST_API VAST_INLINE u8 vast_tile_is_on_lod_outer_edge(vast_tiles *t, u32 tile_idx)
 {
     i32 current_lod = t->tile_lod_current[tile_idx];
     i32 x, z;
