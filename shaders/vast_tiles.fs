@@ -19,6 +19,17 @@ uniform vec3  iViewDir;
 
 out vec4 FragColor;
 
+float hash(int n) {
+    n = (n << 13) ^ n;
+    return float((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 2147483647.0;
+}
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
 float hash21(vec2 p)
 {
     p = fract(p * vec2(123.34, 456.21));
@@ -265,6 +276,14 @@ void main()
     }  else if (u_visualization_mode < 3.5f) {
         FragColor = vec4(cloudShadow, cloudShadow, cloudShadow, 1.0);
     } else if (u_visualization_mode < 4.5f) {
-        FragColor = vec4(normal * 0.5 + 0.5, 1.0);
+        float hue = hash(gl_PrimitiveID + 42);
+        vec3 hsv = vec3(hue, 0.70, 0.85);
+        vec3 color = hsv2rgb(hsv);
+
+        if(v_is_dirty_pass > 0.5) {
+            color.r = 1.0;
+        }
+
+        FragColor = vec4(color, 1.0);
     } 
 }
