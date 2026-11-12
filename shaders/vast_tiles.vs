@@ -9,7 +9,6 @@ uniform mat4           u_vp;
 uniform float          u_tile_size;
 uniform float          u_grid_res;
 uniform sampler2DArray u_heightmap;
-uniform float          u_visualization_mode;
 
 out float      v_is_dirty_pass;
 out vec2       v_uv;
@@ -46,12 +45,7 @@ void main()
         float fz = float(v_z - coarse_z1) / 2.0;
         float height_coarse = mix(mix(h00, h10, fx), mix(h01, h11, fx), fz);
 
-        float morph = smoothstep(0.0, 1.0, a_instance_data.z);
-        height = mix(height_coarse, height, morph);
-    }
-
-    if (u_visualization_mode > 3.5 && u_visualization_mode < 4.5) {
-        height = 0.0;
+        height = mix(height_coarse, height, a_instance_data.z);
     }
 
     if (a_is_skirt > 0.5f) {
