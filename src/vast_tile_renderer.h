@@ -503,6 +503,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     if (!tiles_initialized)
     {
         /* Setup tiles */
+        camera_tile_x = (i32)vast_floorf((camera->position.x + tile_world_size * 0.5f) / tile_world_size);
+        camera_tile_z = (i32)vast_floorf((camera->position.z + tile_world_size * 0.5f) / tile_world_size);
+
         VAST_PROFILER_BEGIN(tile_init);
         vast_tiles_init(&t, camera_tile_x, camera_tile_z);
         VAST_PROFILER_END(tile_init);
@@ -800,7 +803,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                         tile_x_min, tile_z_min, tile_x_max, tile_z_max,
                         threshold);
 
-                    (void) camera_tile_factor;
+                    (void)camera_tile_factor;
 
                     /*tile_transition_timer[i] = camera_tile_factor;*/
                 }
