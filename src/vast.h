@@ -219,6 +219,7 @@ typedef u8 (*vast_platform_api_io_file_size)(s8 *filename, u32 *file_size);
 typedef u8 (*vast_platform_api_io_file_mod_signature)(s8 *filename, u32 *file_mod_signature);
 typedef u8 (*vast_platform_api_io_file_read)(s8 *filename, u8 *buffer, u32 buffer_size);
 typedef u8 (*vast_platform_api_io_file_write)(s8 *filename, u8 *buffer, u32 buffer_size);
+typedef f64 (*vast_platform_api_time_ms_current)(void);
 
 typedef struct vast_platform_api
 {
@@ -227,6 +228,7 @@ typedef struct vast_platform_api
     vast_platform_api_io_file_mod_signature io_file_mod_signature;
     vast_platform_api_io_file_read io_file_read;
     vast_platform_api_io_file_write io_file_write;
+    vast_platform_api_time_ms_current time_ms_current;
 
 } vast_platform_api;
 

@@ -1339,6 +1339,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   state.platform_state.api.io_file_size = win32_file_size;
   state.platform_state.api.io_file_mod_signature = win32_file_mod_signature;
   state.platform_state.api.io_file_read = win32_file_read;
+  state.platform_state.api.time_ms_current = vast_profiler_time_ms;
 
   /* Platform Window setup */
   state.platform_state.window.width = 800;
