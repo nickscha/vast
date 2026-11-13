@@ -6,7 +6,12 @@ LICENSE
   See end of file for detailed license information.
 
 */
-#include "vast_types.h"
+
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h" /* Basic types (u8, u32, ...)    */
 #include "vast.h"
 #include "vast_string_builder.h"
 #include "vast_profiler.h"

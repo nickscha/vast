@@ -1,8 +1,12 @@
 #ifndef WIN32_VAST_XINPUT_H
 #define WIN32_VAST_XINPUT_H
 
-#include "vast_types.h"
-#include "win32_vast_api.h"
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h"     /* Basic types (u8, u32, ...)    */
+#include "win32_vast_api.h" /* Win32 API calls               */
 
 /* #############################################################################
  * # [SECTION] XInput gamepad controller support

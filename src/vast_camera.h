@@ -1,8 +1,12 @@
 #ifndef VAST_CAMERA_H
 #define VAST_CAMERA_H
 
-#include "vast_types.h"
-#include "vast_math_linear_algebra.h"
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h"               /* Basic types (u8, u32, ...)    */
+#include "vast_math_linear_algebra.h" /* Vector Math                   */
 
 /* #############################################################################
  * # [SECTION] Basic Camera

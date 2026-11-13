@@ -1,8 +1,12 @@
 #ifndef VAST_OPENGL_H
 #define VAST_OPENGL_H
 
-#include "vast_types.h"
-#include "vast_opengl_api.h"
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h"      /* Basic types (u8, u32, ...)    */
+#include "vast_opengl_api.h" /* OpenGL function pointers      */
 
 /* #############################################################################
  * # [SECTION] OpenGL Function Loader

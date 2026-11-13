@@ -1,7 +1,11 @@
 #ifndef VAST_STRING_BUILDER_H
 #define VAST_STRING_BUILDER_H
 
-#include "vast_types.h"
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h" /* Basic types (u8, u32, ...)    */
 
 /* #############################################################################
  * # [SECTION] String Builder

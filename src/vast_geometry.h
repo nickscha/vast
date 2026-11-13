@@ -1,7 +1,11 @@
 #ifndef VAST_GEOMETRY_H
 #define VAST_GEOMETRY_H
 
-#include "vast_types.h"
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h" /* Basic types (u8, u32, ...)    */
 
 /* #############################################################################
  * # [SECTION] Grid Generation with skirts
