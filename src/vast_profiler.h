@@ -1,6 +1,16 @@
 #ifndef VAST_PROFILER_H
 #define VAST_PROFILER_H
 
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h" /* Basic types (u8, u32, ...)    */
+
+/* #############################################################################
+ * # [SECTION] Profiler Structs
+ * #############################################################################
+ */
 typedef struct vast_profiler_entry
 {
     f64 time_ms_last;
@@ -14,6 +24,10 @@ typedef struct vast_profiler_entry
 
 } vast_profiler_entry;
 
+/* #############################################################################
+ * # [SECTION] Profiler Release Version
+ * #############################################################################
+ */
 #ifdef VAST_RELEASE
 
 /* On Release build the profiler is disabled */
@@ -25,8 +39,6 @@ static vast_profiler_entry vast_profiler_entries[1];
 static u32 vast_profiler_entries_count = 0;
 
 #else
-
-#include "vast_types.h"
 
 /* #############################################################################
  * # [SECTION] Performance Profiler
