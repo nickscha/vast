@@ -1,7 +1,12 @@
 #ifndef VAST_MATH_LINEAR_ALGEBRA_H
 #define VAST_MATH_LINEAR_ALGEBRA_H
 
-#include "vast_math_basic.h"
+/* #############################################################################
+ * # [SECTION] Dependencies
+ * #############################################################################
+ */
+#include "vast_types.h"      /* Basic types (u8, u32, ...)    */
+#include "vast_math_basic.h" /* Basic math (sin, cos, sqrt)   */
 
 /* #############################################################################
  * # [SECTION] Linear Algebra Math (Scalar)
