@@ -295,11 +295,34 @@ typedef struct vast_platform_state
  */
 #ifdef VAST_APPLICATION
 void vast_update(vast_platform_state *platform_state);
+
+#ifndef VAST_RELEASE
+#ifdef _WIN32
+#ifdef __clang__
+#elif __GNUC__
+__attribute((externally_visible))
+#endif
+i32 DllMainCRTStartup(void)
+{
+    return 1;
+}
+#endif /* _WIN32 */
+#endif /* VAST_RELEASE */
 #else
 
 #ifndef VAST_RELEASE
 VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state)
 {
+    if (!platform_state->memory.data)
+    {
+        platform_state->api.io_print("[vast][error] The platform layer did not allocate any memory (platform_state->memory.data)!\n");
+    }
+
+    if (platform_state->memory.size < 1)
+    {
+        platform_state->api.io_print("[vast][error] The platform layer did not set memory size (platform_state->memory.size)!\n");
+    }
+
     platform_state->api.io_print("[vast][error] No 'vast_update' function has been set! Using 'vast_update_stub'!\n");
     platform_state->api.io_print("[vast][error] Define the following function in your code:\n\n");
     platform_state->api.io_print("  u8 vast_update(vast_platform_state *platform_state)\n  {\n    /* your code */\n  }\n\n");

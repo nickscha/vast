@@ -42,8 +42,6 @@ void *memset(void *dest, i32 c, u32 count)
   return dest;
 }
 
-#ifndef VAST_RELEASE
-/* Implementation for vast_profiler.h */
 VAST_API f64 vast_profiler_time_ms(void)
 {
   static i64 freq;
@@ -59,7 +57,6 @@ VAST_API f64 vast_profiler_time_ms(void)
 
   return ((f64)time * 1000.0) / (f64)freq;
 }
-#endif /* VAST_RELEASE */
 
 /* #############################################################################
  * # [SECTION] Force Discrete GPU

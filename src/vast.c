@@ -32,16 +32,3 @@ void vast_update(vast_platform_state *platform_state)
         platform_state->window.clear_color_changed = 1;
     }
 }
-
-#ifndef VAST_RELEASE
-#ifdef _WIN32
-#ifdef __clang__
-#elif __GNUC__
-__attribute((externally_visible))
-#endif
-i32 DllMainCRTStartup(void)
-{
-    return 1;
-}
-#endif /* _WIN32 */
-#endif /* VAST_RELEASE */
