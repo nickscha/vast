@@ -153,32 +153,35 @@ float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
     return mix(1.0, 0.5, shadowMask);
 }
 
+
 void main()
 {
-    vec3 normal = texture(u_normalmap, vec3(v_uv, v_texture_array_layer)).rgb * 2.0 - 1.0;
-
-    vec3 matGrass = vec3(0.06, 0.10, 0.03);
-    vec3 matSnow  = vec3(0.90, 0.92, 0.95);
-
-    float slope = normal.y;
+    /* Base data */
+    vec3 normal  = texture(u_normalmap, vec3(v_uv, v_texture_array_layer)).rgb * 2.0 - 1.0;
+    float slope  = normal.y;
     float height = v_worldPos.y;
 
+    /* Get Material */
+    vec3 matGrass   = vec3(0.06, 0.10,  0.03);
+    vec3 matSnow    = vec3(0.90, 0.92,  0.95);
+    vec3 rockDark   = vec3(0.09, 0.085, 0.08);
+    vec3 rockLight  = vec3(0.16, 0.15,  0.14);
     float rockNoise = noise2D(v_worldPos.xz * 0.04);
-    vec3 rockDark  = vec3(0.09, 0.085, 0.08);
-    vec3 rockLight = vec3(0.16, 0.15, 0.14);
-    vec3 matRock = mix(rockDark, rockLight, rockNoise);
-
+    vec3 matRock    = mix(rockDark, rockLight, rockNoise);
+    
     vec3 mate = matRock;
+
     float grassBlend = smoothstep(0.6, 0.8, slope);
-    mate = mix(mate, matGrass, grassBlend);
-
-    float snowBlend = smoothstep(120.0, 180.0, height) * smoothstep(0.5, 0.8, slope);
+    float snowBlend  = smoothstep(120.0, 180.0, height) * smoothstep(0.5, 0.8, slope);
     float frostBlend = smoothstep(220.0, 260.0, height);
-    snowBlend = max(snowBlend, frostBlend);
-    mate = mix(mate, matSnow, snowBlend);
+    float detail     = noise2D(v_worldPos.xz * 0.025);
 
-    float detail = noise2D(v_worldPos.xz * 0.025);
+    snowBlend = max(snowBlend, frostBlend);
+
+    mate = mix(mate, matGrass, grassBlend);
+    mate = mix(mate, matSnow, snowBlend);
     mate *= mix(0.85, 1.15, detail);
+
 
     float dayAmount = clamp(sunDir.y * 0.5 + 0.5, 0.0, 1.0);
     float sunsetAmount = exp(-abs(sunDir.y) * 7.0);
@@ -252,11 +255,9 @@ void main()
     float luminance =  dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(luminance), distant * 0.15);
 
-    // Tone mapping
+    // Tone mapping & Gamma collection
     col = max(col, vec3(0.0));  
     col = col / (col + vec3(1.0));
-
-    // Gamma Correction
     col = pow(col, vec3(0.4545));
 
     if (u_visualization_mode < 0.5f) {
