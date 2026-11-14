@@ -153,6 +153,54 @@ float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
     return mix(1.0, 0.5, shadowMask);
 }
 
+vec3 getMaterialGrass() 
+{
+    vec2 grassUV         = v_worldPos.xz;
+    float grassLarge     = noise2D(grassUV * 0.012);
+    float grassMedium    = noise2D(grassUV * 0.055);
+    float grassFine      = noise2D(grassUV * 0.22);
+    float grassVariation = grassLarge * 0.50 + grassMedium * 0.35 + grassFine * 0.15;
+    vec3 grassDeep   = vec3(0.035, 0.075, 0.018);
+    vec3 grassGreen  = vec3(0.060, 0.120, 0.025);
+    vec3 grassOlive  = vec3(0.105, 0.125, 0.035);
+    vec3 grassYellow = vec3(0.160, 0.135, 0.045);
+    vec3 grassBrown  = vec3(0.120, 0.080, 0.035);
+    float dryNoise   = noise2D(grassUV * 0.025 + 73.2);
+    float dryMask    = smoothstep(0.48, 0.72, dryNoise);
+    vec3 matGrass    = mix(grassDeep, grassGreen, smoothstep(0.15, 0.55, grassVariation));
+
+    matGrass = mix(matGrass, grassOlive, smoothstep(0.40, 0.70, grassVariation));
+    matGrass = mix(matGrass, grassYellow, smoothstep(0.65, 0.90, grassVariation));
+    matGrass = mix(matGrass, grassBrown, dryMask * 0.45);
+    matGrass *= 0.94 + grassFine * 0.12;
+
+    return matGrass;
+}
+
+vec3 getMaterialRock()
+{
+    vec2 rockUV       = v_worldPos.xz;
+    float largeNoise  = noise2D(rockUV * 0.008);
+    float mediumNoise = noise2D(rockUV * 0.035 + 19.7);
+    float fineNoise   = noise2D(rockUV * 0.14 + 47.3);
+    float variation   =  largeNoise * 0.55 +  mediumNoise * 0.30 + fineNoise * 0.15;
+    vec3 rockDark     = vec3(0.09,  0.085, 0.08);
+    vec3 rockLight    = vec3(0.16,  0.15,  0.14);
+    vec3 rockWarm     = vec3(0.17,  0.125, 0.095);
+    vec3 rockCool     = vec3(0.105, 0.115, 0.12);
+    vec3 rockPale     = vec3(0.19,  0.18,  0.16);
+    vec3 rock         = mix(rockDark, rockLight, smoothstep(0.25, 0.75, variation));
+    float warmMask    = smoothstep(0.48, 0.75, noise2D(rockUV * 0.018 + 83.1));
+    float coolMask    = smoothstep(0.55, 0.80, noise2D(rockUV * 0.025 + 127.4));
+    float paleMask    = smoothstep(0.68, 0.88, noise2D(rockUV * 0.045 + 211.8));
+
+    rock = mix(rock, rockWarm, warmMask * 0.30);
+    rock = mix(rock, rockCool, coolMask * 0.20);
+    rock = mix(rock, rockPale, paleMask * 0.25);
+    rock *= 0.96 + fineNoise * 0.08;
+
+    return rock;
+}
 
 void main()
 {
@@ -162,12 +210,15 @@ void main()
     float height = v_worldPos.y;
 
     /* Get Material */
-    vec3 matGrass   = vec3(0.06, 0.10,  0.03);
+    // vec3 matGrass   = vec3(0.06, 0.10,  0.03);
+    // vec3 rockDark   = vec3(0.09, 0.085, 0.08);
+    // vec3 rockLight  = vec3(0.16, 0.15,  0.14);
+    // float rockNoise = noise2D(v_worldPos.xz * 0.04);
+    // vec3 matRock    = mix(rockDark, rockLight, rockNoise);
+
+    vec3 matGrass   = getMaterialGrass();
+    vec3 matRock    = getMaterialRock();
     vec3 matSnow    = vec3(0.90, 0.92,  0.95);
-    vec3 rockDark   = vec3(0.09, 0.085, 0.08);
-    vec3 rockLight  = vec3(0.16, 0.15,  0.14);
-    float rockNoise = noise2D(v_worldPos.xz * 0.04);
-    vec3 matRock    = mix(rockDark, rockLight, rockNoise);
     
     vec3 mate = matRock;
 
@@ -180,8 +231,7 @@ void main()
 
     mate = mix(mate, matGrass, grassBlend);
     mate = mix(mate, matSnow, snowBlend);
-    mate *= mix(0.85, 1.15, detail);
-
+    mate *= mix(0.94, 1.06, detail);
 
     float dayAmount = clamp(sunDir.y * 0.5 + 0.5, 0.0, 1.0);
     float sunsetAmount = exp(-abs(sunDir.y) * 7.0);
