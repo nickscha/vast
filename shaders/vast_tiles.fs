@@ -215,11 +215,6 @@ void main()
     light += skyDome * zenith * 0.6 * cavityAO;
     light += bounce * zenith * 0.2;
 
-    // make shadow area more deeper and cooler
-    //float ambientDrop = mix(0.6, 1.0, cloudShadow); 
-    //light += skyDome * zenith * 0.6 * cavityAO * ambientDrop;
-    //light += bounce * zenith * 0.2 * ambientDrop;
-
     /* Ground bounce coloring */
     float up = max(normal.y, 0.0);
     float down = max(-normal.y, 0.0);
