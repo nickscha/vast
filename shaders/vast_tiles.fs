@@ -94,9 +94,6 @@ vec3 getFogColor(vec3 rd)
 
     sky += moonColor * moonGlow * 0.08 * nightAmount;
 
-    float mie = pow(sunAmount, 8.0);
-    sky += sunColor * mie * 0.25;
-
     float horizonGlow = pow(1.0 - h, 8.0);
     sky += sunsetHorizon * horizonGlow * sunsetAmount * 0.5;
 
