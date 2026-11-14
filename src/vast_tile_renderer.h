@@ -297,9 +297,9 @@ static i32 lod_texture_pool_size[LOD_COUNT] = {
     /* steady */ 9 + /* burst headroom */ 7,    /* LOD 0: 128x128 height, 1024x1024 normal */
     /* steady */ 40 + /* burst headroom */ 24,  /* LOD 1:  64x64  height,  512x512  normal */
     /* steady */ 72 + /* burst headroom */ 24,  /* LOD 2:  32x32  height,  256x256  normal */
-    /* steady */ 104 + /* burst headroom */ 24, /* LOD 3:  16x16  height,  128x128  normal */
+    /* steady */ 104 + /* burst headroom */ 32, /* LOD 3:  16x16  height,  128x128  normal */
     /* steady */ 136 + /* burst headroom */ 56, /* LOD 4:   8x8   height,   64x64   normal */
-    /* steady */ 728 + /* burst headroom */ 22  /* LOD 5:   4x4   height,   32x32   normal */
+    /* steady */ 728 + /* burst headroom */ 64  /* LOD 5:   4x4   height,   32x32   normal */
 };
 
 static i32 texture_layer[VAST_TILES_TOTAL] = {0};
@@ -317,7 +317,6 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
     i32 lod_current;
     i32 lod_required;
     i32 texture_layer_current;
-    i32 texture_array_layer_capacity_required;
     i32 texture_layer_assigned;
 
     if (!initialized)
@@ -346,7 +345,6 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
     }
 
     texture_layer_current = texture_layer[tile_index];
-    texture_array_layer_capacity_required = lod_texture_pool_size[lod_required];
 
     /* Current LOD has texture layer assigned. Free it. */
     if (texture_layer_current >= 0)
@@ -361,16 +359,28 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
     texture_layer_used[lod_required][texture_layer_assigned] = 1;
 
     /* Find the next free texture layer */
-    for (i = 0; i < (u32)texture_array_layer_capacity_required; ++i)
     {
-        if (!texture_layer_used[lod_required][i])
-        {
-            texture_layer_next_free[lod_required] = (i32)i;
-            break;
-        }
-    }
+        i32 texture_array_layer_capacity_required = lod_texture_pool_size[lod_required];
+        i32 next_free = -1;
 
-    texture_layer[tile_index] = texture_layer_assigned;
+        for (i = 0; i < (u32)texture_array_layer_capacity_required; ++i)
+        {
+            if (!texture_layer_used[lod_required][i])
+            {
+                next_free = (i32)i;
+                break;
+            }
+        }
+
+        texture_layer_next_free[lod_required] = (i32)next_free;
+
+        if (next_free == -1)
+        {
+            return -1;
+        }
+
+        texture_layer[tile_index] = texture_layer_assigned;
+    }
 
     return texture_layer_assigned;
 }
@@ -663,6 +673,25 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
 
             i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx);
+
+            if (texture_array_layer == -1)
+            {
+                s8 tmp[128];
+                vast_sb sb = {0};
+                sb.size = sizeof(tmp);
+                sb.buffer = tmp;
+
+                vast_sb_s8(&sb, "tile_index: ");
+                vast_sb_i32(&sb, (i32)tile_idx);
+                vast_sb_s8(&sb, "\n");
+
+                vast_sb_s8(&sb, "tile_lod_required: ");
+                vast_sb_i32(&sb, (i32)tile_lod_required);
+                vast_sb_s8(&sb, "\n");
+
+                state->api.io_print("[ERROR] no next free texutre_array_layer left!\n");
+                state->api.io_print(sb.buffer);
+            }
 
             gl->glBindVertexArray(scratch_vao);
             gl->glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo);
