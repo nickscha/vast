@@ -186,8 +186,7 @@ VAST_API void vast_tile_shader_hot_reload(
     vast_tile_shader_final *tiles_shader,
     vast_tile_shader_heightmap *tiles_hm_shader,
     vast_tile_shader_normalmap *tiles_nm_shader,
-    i32 camera_tile_x,
-    i32 camera_tile_z)
+    f32 camera_position_x, f32 camera_position_z)
 {
     if (state->timing.frame_count % 30 == 0)
     {
@@ -224,14 +223,14 @@ VAST_API void vast_tile_shader_hot_reload(
         if (tile_shader_heightmap_now != tile_shader_heightmap_last)
         {
             vast_tile_shader_heightmap_load(state, tiles_hm_shader);
-            vast_tiles_init(tiles, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
+            vast_tiles_init(tiles, camera_position_x, camera_position_z, tiles->world_size); /* Regenerate terrain fully */
             tile_shader_heightmap_last = tile_shader_heightmap_now;
         }
 
         if (tile_shader_normalmap_now != tile_shader_normalmap_last)
         {
             vast_tile_shader_normalmap_load(state, tiles_nm_shader);
-            vast_tiles_init(tiles, camera_tile_x, camera_tile_z); /* Regenerate terrain fully */
+            vast_tiles_init(tiles, camera_position_x, camera_position_z, tiles->world_size); /* Regenerate terrain fully */
             tile_shader_normalmap_last = tile_shader_normalmap_now;
         }
 
@@ -484,15 +483,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 {
     static u8 tiles_initialized = 0;
     static vast_tiles t = {0};
-    static i32 camera_tile_x = 0;
-    static i32 camera_tile_z = 0;
 
     static vast_tile_shader_final tiles_shader = {0};
     static vast_tile_shader_heightmap tiles_hm_shader = {0};
     static vast_tile_shader_normalmap tiles_nm_shader = {0};
-
-    static f32 tile_world_size = 256.0f;
-    static f32 tile_world_size_half = 256.0f * 0.5f;
 
     static u32 grid_vaos[LOD_COUNT];
     static u32 grid_vbos[LOD_COUNT];
@@ -513,11 +507,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     if (!tiles_initialized)
     {
         /* Setup tiles */
-        camera_tile_x = (i32)vast_floorf((camera->position.x + tile_world_size * 0.5f) / tile_world_size);
-        camera_tile_z = (i32)vast_floorf((camera->position.z + tile_world_size * 0.5f) / tile_world_size);
+        f32 tile_world_size = 256.0f;
 
         VAST_PROFILER_BEGIN(tile_init);
-        vast_tiles_init(&t, camera_tile_x, camera_tile_z);
+        vast_tiles_init(&t, camera->position.x, camera->position.z, tile_world_size);
         VAST_PROFILER_END(tile_init);
 
         {
@@ -624,7 +617,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     }
 
 #ifndef VAST_RELEASE
-    vast_tile_shader_hot_reload(state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, camera_tile_x, camera_tile_z);
+    vast_tile_shader_hot_reload(state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, camera->position.x, camera->position.z);
 #endif
 
     /* Test camera movement tile change */
@@ -647,13 +640,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         }
     }
 
-    /* Update camera tile based on camera world position */
-    camera_tile_x = (i32)vast_floorf((camera->position.x + tile_world_size * 0.5f) / tile_world_size);
-    camera_tile_z = (i32)vast_floorf((camera->position.z + tile_world_size * 0.5f) / tile_world_size);
-
     /* Check for new dirty tiles */
     VAST_PROFILER_BEGIN(tile_update);
-    vast_tiles_update(&t, camera_tile_x, camera_tile_z);
+    vast_tiles_update(&t, camera->position.x, camera->position.z);
     VAST_PROFILER_END(tile_update);
 
     /* Process dirty tiles */
@@ -707,7 +696,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 gl->glUniform1f(tiles_hm_shader.loc_texture_size, (f32)height_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */
-                gl->glUniform1f(tiles_hm_shader.loc_tile_size, tile_world_size);
+                gl->glUniform1f(tiles_hm_shader.loc_tile_size, t.world_size);
 
                 gl->glDrawArrays(GL_TRIANGLES, 0, 3);
             }
@@ -724,7 +713,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 gl->glUniform1f(tiles_nm_shader.loc_texture_size, (f32)normal_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */
-                gl->glUniform1f(tiles_nm_shader.loc_tile_size, tile_world_size);
+                gl->glUniform1f(tiles_nm_shader.loc_tile_size, t.world_size);
 
                 gl->glDrawArrays(GL_TRIANGLES, 0, 3);
             }
@@ -785,7 +774,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         gl->glUniform3f(tiles_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
         gl->glUniform1f(tiles_shader.loc_visualization_mode, (f32)visualization_mode);
 
-        gl->glUniform1f(tiles_shader.loc_tile_size, tile_world_size);
+        gl->glUniform1f(tiles_shader.loc_tile_size, t.world_size);
         gl->glUniform1i(tiles_shader.loc_heightmap, 0);
         gl->glUniform1i(tiles_shader.loc_normalmap, 1);
 
@@ -808,7 +797,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                     continue;
                 }
 
-                if (!vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], tile_world_size, -200.0f, 600.0f))
+                if (!vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], t.world_size, -200.0f, 600.0f))
                 {
                     /* Stop LOD geomorphing since the tile is not visible */
                     tile_transition_timer[i] = 1.0f;
@@ -818,10 +807,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 /* LOD Geomorphing: Fine to Coarse transition when moving backwards */
                 if (vast_tile_is_on_lod_outer_edge(&t, i))
                 {
-                    f32 tile_x_min = (f32)camera_tile_x * tile_world_size - tile_world_size_half;
-                    f32 tile_x_max = (f32)tile_x_min + tile_world_size;
-                    f32 tile_z_min = (f32)camera_tile_z * tile_world_size - tile_world_size_half;
-                    f32 tile_z_max = (f32)tile_z_min + tile_world_size;
+                    vast_vec4 bounds = vast_tile_calculate_bounds(&t, camera->position.x, camera->position.z);
 
                     f32 threshold = 0.1f;
 
@@ -829,7 +815,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                     f32 camera_tile_factor = vast_tile_camera_backface_edge_factor(
                         camera->position.x, camera->position.z,
                         camera->forward.x, camera->forward.z,
-                        tile_x_min, tile_z_min, tile_x_max, tile_z_max,
+                        bounds.x, bounds.z, bounds.y, bounds.w,
                         threshold);
 
                     (void)camera_tile_factor;

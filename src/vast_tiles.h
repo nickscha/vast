@@ -5,7 +5,9 @@
  * # [SECTION] Dependencies
  * #############################################################################
  */
-#include "vast_types.h" /* Basic types (u8, u32, ...)    */
+#include "vast_types.h"               /* Basic types (u8, u32, ...)           */
+#include "vast_math_basic.h"          /* Basic math for world space functions */
+#include "vast_math_linear_algebra.h" /* Vec4 for tile bounds calculation     */
 
 /* #############################################################################
  * # [SECTION] Tiling Logic
@@ -34,6 +36,8 @@ typedef struct vast_tiles
     i32 origin_z; /* The bottom left origin Z */
     i32 camera_x;
     i32 camera_z;
+
+    f32 world_size; /* How much area does one tile cover in world space (has to be power of two) */
 
     /* LOD stats (what is the maximum lod and how many tiles per LOD) */
     i32 tile_lod_max;
@@ -242,14 +246,46 @@ VAST_API VAST_INLINE void vast_tiles_sort_dirty_by_distance(vast_tiles *t)
     }
 }
 
-VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, i32 camera_tile_x, i32 camera_tile_z)
+/* #############################################################################
+ * # [SECTION] World Space specific helper functions
+ * #############################################################################
+ */
+VAST_API VAST_INLINE i32 vast_tile_calculate_camera_tile(vast_tiles *t, f32 camera_position)
+{
+    return (i32)vast_floorf((camera_position + t->world_size * 0.5f) / t->world_size);
+}
+
+VAST_API VAST_INLINE vast_vec4 vast_tile_calculate_bounds(vast_tiles *t, f32 position_x, f32 position_z)
+{
+    f32 world_size_half = t->world_size * 0.5f;
+
+    i32 camera_tile_x = vast_tile_calculate_camera_tile(t, position_x);
+    i32 camera_tile_z = vast_tile_calculate_camera_tile(t, position_z);
+
+    f32 tile_x_min = (f32)camera_tile_x * t->world_size - world_size_half;
+    f32 tile_x_max = (f32)tile_x_min + t->world_size;
+    f32 tile_z_min = (f32)camera_tile_z * t->world_size - world_size_half;
+    f32 tile_z_max = (f32)tile_z_min + t->world_size;
+
+    return vast_vec4_init(tile_x_min, tile_x_max, tile_z_min, tile_z_max);
+}
+
+/* #############################################################################
+ * # [SECTION] User API calls
+ * #############################################################################
+ */
+VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, f32 camera_position_x, f32 camera_position_z, f32 world_size)
 {
     i32 x, z;
+
+    i32 camera_tile_x = vast_tile_calculate_camera_tile(t, camera_position_x);
+    i32 camera_tile_z = vast_tile_calculate_camera_tile(t, camera_position_z);
 
     t->origin_x = camera_tile_x - VAST_TILES_HALF;
     t->origin_z = camera_tile_z - VAST_TILES_HALF;
     t->camera_x = camera_tile_x - 424242; /* force update */
     t->camera_z = camera_tile_z - 424242; /* force update  */
+    t->world_size = world_size;
     t->dirty_indices_count = 0;
 
     /* Mark all tiles dirty and calculate lod distance */
@@ -279,12 +315,15 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, i32 camera_tile_x, i32 
 }
 
 /* Toroidal wrap around */
-VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, i32 camera_tile_x, i32 camera_tile_z)
+VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x, f32 camera_position_z)
 {
     i32 x, z;
     u32 i;
     i32 new_origin_x;
     i32 new_origin_z;
+
+    i32 camera_tile_x = vast_tile_calculate_camera_tile(t, camera_position_x);
+    i32 camera_tile_z = vast_tile_calculate_camera_tile(t, camera_position_z);
 
     new_origin_x = camera_tile_x - VAST_TILES_HALF;
     new_origin_z = camera_tile_z - VAST_TILES_HALF;
@@ -302,7 +341,7 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, i32 camera_tile_x, i3
     if (vast_absi(new_origin_x - t->origin_x) >= VAST_TILES_PER_SIDE ||
         vast_absi(new_origin_z - t->origin_z) >= VAST_TILES_PER_SIDE)
     {
-        vast_tiles_init(t, camera_tile_x, camera_tile_z);
+        vast_tiles_init(t, camera_position_x, camera_position_z, t->world_size);
         return;
     }
 

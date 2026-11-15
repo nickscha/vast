@@ -381,6 +381,18 @@ typedef struct vast_vec4
 
 } vast_vec4;
 
+VAST_API VAST_INLINE vast_vec4 vast_vec4_init(f32 x, f32 y, f32 z, f32 w)
+{
+    vast_vec4 result;
+
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+
+    return result;
+}
+
 typedef enum vast_frustum_plane
 {
     VAST_FRUSTUM_LEFT = 0,
