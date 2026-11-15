@@ -270,6 +270,90 @@ VAST_API VAST_INLINE vast_vec4 vast_tile_calculate_bounds(vast_tiles *t, f32 pos
     return vast_vec4_init(tile_x_min, tile_x_max, tile_z_min, tile_z_max);
 }
 
+VAST_API VAST_INLINE f32 vast_tile_calculate_camera_backface_edge_factor(
+    vast_tiles *t,
+    f32 camera_position_x,
+    f32 camera_position_z,
+    f32 forward_x,
+    f32 forward_z,
+    f32 threshold)
+{
+    f32 distance;
+    f32 threshold_distance;
+    f32 dx;
+    f32 dz;
+
+    vast_vec4 bounds = vast_tile_calculate_bounds(t, camera_position_x, camera_position_z);
+
+    f32 min_x = bounds.x;
+    f32 max_x = bounds.y;
+    f32 min_z = bounds.z;
+    f32 max_z = bounds.w;
+
+    threshold_distance = (max_x - min_x) * threshold;
+
+    if ((max_z - min_z) * threshold > threshold_distance)
+    {
+        threshold_distance = (max_z - min_z) * threshold;
+    }
+
+    if (threshold_distance <= 0.0f)
+    {
+        return 1.0f;
+    }
+
+    distance = 1.0e30f;
+
+    /* Opposite X direction. */
+    if (forward_x > 0.0f)
+    {
+        dx = camera_position_x - min_x;
+
+        if (dx < distance)
+        {
+            distance = dx;
+        }
+    }
+    else if (forward_x < 0.0f)
+    {
+        dx = max_x - camera_position_x;
+
+        if (dx < distance)
+        {
+            distance = dx;
+        }
+    }
+
+    /* Opposite Z direction. */
+    if (forward_z > 0.0f)
+    {
+        dz = camera_position_z - min_z;
+
+        if (dz < distance)
+        {
+            distance = dz;
+        }
+    }
+    else if (forward_z < 0.0f)
+    {
+        dz = max_z - camera_position_z;
+
+        if (dz < distance)
+        {
+            distance = dz;
+        }
+    }
+
+    if (distance == 1.0e30f)
+    {
+        return 1.0f;
+    }
+
+    distance /= threshold_distance;
+
+    return vast_clampf(distance, 0.0f, 1.0f);
+}
+
 /* #############################################################################
  * # [SECTION] User API calls
  * #############################################################################

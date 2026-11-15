@@ -388,96 +388,6 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
  * # [SECTION] Tile Rendering
  * #############################################################################
  */
-VAST_API VAST_INLINE f32 vast_tile_camera_backface_edge_factor(
-    f32 camera_x,
-    f32 camera_z,
-    f32 forward_x,
-    f32 forward_z,
-    f32 min_x,
-    f32 min_z,
-    f32 max_x,
-    f32 max_z,
-    f32 threshold)
-{
-    f32 distance;
-    f32 threshold_distance;
-    f32 dx;
-    f32 dz;
-
-    threshold_distance = (max_x - min_x) * threshold;
-
-    if ((max_z - min_z) * threshold > threshold_distance)
-    {
-        threshold_distance = (max_z - min_z) * threshold;
-    }
-
-    if (threshold_distance <= 0.0f)
-    {
-        return 1.0f;
-    }
-
-    distance = 1.0e30f;
-
-    /* Opposite X direction. */
-    if (forward_x > 0.0f)
-    {
-        dx = camera_x - min_x;
-
-        if (dx < distance)
-        {
-            distance = dx;
-        }
-    }
-    else if (forward_x < 0.0f)
-    {
-        dx = max_x - camera_x;
-
-        if (dx < distance)
-        {
-            distance = dx;
-        }
-    }
-
-    /* Opposite Z direction. */
-    if (forward_z > 0.0f)
-    {
-        dz = camera_z - min_z;
-
-        if (dz < distance)
-        {
-            distance = dz;
-        }
-    }
-    else if (forward_z < 0.0f)
-    {
-        dz = max_z - camera_z;
-
-        if (dz < distance)
-        {
-            distance = dz;
-        }
-    }
-
-    if (distance == 1.0e30f)
-    {
-        return 1.0f;
-    }
-
-    distance /= threshold_distance;
-
-    if (distance > 1.0f)
-    {
-        distance = 1.0f;
-    }
-
-    if (distance < 0.0f)
-    {
-        distance = 0.0f;
-    }
-
-    return distance;
-}
-
 /* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
 VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 *draw_calls)
 {
@@ -807,15 +717,13 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 /* LOD Geomorphing: Fine to Coarse transition when moving backwards */
                 if (vast_tile_is_on_lod_outer_edge(&t, i))
                 {
-                    vast_vec4 bounds = vast_tile_calculate_bounds(&t, camera->position.x, camera->position.z);
-
                     f32 threshold = 0.1f;
 
                     /* 1.0f at boundary - 0.0f at edge */
-                    f32 camera_tile_factor = vast_tile_camera_backface_edge_factor(
+                    f32 camera_tile_factor = vast_tile_calculate_camera_backface_edge_factor(
+                        &t,
                         camera->position.x, camera->position.z,
                         camera->forward.x, camera->forward.z,
-                        bounds.x, bounds.z, bounds.y, bounds.w,
                         threshold);
 
                     (void)camera_tile_factor;
