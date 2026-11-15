@@ -283,12 +283,12 @@ VAST_API VAST_INLINE f32 vast_tile_calculate_camera_backface_edge_factor(
     f32 dx;
     f32 dz;
 
-    vast_vec4 bounds = vast_tile_calculate_bounds(t, camera_position_x, camera_position_z);
+    vast_vec4 tile_bounds = vast_tile_calculate_bounds(t, camera_position_x, camera_position_z);
 
-    f32 min_x = bounds.x;
-    f32 max_x = bounds.y;
-    f32 min_z = bounds.z;
-    f32 max_z = bounds.w;
+    f32 min_x = tile_bounds.x;
+    f32 max_x = tile_bounds.y;
+    f32 min_z = tile_bounds.z;
+    f32 max_z = tile_bounds.w;
 
     threshold_distance = (max_x - min_x) * threshold;
 
@@ -361,28 +361,28 @@ VAST_API VAST_INLINE u8 vast_tile_is_visible(
     f32 minHeight,
     f32 maxHeight)
 {
-    f32 tileX = (f32)t->tile_x[tile_index];
-    f32 tileZ = (f32)t->tile_z[tile_index];
+    f32 tile_x = (f32)t->tile_x[tile_index];
+    f32 tile_z = (f32)t->tile_z[tile_index];
 
     f32 world_size_half = t->world_size * 0.5f;
 
-    f32 minX = tileX * t->world_size - world_size_half;
-    f32 maxX = tileX * t->world_size + world_size_half;
+    f32 minX = tile_x * t->world_size - world_size_half;
+    f32 maxX = tile_x * t->world_size + world_size_half;
 
-    f32 minZ = tileZ * t->world_size - world_size_half;
-    f32 maxZ = tileZ * t->world_size + world_size_half;
+    f32 minZ = tile_z * t->world_size - world_size_half;
+    f32 maxZ = tile_z * t->world_size + world_size_half;
 
-    i32 i;
+    i32 plane_index;
 
-    for (i = 0; i < VAST_FRUSTUM_COUNT; ++i)
+    for (plane_index = 0; plane_index < VAST_FRUSTUM_COUNT; ++plane_index)
     {
-        vast_vec4 *p = &f->planes[i];
+        vast_vec4 *plane = &f->planes[plane_index];
 
-        f32 px = (p->x >= 0.0f) ? maxX : minX;
-        f32 py = (p->y >= 0.0f) ? maxHeight : minHeight;
-        f32 pz = (p->z >= 0.0f) ? maxZ : minZ;
+        f32 px = (plane->x >= 0.0f) ? maxX : minX;
+        f32 py = (plane->y >= 0.0f) ? maxHeight : minHeight;
+        f32 pz = (plane->z >= 0.0f) ? maxZ : minZ;
 
-        if (p->x * px + p->y * py + p->z * pz + p->w < 0.0f)
+        if (plane->x * px + plane->y * py + plane->z * pz + plane->w < 0.0f)
         {
             return 0;
         }

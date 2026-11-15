@@ -391,11 +391,11 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         VAST_PROFILER_END(tile_init);
 
         {
-            u32 i;
+            u32 tile_index;
 
-            for (i = 0; i < VAST_TILES_TOTAL; ++i)
+            for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
             {
-                tile_transition_timer[i] = 1.0f;
+                tile_transition_timer[tile_index] = 1.0f;
             }
         }
 
@@ -440,28 +440,28 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
         /* Generate Grid with Skirts for all LOD */
         {
-            u32 i;
+            u32 lod;
 
-            for (i = 0; i < (u32)t.tile_lod_max + 1; ++i)
+            for (lod = 0; lod < (u32)t.tile_lod_max + 1; ++lod)
             {
-                i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)i)) + 1;
+                i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)lod)) + 1;
                 vast_geometry_vertex_skirt vertices[VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE + 600];
                 u16 indices[VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE * 6 + 1200];
 
-                gridIndexCounts[i] = vast_geometry_grid_skirt(grid_res, vertices, indices);
+                gridIndexCounts[lod] = vast_geometry_grid_skirt(grid_res, vertices, indices);
 
-                gl->glGenVertexArrays(1, &grid_vaos[i]);
-                gl->glBindVertexArray(grid_vaos[i]);
+                gl->glGenVertexArrays(1, &grid_vaos[lod]);
+                gl->glBindVertexArray(grid_vaos[lod]);
 
                 /* 1. Vertex Buffer */
-                gl->glGenBuffers(1, &grid_vbos[i]);
-                gl->glBindBuffer(GL_ARRAY_BUFFER, grid_vbos[i]);
+                gl->glGenBuffers(1, &grid_vbos[lod]);
+                gl->glBindBuffer(GL_ARRAY_BUFFER, grid_vbos[lod]);
                 gl->glBufferData(GL_ARRAY_BUFFER, (i32)sizeof(vast_geometry_vertex_skirt) * (grid_res * grid_res + 600), vertices, GL_STATIC_DRAW);
 
                 /* 2. Index Buffer */
-                gl->glGenBuffers(1, &grid_ibos[i]);
-                gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[i]);
-                gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, gridIndexCounts[i] * (i32)sizeof(u16), indices, GL_STATIC_DRAW);
+                gl->glGenBuffers(1, &grid_ibos[lod]);
+                gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grid_ibos[lod]);
+                gl->glBufferData(GL_ELEMENT_ARRAY_BUFFER, gridIndexCounts[lod] * (i32)sizeof(u16), indices, GL_STATIC_DRAW);
 
                 /* Attribute 0: UV (vec2) - Per-vertex */
                 gl->glEnableVertexAttribArray(0);
@@ -472,8 +472,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 gl->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(vast_geometry_vertex_skirt), (void *)(sizeof(f32) * 2));
 
                 /* 3. Instance VBO */
-                gl->glGenBuffers(1, &lod_instance_vbos[i]);
-                gl->glBindBuffer(GL_ARRAY_BUFFER, lod_instance_vbos[i]);
+                gl->glGenBuffers(1, &lod_instance_vbos[lod]);
+                gl->glBindBuffer(GL_ARRAY_BUFFER, lod_instance_vbos[lod]);
                 gl->glBufferData(GL_ARRAY_BUFFER, (i32)sizeof(vast_tile_instance_data) * VAST_TILES_TOTAL, VAST_NULL, GL_DYNAMIC_DRAW);
 
                 /* Attribute 2: Instance Offset (vec2) - Per-instance */
@@ -661,28 +661,28 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         {
 
             i32 instance_count = 0;
-            u32 i;
+            u32 tile_index;
             i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
 
-            for (i = 0; i < VAST_TILES_TOTAL; ++i)
+            for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
             {
-                i32 tile_lod_current = t.tile_lod_current[i];
-                i32 texture_array_layer = texture_layer[i];
+                i32 tile_lod_current = t.tile_lod_current[tile_index];
+                i32 texture_array_layer = texture_layer[tile_index];
 
                 if (tile_lod_current != (i32)lod || texture_array_layer < 0)
                 {
                     continue;
                 }
 
-                if (!vast_tile_is_visible(&t, &frustum, i, -200.0f, 600.0f))
+                if (!vast_tile_is_visible(&t, &frustum, tile_index, -200.0f, 600.0f))
                 {
                     /* Stop LOD geomorphing since the tile is not visible */
-                    tile_transition_timer[i] = 1.0f;
+                    tile_transition_timer[tile_index] = 1.0f;
                     continue;
                 }
 
                 /* LOD Geomorphing: Fine to Coarse transition when moving backwards */
-                if (vast_tile_is_on_lod_outer_edge(&t, i))
+                if (vast_tile_is_on_lod_outer_edge(&t, tile_index))
                 {
                     f32 threshold = 0.1f;
 
@@ -698,11 +698,11 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                     /*tile_transition_timer[i] = camera_tile_factor;*/
                 }
 
-                instance_buffer[instance_count].offset_x = (f32)t.tile_x[i];
-                instance_buffer[instance_count].offset_z = (f32)t.tile_z[i];
+                instance_buffer[instance_count].offset_x = (f32)t.tile_x[tile_index];
+                instance_buffer[instance_count].offset_z = (f32)t.tile_z[tile_index];
                 instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
-                instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, i);
-                instance_buffer[instance_count].transition_factor = tile_transition_timer[i];
+                instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, tile_index);
+                instance_buffer[instance_count].transition_factor = tile_transition_timer[tile_index];
                 instance_count++;
             }
 
