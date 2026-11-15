@@ -354,6 +354,43 @@ VAST_API VAST_INLINE f32 vast_tile_calculate_camera_backface_edge_factor(
     return vast_clampf(distance, 0.0f, 1.0f);
 }
 
+VAST_API VAST_INLINE u8 vast_tile_is_visible(
+    vast_tiles *t,
+    vast_frustum *f,
+    u32 tile_index,
+    f32 minHeight,
+    f32 maxHeight)
+{
+    f32 tileX = (f32)t->tile_x[tile_index];
+    f32 tileZ = (f32)t->tile_z[tile_index];
+
+    f32 world_size_half = t->world_size * 0.5f;
+
+    f32 minX = tileX * t->world_size - world_size_half;
+    f32 maxX = tileX * t->world_size + world_size_half;
+
+    f32 minZ = tileZ * t->world_size - world_size_half;
+    f32 maxZ = tileZ * t->world_size + world_size_half;
+
+    i32 i;
+
+    for (i = 0; i < VAST_FRUSTUM_COUNT; ++i)
+    {
+        vast_vec4 *p = &f->planes[i];
+
+        f32 px = (p->x >= 0.0f) ? maxX : minX;
+        f32 py = (p->y >= 0.0f) ? maxHeight : minHeight;
+        f32 pz = (p->z >= 0.0f) ? maxZ : minZ;
+
+        if (p->x * px + p->y * py + p->z * pz + p->w < 0.0f)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 /* #############################################################################
  * # [SECTION] User API calls
  * #############################################################################

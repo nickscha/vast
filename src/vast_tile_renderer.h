@@ -245,39 +245,6 @@ VAST_API void vast_tile_shader_hot_reload(
 }
 #endif
 
-VAST_API u8 vast_tile_is_visible(
-    vast_frustum *f,
-    f32 tileX,
-    f32 tileZ,
-    f32 tileSize,
-    f32 minHeight,
-    f32 maxHeight)
-{
-    f32 minX = tileX * tileSize - tileSize * 0.5f;
-    f32 maxX = tileX * tileSize + tileSize * 0.5f;
-
-    f32 minZ = tileZ * tileSize - tileSize * 0.5f;
-    f32 maxZ = tileZ * tileSize + tileSize * 0.5f;
-
-    i32 i;
-
-    for (i = 0; i < VAST_FRUSTUM_COUNT; ++i)
-    {
-        vast_vec4 *p = &f->planes[i];
-
-        f32 px = (p->x >= 0.0f) ? maxX : minX;
-        f32 py = (p->y >= 0.0f) ? maxHeight : minHeight;
-        f32 pz = (p->z >= 0.0f) ? maxZ : minZ;
-
-        if (p->x * px + p->y * py + p->z * pz + p->w < 0.0f)
-        {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
 /* #############################################################################
  * # [SECTION] Texture Pool Slot Allocations and Ownership Tracking
  * #############################################################################
@@ -707,7 +674,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                     continue;
                 }
 
-                if (!vast_tile_is_visible(&frustum, (f32)t.tile_x[i], (f32)t.tile_z[i], t.world_size, -200.0f, 600.0f))
+                if (!vast_tile_is_visible(&t, &frustum, i, -200.0f, 600.0f))
                 {
                     /* Stop LOD geomorphing since the tile is not visible */
                     tile_transition_timer[i] = 1.0f;
