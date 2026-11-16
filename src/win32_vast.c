@@ -1457,6 +1457,11 @@ VAST_API void vast_render_scene(win32_vast_state *state)
         sun_screen_pos.x = (sun_clip.x / sun_clip.w) * 0.5f + 0.5f;
         sun_screen_pos.y = (sun_clip.y / sun_clip.w) * 0.5f + 0.5f;
       }
+      else
+      {
+        sun_screen_pos.x = -10.0f;
+        sun_screen_pos.y = -10.0f;
+      }
 
       gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
       gl->glViewport(0, 0, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
