@@ -276,8 +276,9 @@ void main()
     light += skyLight * 0.6;
     light += groundBounce;
 
-    vec3 rayDir = normalize(v_worldPos - iCamera);
-    float dist = length(v_worldPos - iCamera);
+    vec3 cameraToFragment = v_worldPos - iCamera;
+    vec3 rayDir = normalize(cameraToFragment);
+    float dist = length(cameraToFragment);
 
     // Specular highlighting
     vec3 viewDir = -rayDir;
