@@ -695,7 +695,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
                     (void)camera_tile_factor;
 
-                    /*tile_transition_timer[i] = camera_tile_factor;*/
+                    /*tile_transition_timer[tile_index] = camera_tile_factor;*/
                 }
 
                 instance_buffer[instance_count].offset_x = (f32)t.tile_x[tile_index];
