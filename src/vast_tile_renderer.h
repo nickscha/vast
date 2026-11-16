@@ -644,6 +644,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         gl->glEnable(GL_CULL_FACE);
         gl->glCullFace(GL_BACK);
 
+        gl->glEnable(GL_DEPTH_TEST);
+        gl->glDepthMask(GL_TRUE);
+        gl->glDepthFunc(GL_LESS);
+
         gl->glUseProgram(tiles_shader.header.program);
         gl->glUniformMatrix4fv(tiles_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
         gl->glUniform3f(tiles_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);

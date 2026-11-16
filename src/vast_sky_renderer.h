@@ -104,8 +104,9 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
     camera_basis[8] = camera->forward.z;
 
     /* Render */
-    gl->glDisable(GL_DEPTH_TEST);
+    gl->glEnable(GL_DEPTH_TEST);
     gl->glDepthMask(GL_FALSE);
+    gl->glDepthFunc(GL_LEQUAL);
 
     gl->glUseProgram(sky_shader.header.program);
     gl->glBindVertexArray(sky_vao);
@@ -119,7 +120,6 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
     gl->glDrawArrays(GL_TRIANGLES, 0, 3);
 
     gl->glDepthMask(GL_TRUE);
-    gl->glEnable(GL_DEPTH_TEST);
     gl->glDepthFunc(GL_LESS);
 
     VAST_PROFILER_END(sky_render);

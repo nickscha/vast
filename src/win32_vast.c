@@ -1284,8 +1284,8 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   /* Application Rendering      */
   /******************************/
   state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  vast_sky_render(&state->platform_state, &camera, sun_dir);
   vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls);
+  vast_sky_render(&state->platform_state, &camera, sun_dir);
 
   /******************************/
   /* UI Rendering (F1 pressed)  */
