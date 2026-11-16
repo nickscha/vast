@@ -5,6 +5,7 @@ in vec2 vUV;
 uniform sampler2D u_scene_tex;
 uniform vec3      iResolution;
 uniform float     iTime;
+uniform vec2      u_sunScreenPos;
 
 out vec4 FragColor;
 
@@ -50,6 +51,41 @@ vec4 fxaa(sampler2D tex, vec2 uv, vec2 texelSz) {
     return ((lumaB < lumaMin) || (lumaB > lumaMax)) ? A : B;
 }
 
+/* TODO(nickscha): GPU Gems - Currently to slow in full res fragment shader
+vec3 godRays(sampler2D tex, vec2 uv, vec2 sunPos) {
+    float edgeFade = smoothstep(-0.3, 0.05, sunPos.x) * (1.0 - smoothstep(0.95, 1.3, sunPos.x)) *
+                     smoothstep(-0.3, 0.05, sunPos.y) * (1.0 - smoothstep(0.95, 1.3, sunPos.y));
+    if (edgeFade <= 0.001) return vec3(0.0);
+
+    const int numSamples = 16; // Down from 48 -> 3x fewer texture fetches
+    float density = 0.85;
+    vec2 deltaTexCoord = (uv - sunPos) * (1.0 / float(numSamples)) * density;
+
+    float jitter = fract(sin(dot(uv * iResolution.xy, vec2(12.9898, 78.233))) * 43758.5453);
+    vec2 coord = uv - deltaTexCoord * jitter;
+
+    vec3 result = vec3(0.0);
+    float illuminationDecay = 1.0;
+
+    for (int i = 0; i < numSamples; i++) {
+        coord -= deltaTexCoord;
+        vec3 sampleColor = texture(tex, coord).rgb;
+
+        float brightness = dot(sampleColor, vec3(0.299, 0.587, 0.114));
+        sampleColor *= smoothstep(0.55, 0.98, brightness);
+
+        result += sampleColor * illuminationDecay;
+        illuminationDecay *= 0.84;
+    }
+
+    vec3 shafts = (result / float(numSamples)) * vec3(1.15, 1.05, 0.90) * 0.55;
+    float distToSun = length((uv - sunPos) * vec2(iResolution.x / iResolution.y, 1.0));
+    float coreMask = smoothstep(0.03, 0.22, distToSun);
+
+    return shafts * coreMask * edgeFade;
+}
+*/
+
 float grain(vec2 uv, float time) {
     vec2 seed = uv * iResolution.xy + fract(time) * 1000.0;
     return fract(sin(dot(seed, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
@@ -60,6 +96,10 @@ void main()
     // FXAA
     vec2 texelSize = 1.0 / iResolution.xy;
     vec3 col = fxaa(u_scene_tex, vUV, texelSize).rgb;
+
+    // God Rays
+    //vec3 sunShafts = godRays(u_scene_tex, vUV, u_sunScreenPos);
+    //col = 1.0 - (1.0 - clamp(col, 0.0, 1.0)) * (1.0 - clamp(sunShafts, 0.0, 1.0));
 
     // Vignette
     vec2 vigUV = vUV * (1.0 - vUV.yx);

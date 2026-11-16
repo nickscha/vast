@@ -265,6 +265,15 @@ VAST_API VAST_INLINE void vast_vec2_mul_mat2x2(f32 *a, f32 *b, vast_mat2x2 m)
     *b = x * m.e[VAST_MAT2X2_AT(0, 1)] + y * m.e[VAST_MAT2X2_AT(1, 1)];
 }
 
+typedef struct vast_vec4
+{
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+
+} vast_vec4;
+
 #define VAST_MAT4X4_ELEMENT_COUNT 16
 
 #ifdef VAST_MAT_ROW_MAJOR_ORDER
@@ -302,6 +311,33 @@ VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_mul(vast_mat4x4 a, vast_mat4x4 b)
                 a.e[VAST_MAT4X4_AT(i, 3)] * b.e[VAST_MAT4X4_AT(3, j)];
         }
     }
+
+    return result;
+}
+
+VAST_API VAST_INLINE vast_vec4 vast_mat4x4_mul_vec4(vast_mat4x4 m, vast_vec4 v)
+{
+    vast_vec4 result;
+
+    result.x = m.e[VAST_MAT4X4_AT(0, 0)] * v.x +
+               m.e[VAST_MAT4X4_AT(0, 1)] * v.y +
+               m.e[VAST_MAT4X4_AT(0, 2)] * v.z +
+               m.e[VAST_MAT4X4_AT(0, 3)] * v.w;
+
+    result.y = m.e[VAST_MAT4X4_AT(1, 0)] * v.x +
+               m.e[VAST_MAT4X4_AT(1, 1)] * v.y +
+               m.e[VAST_MAT4X4_AT(1, 2)] * v.z +
+               m.e[VAST_MAT4X4_AT(1, 3)] * v.w;
+
+    result.z = m.e[VAST_MAT4X4_AT(2, 0)] * v.x +
+               m.e[VAST_MAT4X4_AT(2, 1)] * v.y +
+               m.e[VAST_MAT4X4_AT(2, 2)] * v.z +
+               m.e[VAST_MAT4X4_AT(2, 3)] * v.w;
+
+    result.w = m.e[VAST_MAT4X4_AT(3, 0)] * v.x +
+               m.e[VAST_MAT4X4_AT(3, 1)] * v.y +
+               m.e[VAST_MAT4X4_AT(3, 2)] * v.z +
+               m.e[VAST_MAT4X4_AT(3, 3)] * v.w;
 
     return result;
 }
@@ -371,15 +407,6 @@ VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_look_at(vast_vec3 eye, vast_vec3 ta
 
     return result;
 }
-
-typedef struct vast_vec4
-{
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-
-} vast_vec4;
 
 VAST_API VAST_INLINE vast_vec4 vast_vec4_init(f32 x, f32 y, f32 z, f32 w)
 {
