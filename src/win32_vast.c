@@ -1205,6 +1205,8 @@ typedef struct shader_post_processing
   shader_header header;
 
   i32 loc_scene_texture;
+  i32 loc_iResolution;
+  i32 loc_iTime;
 
 } shader_post_processing;
 
@@ -1307,11 +1309,9 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
       if (!post_process_initialized)
       {
-        /* Create the framebuffer */
         gl->glGenFramebuffers(1, &fbo);
         gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-        /* 1. Color Attachment (RGBA16F preserves HDR range for future tone mapping/bloom) */
         gl->glGenTextures(1, &color_tex);
         gl->glBindTexture(GL_TEXTURE_2D, color_tex);
         gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height, 0, GL_RGBA, GL_FLOAT, VAST_NULL);
@@ -1321,13 +1321,11 @@ VAST_API void vast_render_scene(win32_vast_state *state)
         gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
 
-        /* 2. Depth Renderbuffer (Required so terrain/water/sky depth testing works identically) */
         gl->glGenRenderbuffers(1, &depth_rbo);
         gl->glBindRenderbuffer(GL_RENDERBUFFER, depth_rbo);
         gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
         gl->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rbo);
 
-        /* Unbind back to default screen buffer */
         gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         /* Load shader */
@@ -1361,6 +1359,8 @@ VAST_API void vast_render_scene(win32_vast_state *state)
           if (opengl_shader_load(&post_processing_shader.header, shader_code_vertex, (s8 *)shader_data_fragment, state->platform_state.api.io_print, gl))
           {
             post_processing_shader.loc_scene_texture = gl->glGetUniformLocation(post_processing_shader.header.program, "u_scene_tex");
+            post_processing_shader.loc_iResolution = gl->glGetUniformLocation(post_processing_shader.header.program, "iResolution");
+            post_processing_shader.loc_iTime = gl->glGetUniformLocation(post_processing_shader.header.program, "iTime");
           }
           else
           {
@@ -1405,10 +1405,12 @@ VAST_API void vast_render_scene(win32_vast_state *state)
       gl->glDisable(GL_DEPTH_TEST);
 
       gl->glUseProgram(post_processing_shader.header.program);
+      gl->glUniform1i(post_processing_shader.loc_scene_texture, 0);
+      gl->glUniform3f(post_processing_shader.loc_iResolution, (f32)state->platform_state.window.width, (f32)state->platform_state.window.height, 1.0f);
+      gl->glUniform1f(post_processing_shader.loc_iTime, (f32)state->platform_state.timing.time_elapsed);
 
       gl->glActiveTexture(GL_TEXTURE0);
       gl->glBindTexture(GL_TEXTURE_2D, color_tex);
-      gl->glUniform1i(post_processing_shader.loc_scene_texture, 0);
       gl->glBindVertexArray(post_processing_vao);
       gl->glDrawArrays(GL_TRIANGLES, 0, 3);
     }
