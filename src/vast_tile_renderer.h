@@ -523,10 +523,12 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     VAST_PROFILER_END(tile_update);
 
     /* Process dirty tiles */
-    VAST_PROFILER_BEGIN(tile_process_dirty);
+    if (t.dirty_indices_count > 0)
     {
         /* When no tiles calculated process everything in one frame otherwise introduce frame pacing */
         i32 updates_per_frame = t.dirty_indices_count == VAST_TILES_TOTAL ? VAST_TILES_TOTAL : 6;
+
+        VAST_PROFILER_BEGIN(tile_process_dirty);
 
         while (updates_per_frame > 0 && t.dirty_indices_count > 0)
         {
@@ -604,8 +606,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             t.dirty_indices_count--;
             updates_per_frame--;
         }
+
+        VAST_PROFILER_END(tile_process_dirty);
     }
-    VAST_PROFILER_END(tile_process_dirty);
 
     /* Render Tiles */
     VAST_PROFILER_BEGIN(tile_render);
