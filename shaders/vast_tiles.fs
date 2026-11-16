@@ -117,7 +117,7 @@ float cloudValueNoise(vec2 p) {
 }
 
 float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
-    if (sun_dir.y < 0.0) return 1.0;
+    if (sun_dir.y < 0.15) return 1.0;
 
     float safeSunY = max(sun_dir.y, 0.05); 
 
