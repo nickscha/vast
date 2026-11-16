@@ -138,7 +138,7 @@ float getCloudShadow(vec3 pos, vec3 sun_dir, float time) {
     float a = 0.5;
     mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);
     
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
         density += a * cloudValueNoise(uv);
         uv = rot * uv * 2.02;
         a *= 0.5;
