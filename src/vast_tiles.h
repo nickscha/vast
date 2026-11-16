@@ -207,11 +207,11 @@ VAST_API VAST_INLINE u8 vast_tile_get_lod_edge_mask(vast_tiles *t, u32 tile_idx)
 
 VAST_API VAST_INLINE u8 vast_tile_is_dirty(vast_tiles *t, u32 tile_index)
 {
-    u16 i;
+    u16 dirty_index;
 
-    for (i = 0; i < t->dirty_indices_count; ++i)
+    for (dirty_index = 0; dirty_index < t->dirty_indices_count; ++dirty_index)
     {
-        if (t->dirty_indices[i] == tile_index)
+        if (t->dirty_indices[dirty_index] == tile_index)
         {
             return 1;
         }
@@ -414,19 +414,19 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, f32 camera_position_x, 
     {
         for (x = t->origin_x; x < t->origin_x + VAST_TILES_PER_SIDE; ++x)
         {
-            u32 i = vast_tile_index(x, z);
-            i8 lod = vast_tile_lod(x, z, camera_tile_x, camera_tile_z);
+            u32 tile_index = vast_tile_index(x, z);
+            i8 tile_lod = vast_tile_lod(x, z, camera_tile_x, camera_tile_z);
 
-            t->tile_x[i] = x;
-            t->tile_z[i] = z;
-            t->tile_lod_required[i] = lod;
-            t->tile_lod_current[i] = -1; /* -1 = Uninitialized/Unknown */
-            t->dirty_indices[t->dirty_indices_count++] = (u16)i;
-            t->tile_per_lod_count[(i32)lod]++;
+            t->tile_x[tile_index] = x;
+            t->tile_z[tile_index] = z;
+            t->tile_lod_required[tile_index] = tile_lod;
+            t->tile_lod_current[tile_index] = -1; /* -1 = Uninitialized/Unknown */
+            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
+            t->tile_per_lod_count[(i32)tile_lod]++;
 
-            if (lod > t->tile_lod_max)
+            if (tile_lod > t->tile_lod_max)
             {
-                t->tile_lod_max = lod;
+                t->tile_lod_max = tile_lod;
             }
         }
     }
@@ -473,11 +473,11 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
         for (z = t->origin_z; z < t->origin_z + VAST_TILES_PER_SIDE; ++z)
         {
-            u32 i = vast_tile_index(target_x, z);
+            u32 tile_index = vast_tile_index(target_x, z);
 
-            t->tile_x[i] = target_x;
-            t->tile_z[i] = z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)i;
+            t->tile_x[tile_index] = target_x;
+            t->tile_z[tile_index] = z;
+            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
         }
 
         t->origin_x++;
@@ -493,11 +493,11 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
         for (z = t->origin_z; z < t->origin_z + VAST_TILES_PER_SIDE; ++z)
         {
-            u32 i = vast_tile_index(target_x, z);
+            u32 tile_index = vast_tile_index(target_x, z);
 
-            t->tile_x[i] = target_x;
-            t->tile_z[i] = z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)i;
+            t->tile_x[tile_index] = target_x;
+            t->tile_z[tile_index] = z;
+            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
         }
     }
 
@@ -508,11 +508,11 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
         for (x = t->origin_x; x < t->origin_x + VAST_TILES_PER_SIDE; ++x)
         {
-            u32 i = vast_tile_index(x, target_z);
+            u32 tile_index = vast_tile_index(x, target_z);
 
-            t->tile_x[i] = x;
-            t->tile_z[i] = target_z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)i;
+            t->tile_x[tile_index] = x;
+            t->tile_z[tile_index] = target_z;
+            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
         }
 
         t->origin_z++;
@@ -528,11 +528,11 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
         for (x = t->origin_x; x < t->origin_x + VAST_TILES_PER_SIDE; ++x)
         {
-            u32 i = vast_tile_index(x, target_z);
+            u32 tile_index = vast_tile_index(x, target_z);
 
-            t->tile_x[i] = x;
-            t->tile_z[i] = target_z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)i;
+            t->tile_x[tile_index] = x;
+            t->tile_z[tile_index] = target_z;
+            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
         }
     }
 
