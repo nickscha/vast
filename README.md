@@ -1,6 +1,10 @@
 # vast
 A C89 standard compliant, nostdlib (no C Standard Library) Virtual Adaptive Sparse Tiles (VAST).
 
+<p align="center">
+<a href="https://github.com/nickscha/vast"><img src="assets/vast.png"></a>
+</p>
+
 > [!WARNING]
 > THIS PROJECT IS A WORK IN PROGRESS! ANYTHING CAN CHANGE AT ANY MOMENT WITHOUT ANY NOTICE! USE THIS PROJECT AT YOUR OWN RISK!
 
