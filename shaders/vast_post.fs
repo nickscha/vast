@@ -110,6 +110,18 @@ void main()
     // Grain
     col += grain(vUV, iTime) * 0.025;
 
+    // Cinematic Letterbox
+    float targetAspect = 2.39; // 21:9
+    float currentAspect = iResolution.x / iResolution.y;
+    float maxBarHeight = max(0.0, (1.0 - (currentAspect / targetAspect)) * 0.5);
+    float t = clamp((iTime - 5.0) / 3.0, 0.0, 1.0);
+    float ease = t * t * (3.0 - 2.0 * t);
+    float barHeight = maxBarHeight * (1.0 - ease);
+
+    if (vUV.y < barHeight || vUV.y > 1.0 - barHeight) {
+        col = vec3(0.0);
+    }
+
     FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
   
     //vec3 col = texture(u_scene_tex, vUV).rgb;
