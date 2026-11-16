@@ -1200,6 +1200,14 @@ VAST_API VAST_INLINE void vast_update_camera_movement(win32_vast_state *state, v
   vast_camera_update(camera);
 }
 
+typedef struct shader_post_processing
+{
+  shader_header header;
+
+  i32 loc_scene_texture;
+
+} shader_post_processing;
+
 VAST_API void vast_render_scene(win32_vast_state *state)
 {
   static u8 scene_initialized = 0;
@@ -1283,9 +1291,128 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   /******************************/
   /* Application Rendering      */
   /******************************/
-  state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls);
-  vast_sky_render(&state->platform_state, &camera, sun_dir);
+  {
+    static u8 post_process_initialized = 0;
+    static u32 fbo;
+    static u32 color_tex;
+    static u32 depth_rbo;
+    static shader_post_processing post_processing_shader = {0};
+    static u32 post_processing_vao;
+    static i32 last_width = 0;
+    static i32 last_height = 0;
+
+    {
+
+      vast_opengl_api *gl = &state->platform_state.graphics.opengl;
+
+      if (!post_process_initialized)
+      {
+        /* Create the framebuffer */
+        gl->glGenFramebuffers(1, &fbo);
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+        /* 1. Color Attachment (RGBA16F preserves HDR range for future tone mapping/bloom) */
+        gl->glGenTextures(1, &color_tex);
+        gl->glBindTexture(GL_TEXTURE_2D, color_tex);
+        gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height, 0, GL_RGBA, GL_FLOAT, VAST_NULL);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
+
+        /* 2. Depth Renderbuffer (Required so terrain/water/sky depth testing works identically) */
+        gl->glGenRenderbuffers(1, &depth_rbo);
+        gl->glBindRenderbuffer(GL_RENDERBUFFER, depth_rbo);
+        gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
+        gl->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rbo);
+
+        /* Unbind back to default screen buffer */
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        /* Load shader */
+        {
+          static s8 *shader_code_vertex =
+              "#version 330 core\n"
+              "\n"
+              "out vec2 vUV;\n"
+              "\n"
+              "const vec2 verts[3] = vec2[](\n"
+              "    vec2(-1.0, -1.0),\n"
+              "    vec2( 3.0, -1.0),\n"
+              "    vec2(-1.0,  3.0)\n"
+              ");\n"
+              "\n"
+              "void main()\n"
+              "{\n"
+              "    vec2 p = verts[gl_VertexID];\n"
+              "    vUV = p * 0.5 + 0.5;\n"
+              "    gl_Position = vec4(p, 1.0, 1.0);\n"
+              "}";
+
+          u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->platform_state, &state->platform_state.memory, "shaders/vast_post.fs");
+
+          if (!shader_data_fragment)
+          {
+            state->platform_state.memory.offset = 0;
+            return;
+          }
+
+          if (opengl_shader_load(&post_processing_shader.header, shader_code_vertex, (s8 *)shader_data_fragment, state->platform_state.api.io_print, gl))
+          {
+            post_processing_shader.loc_scene_texture = gl->glGetUniformLocation(post_processing_shader.header.program, "u_scene_tex");
+          }
+          else
+          {
+            state->platform_state.api.io_print("Cannot compile post processing shaders!\n");
+          }
+
+          state->platform_state.memory.offset = 0;
+
+          gl->glGenVertexArrays(1, &post_processing_vao);
+        }
+
+        post_process_initialized = 1;
+      }
+
+      if (last_width != (i32)state->platform_state.window.width || last_height != (i32)state->platform_state.window.height)
+      {
+
+        last_width = (i32)state->platform_state.window.width;
+        last_height = (i32)state->platform_state.window.height;
+
+        gl->glBindTexture(GL_TEXTURE_2D, color_tex);
+        gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height, 0, GL_RGBA, GL_FLOAT, VAST_NULL);
+
+        gl->glBindRenderbuffer(GL_RENDERBUFFER, depth_rbo);
+        gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
+      }
+
+      gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+      gl->glViewport(0, 0, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
+    }
+
+    state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, fbo);
+    vast_sky_render(&state->platform_state, &camera, sun_dir, fbo);
+
+    /* Post Processing shader */
+    {
+      vast_opengl_api *gl = &state->platform_state.graphics.opengl;
+
+      gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      gl->glViewport(0, 0, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
+      gl->glDisable(GL_DEPTH_TEST);
+
+      gl->glUseProgram(post_processing_shader.header.program);
+
+      gl->glActiveTexture(GL_TEXTURE0);
+      gl->glBindTexture(GL_TEXTURE_2D, color_tex);
+      gl->glUniform1i(post_processing_shader.loc_scene_texture, 0);
+      gl->glBindVertexArray(post_processing_vao);
+      gl->glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+  }
 
   /******************************/
   /* UI Rendering (F1 pressed)  */

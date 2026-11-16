@@ -62,6 +62,7 @@
 #define GL_RGB8 0x8051
 #define GL_RGBA8 0x8058
 #define GL_RGB16F 0x881B
+#define GL_RGBA16F 0x881A
 #define GL_RED 0x1903
 #define GL_RED_INTEGER 0x8D94
 #define GL_R8 0x8229
@@ -85,7 +86,10 @@
 #define GL_FRONT_AND_BACK 0x0408
 #define GL_CULL_FACE 0x0B44
 #define GL_FRAMEBUFFER 0x8D40
+#define GL_RENDERBUFFER 0x8D41
 #define GL_COLOR_ATTACHMENT0 0x8CE0
+#define GL_DEPTH_ATTACHMENT 0x8D00
+#define GL_DEPTH_COMPONENT24 0x81A6
 #define GL_MAX_TEXTURE_SIZE 0x0D33
 #define GL_MAX_3D_TEXTURE_SIZE 0x8073
 #define GL_MAX_TEXTURE_IMAGE_UNITS 0x8872
@@ -163,6 +167,10 @@ typedef void (*PFNGLDELETEFRAMEBUFFERSPROC)(i32 n, u32 *framebuffers);
 typedef void (*PFNGLBINDFRAMEBUFFERPROC)(u32 target, u32 framebuffer);
 typedef void (*PFNGLFRAMEBUFFERTEXTURE2DPROC)(u32 target, u32 attachment, u32 textarget, u32 texture, i32 level);
 typedef void (*PFNGLFRAMEBUFFERTEXTURELAYERPROC)(u32 target, u32 attachment, u32 texture, i32 level, i32 layer);
+typedef void (*PFNGLGENRENDERBUFFERSPROC)(i32 n, u32 *renderbuffers);
+typedef void (*PFNGLBINDRENDERBUFFERPROC)(u32 target, u32 renderbuffer);
+typedef void (*PFNGLRENDERBUFFERSTORAGEPROC)(u32 target, u32 internalformat, i32 width, i32 height);
+typedef void (*PFNGLFRAMEBUFFERRENDERBUFFERPROC)(u32 target, u32 attachment, u32 renderbuffertarget, u32 renderbuffer);
 
 typedef struct vast_opengl_api
 {
@@ -234,6 +242,10 @@ typedef struct vast_opengl_api
     PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
     PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
     PFNGLFRAMEBUFFERTEXTURELAYERPROC glFramebufferTextureLayer;
+    PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers;
+    PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
+    PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
+    PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
 
 } vast_opengl_api;
 

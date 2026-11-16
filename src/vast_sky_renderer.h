@@ -32,7 +32,7 @@ typedef struct shader_sky
  * # [SECTION] Sky Renderer
  * #############################################################################
  */
-VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir)
+VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 fbo)
 {
     static u8 sky_initialized = 0;
     static shader_sky sky_shader = {0};
@@ -79,7 +79,7 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
         }
         else
         {
-            state->api.io_print("Cannot compile shaders!\n");
+            state->api.io_print("Cannot compile sky shaders!\n");
         }
 
         state->memory.offset = 0;
@@ -104,6 +104,8 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
     camera_basis[8] = camera->forward.z;
 
     /* Render */
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
     gl->glEnable(GL_DEPTH_TEST);
     gl->glDepthMask(GL_FALSE);
     gl->glDepthFunc(GL_LEQUAL);
@@ -121,6 +123,8 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
 
     gl->glDepthMask(GL_TRUE);
     gl->glDepthFunc(GL_LESS);
+
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     VAST_PROFILER_END(sky_render);
 }
