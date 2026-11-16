@@ -1303,6 +1303,24 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     static i32 last_width = 0;
     static i32 last_height = 0;
 
+    static s8 *shader_code_vertex =
+        "#version 330 core\n"
+        "\n"
+        "out vec2 vUV;\n"
+        "\n"
+        "const vec2 verts[3] = vec2[](\n"
+        "    vec2(-1.0, -1.0),\n"
+        "    vec2( 3.0, -1.0),\n"
+        "    vec2(-1.0,  3.0)\n"
+        ");\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "    vec2 p = verts[gl_VertexID];\n"
+        "    vUV = p * 0.5 + 0.5;\n"
+        "    gl_Position = vec4(p, 1.0, 1.0);\n"
+        "}";
+
     {
 
       vast_opengl_api *gl = &state->platform_state.graphics.opengl;
@@ -1330,24 +1348,6 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
         /* Load shader */
         {
-          static s8 *shader_code_vertex =
-              "#version 330 core\n"
-              "\n"
-              "out vec2 vUV;\n"
-              "\n"
-              "const vec2 verts[3] = vec2[](\n"
-              "    vec2(-1.0, -1.0),\n"
-              "    vec2( 3.0, -1.0),\n"
-              "    vec2(-1.0,  3.0)\n"
-              ");\n"
-              "\n"
-              "void main()\n"
-              "{\n"
-              "    vec2 p = verts[gl_VertexID];\n"
-              "    vUV = p * 0.5 + 0.5;\n"
-              "    gl_Position = vec4(p, 1.0, 1.0);\n"
-              "}";
-
           u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->platform_state, &state->platform_state.memory, "shaders/vast_post.fs");
 
           if (!shader_data_fragment)
@@ -1386,6 +1386,47 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
         gl->glBindRenderbuffer(GL_RENDERBUFFER, depth_rbo);
         gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
+      }
+
+      if (state->platform_state.timing.frame_count % 30 == 0)
+      {
+        static u8 hot_reload_initialized = 0;
+        static u32 post_processing_shader_heightmap_last = 0;
+
+        u32 post_processing_shader_heightmap_now = 0;
+
+        if (!hot_reload_initialized)
+        {
+          state->platform_state.api.io_file_mod_signature("shaders/vast_post.fs", &post_processing_shader_heightmap_last);
+
+          hot_reload_initialized = 1;
+        }
+
+        state->platform_state.api.io_file_mod_signature("shaders/vast_post.fs", &post_processing_shader_heightmap_now);
+
+        if (post_processing_shader_heightmap_now != post_processing_shader_heightmap_last)
+        {
+          u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->platform_state, &state->platform_state.memory, "shaders/vast_post.fs");
+
+          if (!shader_data_fragment)
+          {
+            state->platform_state.memory.offset = 0;
+            return;
+          }
+
+          if (opengl_shader_load(&post_processing_shader.header, shader_code_vertex, (s8 *)shader_data_fragment, state->platform_state.api.io_print, gl))
+          {
+            post_processing_shader.loc_scene_texture = gl->glGetUniformLocation(post_processing_shader.header.program, "u_scene_tex");
+            post_processing_shader.loc_iResolution = gl->glGetUniformLocation(post_processing_shader.header.program, "iResolution");
+            post_processing_shader.loc_iTime = gl->glGetUniformLocation(post_processing_shader.header.program, "iTime");
+          }
+          else
+          {
+            state->platform_state.api.io_print("Cannot compile post processing shaders!\n");
+          }
+
+          state->platform_state.memory.offset = 0;
+        }
       }
 
       gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
