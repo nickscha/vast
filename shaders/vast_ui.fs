@@ -1,7 +1,8 @@
 #version 330 core
 
-in vec2 v_uv;
-in vec4 v_color;
+in vec2      v_uv;
+in vec4      v_color;
+flat in uint v_isSolid;
 
 uniform sampler2D tex_font;
 uniform vec3      iResolution;
@@ -11,6 +12,12 @@ out vec4 FragColor;
 
 void main()
 {
+    if (v_isSolid == 1u)
+    {
+        FragColor = v_color;
+        return;
+    }
+    
     vec4 texel          = textureGrad(tex_font, v_uv, dFdx(v_uv), dFdy(v_uv));
     float dist          = texel.a;
     float aa            = fwidth(dist) * 0.55;

@@ -7,7 +7,6 @@
  */
 #include "vast_types.h"          /* Basic types (u8, u32, ...)  */
 #include "vast.h"                /* Platform State              */
-#include "vast_font.h"           /* Font Bitmap data            */
 #include "vast_string_builder.h" /* String parsing              */
 #include "vast_opengl.h"         /* OpenGL functions            */
 

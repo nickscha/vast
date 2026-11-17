@@ -17,11 +17,10 @@ LICENSE
 #include "vast_profiler.h"
 #include "vast_opengl.h"
 #include "vast_camera.h"
-#include "vast_ui.h"
 #include "vast_screen_recording.h"
 #include "vast_sky_renderer.h"
 #include "vast_tile_renderer.h"
-#include "vast_font_renderer.h"
+#include "vast_ui_renderer.h"
 #include "win32_vast_opengl.h"
 #include "win32_vast_api.h"
 #include "win32_vast_xinput.h"
@@ -1449,7 +1448,9 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, post_process_fbo, post_process_enabled);
     vast_sky_render(&state->platform_state, &camera, sun_dir, post_process_fbo, post_process_enabled);
-    vast_font_render(&state->platform_state, post_process_fbo, post_process_enabled);
+
+    (void)vast_sb_f64;
+    (void)vast_sb_s8_pad;
 
     /* Post Processing shader */
     if (post_process_enabled)
@@ -1490,36 +1491,9 @@ VAST_API void vast_render_scene(win32_vast_state *state)
       gl->glBindVertexArray(post_processing_vao);
       gl->glDrawArrays(GL_TRIANGLES, 0, 3);
     }
-  }
 
-  /******************************/
-  /* UI Rendering (F1 pressed)  */
-  /******************************/
-  if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F1] && !state->platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F1])
-  {
-    state->ui_enabled = !state->ui_enabled;
-  }
-
-  if (state->ui_enabled)
-  {
-    static u32 handle_count = 0;
-    static win32_process_memory_info mem = {0};
-
-    if (((u32)state->platform_state.timing.time_elapsed) % 5 == 0)
-    {
-      GetProcessHandleCount(GetCurrentProcess(), &handle_count);
-      win32_process_memory(&mem);
-    }
-
-    vast_ui_render(
-        &state->platform_state,
-        state->thread_count,
-        (i32)handle_count,
-        (i32)(mem.working_set / 1024), (i32)(mem.peak_working_set / 1024), (i32)(mem.private_bytes / 1024),
-        state->gl_version, state->gl_renderer, state->gl_vendor,
-        state->borderless_enabled, state->fullscreen_enabled, state->shader_paused, state->screen_recording_enabled,
-        state->draw_calls,
-        &camera);
+    /* UI Rendering should be untouched by post processing for now */
+    vast_ui_render(&state->platform_state, &post_process_enabled);
   }
 }
 
