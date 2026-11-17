@@ -44,6 +44,8 @@ typedef struct vast_ui_instance_data
 #define VAST_UI_MAX_STACK 8
 #endif
 
+#define VAST_UI_SOLID_FILL_MAGIC_INDEX 424242u
+
 typedef struct vast_ui_rect
 {
     f32 x;
@@ -127,7 +129,7 @@ VAST_API VAST_INLINE void vast_ui_begin(
     ctx->mouse_released = !ctx->mouse_down && ctx->mouse_was_down;
 
     ctx->scale = scale > 0.0f ? scale : 1.0f;
-    ctx->padding = padding;
+    ctx->padding = padding > 0.0f ? padding : 8.0f;
     ctx->stack_ptr = 0;
     ctx->cursor_y = 0.0f;
     ctx->instances_count = 0;
@@ -288,28 +290,6 @@ VAST_API VAST_INLINE vast_ui_result vast_ui_button(vast_ui_context *ctx, u32 id,
     return vast_ui_internal_process(ctx, id, rect);
 }
 
-VAST_API VAST_INLINE vast_ui_result vast_ui_checkbox(vast_ui_context *ctx, u32 id, vast_ui_rect rect, u8 *is_checked)
-{
-    vast_ui_result res = vast_ui_internal_process(ctx, id, rect);
-    if (res.state & VAST_UI_STATE_RELEASED)
-    {
-        *is_checked = !(*is_checked);
-    }
-    return res;
-}
-
-VAST_API VAST_INLINE vast_ui_result vast_ui_slider(vast_ui_context *ctx, u32 id, vast_ui_rect rect, f32 *val, f32 min, f32 max)
-{
-    vast_ui_result res = vast_ui_internal_process(ctx, id, rect);
-    if ((res.state & VAST_UI_STATE_PRESSED) || (res.state & VAST_UI_STATE_HELD))
-    {
-        f32 t = (ctx->mouse_x - res.rect.x) / res.rect.w;
-        t = (t < 0.0f) ? 0.0f : (t > 1.0f ? 1.0f : t);
-        *val = min + t * (max - min);
-    }
-    return res;
-}
-
 VAST_API VAST_INLINE void vast_ui_push_rect(vast_ui_context *ctx, vast_ui_result res, u32 rgba_color)
 {
     if (ctx->instances_count < ctx->instances_size)
@@ -320,7 +300,7 @@ VAST_API VAST_INLINE void vast_ui_push_rect(vast_ui_context *ctx, vast_ui_result
         inst.size_x = res.rect.w;
         inst.size_y = res.rect.h;
         inst.color = rgba_color;
-        inst.glyph_index = 424242u; /* 424242 = solid block fill in ui shader */
+        inst.glyph_index = VAST_UI_SOLID_FILL_MAGIC_INDEX;
         ctx->instances[ctx->instances_count++] = inst;
     }
 }
@@ -448,7 +428,6 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
     /* Update */
     VAST_PROFILER_BEGIN(font_update);
     {
-
         static f32 win_x = 10.0f;
         static f32 win_y = 10.0f;
 
@@ -459,8 +438,8 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
         static f32 ui_scale = 1.0f;
         static f32 ui_padding = 8.0f;
 
-        vast_ui_result panel = {0};
-        vast_ui_rect win_rect = vast_ui_rect_init(win_x, win_y, win_w, win_h);
+        vast_ui_result header;
+        vast_ui_result panel;
 
         vast_ui_begin(&ui_ctx,
                       (f32)state->input.mouse.x,
@@ -468,11 +447,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                       state->input.mouse.keys_is_down[VAST_MOUSE_KEY_LEFT],
                       ui_scale, ui_padding);
 
-        panel = vast_ui_panel_begin(&ui_ctx, win_rect);
+        header = vast_ui_drag_header(&ui_ctx, 1, &win_x, &win_y, win_w, font_size);
+        panel = vast_ui_panel_begin(&ui_ctx, vast_ui_rect_init(win_x, win_y, win_w, win_h));
         vast_ui_push_rect(&ui_ctx, panel, 0xEE1E1E26);
 
         {
-            vast_ui_result header = vast_ui_drag_header(&ui_ctx, 1, &win_x, &win_y, win_w, font_size);
             vast_ui_push_rect(&ui_ctx, header, 0xFF333344);
             vast_ui_push_text(&ui_ctx, "Vast UI", header.rect, font_size, 0xFFFFFFFF);
 
@@ -480,10 +459,8 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
             ui_ctx.cursor_y += font_size;
 
             {
-                vast_ui_rect btn_rect = vast_ui_rect_init(0.0f, 0.0f, 120.0f, font_size);
-                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, btn_rect);
+                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 120.0f, font_size));
 
-                /* 0xAABBGGRR */
                 u32 btn_color = *post_process_enabled ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
