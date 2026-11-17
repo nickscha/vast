@@ -325,11 +325,11 @@ VAST_API VAST_INLINE void vast_ui_push_rect(vast_ui_context *ctx, vast_ui_result
     }
 }
 
-VAST_API VAST_INLINE void vast_ui_push_text(vast_ui_context *ctx, s8 *text, f32 x, f32 y, f32 glyph_size, u32 rgba_color)
+VAST_API VAST_INLINE void vast_ui_push_text(vast_ui_context *ctx, s8 *text, vast_ui_rect rect, f32 glyph_size, u32 rgba_color)
 {
     u32 i = 0;
-    f32 cursor_x = x;
-    f32 cursor_y = y;
+    f32 cursor_x = rect.x;
+    f32 cursor_y = rect.y;
     f32 snapped_size = (f32)(i32)(glyph_size + 0.5f);
     f32 advance = glyph_size * 0.55f;
 
@@ -474,7 +474,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
         {
             vast_ui_result header = vast_ui_drag_header(&ui_ctx, 1, &win_x, &win_y, win_w, font_size);
             vast_ui_push_rect(&ui_ctx, header, 0xFF333344);
-            vast_ui_push_text(&ui_ctx, "Vast UI", header.rect.x, header.rect.y, font_size, 0xFFFFFFFF);
+            vast_ui_push_text(&ui_ctx, "Vast UI", header.rect, font_size, 0xFFFFFFFF);
 
             /* Space past header */
             ui_ctx.cursor_y += font_size;
@@ -492,7 +492,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
-                vast_ui_push_text(&ui_ctx, "Post Process", btn.rect.x, btn.rect.y, font_size, 0xFFFFFFFF);
+                vast_ui_push_text(&ui_ctx, "Post Process", btn.rect, font_size, 0xFFFFFFFF);
             }
         }
 
@@ -517,10 +517,10 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
             }
 
             vast_ui_push_rect(&ui_ctx, btn_minus, btn_minus_color);
-            vast_ui_push_text(&ui_ctx, "-", btn_minus.rect.x, btn_minus.rect.y, font_size, 0xFFFFFFFF);
+            vast_ui_push_text(&ui_ctx, "-", btn_minus.rect, font_size, 0xFFFFFFFF);
 
             vast_ui_push_rect(&ui_ctx, btn_plus, btn_plus_color);
-            vast_ui_push_text(&ui_ctx, "+", btn_plus.rect.x, btn_plus.rect.y, font_size, 0xFFFFFFFF);
+            vast_ui_push_text(&ui_ctx, "+", btn_plus.rect, font_size, 0xFFFFFFFF);
         }
         vast_ui_panel_end(&ui_ctx);
 
