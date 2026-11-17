@@ -21,6 +21,7 @@ LICENSE
 #include "vast_screen_recording.h"
 #include "vast_sky_renderer.h"
 #include "vast_tile_renderer.h"
+#include "vast_font_renderer.h"
 #include "win32_vast_opengl.h"
 #include "win32_vast_api.h"
 #include "win32_vast_xinput.h"
@@ -1296,7 +1297,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
   /******************************/
   {
     static u8 post_process_initialized = 0;
-    static u32 fbo;
+    static u32 post_process_fbo;
     static u32 color_tex;
     static u32 depth_rbo;
     static shader_post_processing post_processing_shader = {0};
@@ -1336,8 +1337,8 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
       if (!post_process_initialized)
       {
-        gl->glGenFramebuffers(1, &fbo);
-        gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        gl->glGenFramebuffers(1, &post_process_fbo);
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, post_process_fbo);
 
         gl->glGenTextures(1, &color_tex);
         gl->glBindTexture(GL_TEXTURE_2D, color_tex);
@@ -1440,14 +1441,15 @@ VAST_API void vast_render_scene(win32_vast_state *state)
         }
       }
 
-      gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+      gl->glBindFramebuffer(GL_FRAMEBUFFER, post_process_fbo);
       gl->glViewport(0, 0, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
     }
 
     /* Main rendering */
     state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, fbo, post_process_enabled);
-    vast_sky_render(&state->platform_state, &camera, sun_dir, fbo, post_process_enabled);
+    vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, post_process_fbo, post_process_enabled);
+    vast_sky_render(&state->platform_state, &camera, sun_dir, post_process_fbo, post_process_enabled);
+    vast_font_render(&state->platform_state, post_process_fbo, post_process_enabled);
 
     /* Post Processing shader */
     if (post_process_enabled)

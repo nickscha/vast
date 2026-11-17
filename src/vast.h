@@ -380,7 +380,8 @@ void *vast_io_file_read_to_memory(vast_platform_state *state, vast_platform_memo
         return VAST_NULL;
     }
 
-    data = vast_memory_allocate(memory, file_size);
+    /* TODO(nickscha): + 1 unsafe! */
+    data = vast_memory_allocate(memory, file_size + 1); 
 
     if (!data)
     {
