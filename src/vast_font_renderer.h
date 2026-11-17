@@ -143,17 +143,17 @@ VAST_API void vast_font_render(vast_platform_state *state, u32 fbo, u8 post_proc
         gl->glBindBuffer(GL_ARRAY_BUFFER, font_vbo);
         gl->glBufferData(GL_ARRAY_BUFFER, sizeof(instance_data), 0, GL_DYNAMIC_DRAW);
 
-        /* location 0: vec4 a_rect (pos_x, pos_y, size_x, size_y) */
+        /* location 0: a_rect (pos_x, pos_y, size_x, size_y) */
         gl->glEnableVertexAttribArray(0);
         gl->glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vast_font_instance_data), (void *)0);
         gl->glVertexAttribDivisor(0, 1);
 
-        /* location 1: uint a_color (packed RGBA8) */
+        /* location 1: a_color */
         gl->glEnableVertexAttribArray(1);
         gl->glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(vast_font_instance_data), (void *)(4 * sizeof(f32)));
         gl->glVertexAttribDivisor(1, 1);
 
-        /* location 2: uint a_glyph_index (0..255) */
+        /* location 2: a_glyph_index */
         gl->glEnableVertexAttribArray(2);
         gl->glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(vast_font_instance_data), (void *)(4 * sizeof(f32) + sizeof(u32)));
         gl->glVertexAttribDivisor(2, 1);
@@ -196,12 +196,10 @@ VAST_API void vast_font_render(vast_platform_state *state, u32 fbo, u8 post_proc
         gl->glUniform1f(font_shader.loc_iTime, (f32)state->timing.time_elapsed);
         gl->glUniform1i(font_shader.loc_texture_font, 0);
 
-        /* Upload dynamic glyph instances */
         gl->glBindBuffer(GL_ARRAY_BUFFER, font_vbo);
         gl->glBufferSubData(GL_ARRAY_BUFFER, 0, (i32)instance_data_count * (i32)sizeof(vast_font_instance_data), instance_data);
         gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        /* Draw 4-vertex triangle strip per glyph instance */
         gl->glBindVertexArray(font_vao);
         gl->glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, instance_data_count);
         gl->glBindVertexArray(0);
