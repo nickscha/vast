@@ -66,8 +66,6 @@ VAST_API u32 vast_font_update(vast_platform_state *state, vast_font_instance_dat
         i++;
     }
 
-    (void)state;
-
     return instance_data_count;
 }
 
@@ -91,9 +89,6 @@ VAST_API void vast_font_render(vast_platform_state *state, u32 fbo, u8 post_proc
     static u32 instance_data_count = 0;
 
     vast_opengl_api *gl = &state->graphics.opengl;
-
-    (void)instance_data;
-    (void)instance_data_count;
 
     if (!font_initialized)
     {
