@@ -1304,6 +1304,8 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     static i32 last_width = 0;
     static i32 last_height = 0;
 
+    static u8 post_process_enabled = 0;
+
     static s8 *shader_code_vertex =
         "#version 330 core\n"
         "\n"
@@ -1322,6 +1324,12 @@ VAST_API void vast_render_scene(win32_vast_state *state)
         "    gl_Position = vec4(p, 1.0, 1.0);\n"
         "}";
 
+    if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_B] && !state->platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_B])
+    {
+      post_process_enabled = !post_process_enabled;
+    }
+
+    if (post_process_enabled)
     {
 
       vast_opengl_api *gl = &state->platform_state.graphics.opengl;
@@ -1436,11 +1444,13 @@ VAST_API void vast_render_scene(win32_vast_state *state)
       gl->glViewport(0, 0, (i32)state->platform_state.window.width, (i32)state->platform_state.window.height);
     }
 
+    /* Main rendering */
     state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, fbo);
-    vast_sky_render(&state->platform_state, &camera, sun_dir, fbo);
+    vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, fbo, post_process_enabled);
+    vast_sky_render(&state->platform_state, &camera, sun_dir, fbo, post_process_enabled);
 
     /* Post Processing shader */
+    if (post_process_enabled)
     {
       vast_opengl_api *gl = &state->platform_state.graphics.opengl;
 

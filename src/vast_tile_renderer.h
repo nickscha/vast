@@ -356,7 +356,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
  * #############################################################################
  */
 /* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
-VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 *draw_calls, u32 fbo)
+VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 *draw_calls, u32 fbo, u8 post_process_enabled)
 {
     static u8 tiles_initialized = 0;
     static vast_tiles t = {0};
@@ -641,7 +641,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             }
         }
 
-        gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        if (post_process_enabled)
+        {
+            gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        }
 
         gl->glEnable(GL_CULL_FACE);
         gl->glCullFace(GL_BACK);
