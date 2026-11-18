@@ -516,7 +516,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
 
         {
             vast_ui_push_rect(&ui_ctx, header, 0xFF333344);
-            vast_ui_push_text(&ui_ctx, "Vast UI", header.rect, 0xFFFFFFFF);
+            vast_ui_push_text(&ui_ctx, "Vast UI (F1)", header.rect, 0xFFFFFFFF);
 
             /* Space past header */
             ui_ctx.cursor_y += font_size;

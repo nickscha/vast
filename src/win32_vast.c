@@ -1304,7 +1304,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     static i32 last_width = 0;
     static i32 last_height = 0;
 
-    static u8 post_process_enabled = 0;
+    static u8 post_process_enabled = 1;
 
     static s8 *shader_code_vertex =
         "#version 330 core\n"
@@ -1494,7 +1494,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
     /* UI Rendering should be untouched by post processing for now */
     {
-      static u8 ui_enabled = 0;
+      static u8 ui_enabled = 1;
 
       if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F1] && !state->platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F1])
       {
