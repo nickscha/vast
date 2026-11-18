@@ -601,7 +601,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
 
         /* Profiler Metrics Window */
         {
-            static f32 prof_win_w = 550.0f;
+            static f32 prof_win_w = 620.0f;
             static f32 prof_win_h = 300.0f;
             static f32 prof_win_x = 0.0f;
 
@@ -637,11 +637,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                         if (i == 0)
                         {
                             vast_sb_s8_pad(&sb, "Name", 24, ' ', VAST_SB_PAD_RIGHT);
-                            vast_sb_s8_pad(&sb, "last", 7, ' ', VAST_SB_PAD_LEFT);
-                            vast_sb_s8_pad(&sb, "min", 7, ' ', VAST_SB_PAD_LEFT);
-                            vast_sb_s8_pad(&sb, "max", 7, ' ', VAST_SB_PAD_LEFT);
-                            vast_sb_s8_pad(&sb, "avg", 7, ' ', VAST_SB_PAD_LEFT);
-                            vast_sb_s8_pad(&sb, "cnt", 6, ' ', VAST_SB_PAD_LEFT);
+                            vast_sb_s8_pad(&sb, "last", 9, ' ', VAST_SB_PAD_LEFT);
+                            vast_sb_s8_pad(&sb, "min", 9, ' ', VAST_SB_PAD_LEFT);
+                            vast_sb_s8_pad(&sb, "max", 9, ' ', VAST_SB_PAD_LEFT);
+                            vast_sb_s8_pad(&sb, "avg", 9, ' ', VAST_SB_PAD_LEFT);
+                            vast_sb_s8_pad(&sb, "cnt", 7, ' ', VAST_SB_PAD_LEFT);
                             vast_sb_s8(&sb, "\0");
 
                             vast_ui_label(&ui_ctx, prof_buf, 0xFFAAAAAA);
@@ -649,11 +649,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                         }
 
                         vast_sb_s8_pad(&sb, entry.name, 24, ' ', VAST_SB_PAD_RIGHT);
-                        vast_sb_f64_pad(&sb, entry.time_ms_last, 2, 7, ' ', VAST_SB_PAD_LEFT);
-                        vast_sb_f64_pad(&sb, entry.time_ms_min, 2, 7, ' ', VAST_SB_PAD_LEFT);
-                        vast_sb_f64_pad(&sb, entry.time_ms_max, 2, 7, ' ', VAST_SB_PAD_LEFT);
-                        vast_sb_f64_pad(&sb, entry.counter > 0 ? (entry.time_ms_total / (f64)entry.counter) : 0.0, 2, 7, ' ', VAST_SB_PAD_LEFT);
-                        vast_sb_i32_pad(&sb, (i32)entry.counter, 6, ' ', VAST_SB_PAD_LEFT);
+                        vast_sb_f64_pad(&sb, entry.time_ms_last, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                        vast_sb_f64_pad(&sb, entry.time_ms_min, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                        vast_sb_f64_pad(&sb, entry.time_ms_max, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                        vast_sb_f64_pad(&sb, entry.counter > 0 ? (entry.time_ms_total / (f64)entry.counter) : 0.0, 4, 9, ' ', VAST_SB_PAD_LEFT);
+                        vast_sb_i32_pad(&sb, (i32)entry.counter, 7, ' ', VAST_SB_PAD_LEFT);
                         vast_sb_s8(&sb, "\0");
 
                         vast_ui_label(&ui_ctx, prof_buf, 0xFFFFFFFF);
