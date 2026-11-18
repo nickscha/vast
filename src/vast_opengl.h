@@ -42,6 +42,7 @@ VAST_API VAST_INLINE u8 vast_opengl_load_functions(vast_opengl_function_loader l
     opengl->glTexImage2D = (PFNGLTEXIMAGE2DPROC)load("glTexImage2D");
     opengl->glTexSubImage2D = (PFNGLTEXSUBIMAGE2DPROC)load("glTexSubImage2D");
     opengl->glTexParameteri = (PFNGLTEXPARAMETERIPROC)load("glTexParameteri");
+    opengl->glTexParameterf = (PFNGLTEXPARAMETERFPROC)load("glTexParameterf");
     opengl->glPixelStorei = (PFNGLPIXELSTOREIPROC)load("glPixelStorei");
     opengl->glReadPixels = (PFNGLREADPIXELSPROC)load("glReadPixels");
     opengl->glBlendFunc = (PFNGLBLENDFUNCPROC)load("glBlendFunc");

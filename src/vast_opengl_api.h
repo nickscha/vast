@@ -114,6 +114,7 @@ typedef void (*PFNGLTEXIMAGE1DPROC)(u32 target, i32 level, i32 internalformat, i
 typedef void (*PFNGLTEXIMAGE2DPROC)(u32 target, i32 level, i32 internalformat, i32 width, i32 height, i32 border, i32 format, u32 type, const void *pixels);
 typedef void (*PFNGLTEXSUBIMAGE2DPROC)(u32 target, i32 level, i32 xoffset, i32 yoffset, i32 width, i32 height, i32 format, u32 type, const void *pixels);
 typedef void (*PFNGLTEXPARAMETERIPROC)(u32 target, u32 pname, i32 param);
+typedef void (*PFNGLTEXPARAMETERFPROC)(u32 target, u32 pname, f32 param);
 typedef void (*PFNGLPIXELSTOREIPROC)(u32 pname, i32 param);
 typedef void (*PFNGLREADPIXELSPROC)(i32 x, i32 y, i32 width, i32 height, i32 format, i32 type, void *pixels);
 typedef void (*PFNGLBLENDFUNCPROC)(u32 sfactor, u32 dfactor);
@@ -189,6 +190,7 @@ typedef struct vast_opengl_api
     PFNGLTEXIMAGE2DPROC glTexImage2D;
     PFNGLTEXSUBIMAGE2DPROC glTexSubImage2D;
     PFNGLTEXPARAMETERIPROC glTexParameteri;
+    PFNGLTEXPARAMETERFPROC glTexParameterf;
     PFNGLPIXELSTOREIPROC glPixelStorei;
     PFNGLREADPIXELSPROC glReadPixels;
     PFNGLBLENDFUNCPROC glBlendFunc;
