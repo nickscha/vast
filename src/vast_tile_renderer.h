@@ -91,7 +91,7 @@ static s8 *vast_tile_texture_vertex_data =
 
 VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_tile_shader_heightmap *tiles_hm_shader)
 {
-    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tile_hm.fs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/10_vast_tile_heightmap_texture.fs");
     vast_opengl_api *gl = &state->graphics.opengl;
 
     if (!shader_data_fragment)
@@ -116,7 +116,7 @@ VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_t
 
 VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_tile_shader_normalmap *tiles_nm_shader)
 {
-    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tile_nm.fs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/10_vast_tile_normalmap_texture.fs");
     vast_opengl_api *gl = &state->graphics.opengl;
 
     if (!shader_data_fragment)
@@ -142,8 +142,8 @@ VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_t
 VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_shader_final *tiles_shader)
 {
 
-    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tiles.vs");
-    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_tiles.fs");
+    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/20_vast_tile_render.vs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/20_vast_tile_render.fs");
     vast_opengl_api *gl = &state->graphics.opengl;
 
     if (!shader_data_vertex || !shader_data_fragment)
@@ -192,9 +192,9 @@ VAST_API void vast_tile_shader_hot_reload(
     {
         static u8 hot_reload_initialized = 0;
 
-        static s8 *tile_shader_heightmap = "shaders/vast_tile_hm.fs";
-        static s8 *tile_shader_normalmap = "shaders/vast_tile_nm.fs";
-        static s8 *tile_shader_final = "shaders/vast_tiles.fs";
+        static s8 *tile_shader_heightmap = "shaders/10_vast_tile_heightmap_texture.fs";
+        static s8 *tile_shader_normalmap = "shaders/10_vast_tile_normalmap_texture.fs";
+        static s8 *tile_shader_final = "shaders/20_vast_tile_render.fs";
         static u32 tile_shader_heightmap_last = 0;
         static u32 tile_shader_normalmap_last = 0;
         static u32 tile_shader_final_last = 0;

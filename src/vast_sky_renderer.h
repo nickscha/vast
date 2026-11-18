@@ -61,7 +61,7 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
             "    gl_Position = vec4(p, 1.0, 1.0);\n"
             "}";
 
-        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/vast_sky.fs");
+        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/30_vast_sky.fs");
 
         if (!shader_data_fragment)
         {

@@ -1357,7 +1357,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
         /* Load shader */
         {
-          u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->platform_state, &state->platform_state.memory, "shaders/vast_post.fs");
+          u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->platform_state, &state->platform_state.memory, "shaders/40_vast_post.fs");
 
           if (!shader_data_fragment)
           {
@@ -1407,12 +1407,12 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
         if (!hot_reload_initialized)
         {
-          state->platform_state.api.io_file_mod_signature("shaders/vast_post.fs", &post_processing_shader_heightmap_last);
+          state->platform_state.api.io_file_mod_signature("shaders/40_vast_post.fs", &post_processing_shader_heightmap_last);
 
           hot_reload_initialized = 1;
         }
 
-        state->platform_state.api.io_file_mod_signature("shaders/vast_post.fs", &post_processing_shader_heightmap_now);
+        state->platform_state.api.io_file_mod_signature("shaders/40_vast_post.fs", &post_processing_shader_heightmap_now);
 
         if (post_processing_shader_heightmap_now != post_processing_shader_heightmap_last)
         {
