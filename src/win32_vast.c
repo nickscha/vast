@@ -1493,7 +1493,19 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     }
 
     /* UI Rendering should be untouched by post processing for now */
-    vast_ui_render(&state->platform_state, &post_process_enabled);
+    {
+      static u8 ui_enabled = 0;
+
+      if (state->platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F1] && !state->platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F1])
+      {
+        ui_enabled = !ui_enabled;
+      }
+
+      if (ui_enabled)
+      {
+        vast_ui_render(&state->platform_state, &post_process_enabled);
+      }
+    }
   }
 }
 

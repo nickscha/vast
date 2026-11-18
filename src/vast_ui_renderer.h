@@ -70,6 +70,9 @@ typedef struct vast_ui_context
     f32 padding;
     f32 scale;
 
+    f32 font_size;
+    f32 font_advance_factor;
+
     u32 active_id;
     u32 dragged_window_id;
     f32 drag_offset_x;
@@ -121,7 +124,8 @@ VAST_API VAST_INLINE void vast_ui_begin(
     vast_ui_context *ctx,
     u32 window_width, u32 window_height,
     f32 mouse_x, f32 mouse_y, u8 mouse_down,
-    f32 scale, f32 padding)
+    f32 scale, f32 padding,
+    f32 font_size, f32 font_advance_factor)
 {
     ctx->window_width = window_width;
     ctx->window_height = window_height;
@@ -138,6 +142,10 @@ VAST_API VAST_INLINE void vast_ui_begin(
 
     ctx->scale = scale > 0.0f ? scale : 1.0f;
     ctx->padding = padding > 0.0f ? padding : 8.0f;
+
+    ctx->font_size = font_size > 0.0f ? font_size : 16.0f;
+    ctx->font_advance_factor = font_advance_factor > 0.0f ? font_advance_factor : 0.55f;
+
     ctx->stack_ptr = 0;
     ctx->cursor_y = 0.0f;
     ctx->instances_count = 0;
@@ -324,13 +332,14 @@ VAST_API VAST_INLINE void vast_ui_push_rect(vast_ui_context *ctx, vast_ui_result
     }
 }
 
-VAST_API VAST_INLINE void vast_ui_push_text(vast_ui_context *ctx, s8 *text, vast_ui_rect rect, f32 glyph_size, u32 rgba_color)
+VAST_API VAST_INLINE void vast_ui_push_text(vast_ui_context *ctx, s8 *text, vast_ui_rect rect, u32 rgba_color)
 {
     u32 i = 0;
     f32 cursor_x = rect.x;
     f32 cursor_y = rect.y;
+    f32 glyph_size = ctx->font_size * ctx->scale;
     f32 snapped_size = (f32)(i32)(glyph_size + 0.5f);
-    f32 advance = glyph_size * 0.55f;
+    f32 advance = glyph_size * ctx->font_advance_factor;
 
     while (text[i] != '\0' && ctx->instances_count < ctx->instances_size)
     {
@@ -349,14 +358,13 @@ VAST_API VAST_INLINE void vast_ui_push_text(vast_ui_context *ctx, s8 *text, vast
     }
 }
 
-VAST_API VAST_INLINE void vast_ui_label(vast_ui_context *ctx, s8 *text, f32 glyph_size, u32 rgba_color)
+VAST_API VAST_INLINE void vast_ui_label(vast_ui_context *ctx, s8 *text, u32 rgba_color)
 {
     f32 s = ctx->scale;
     f32 pad = ctx->padding * s;
-    f32 scaled_glyph_size = glyph_size * s;
+    f32 scaled_glyph_size = ctx->font_size * s;
     vast_ui_rect rect;
 
-    /* Auto-layout within current panel container */
     if (ctx->stack_ptr > 0)
     {
         vast_ui_rect *panel = &ctx->stack[ctx->stack_ptr - 1];
@@ -378,7 +386,7 @@ VAST_API VAST_INLINE void vast_ui_label(vast_ui_context *ctx, s8 *text, f32 glyp
         ctx->cursor_y += rect.h + pad;
     }
 
-    vast_ui_push_text(ctx, text, rect, scaled_glyph_size, rgba_color);
+    vast_ui_push_text(ctx, text, rect, rgba_color);
 }
 
 /* #############################################################################
@@ -478,13 +486,14 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
 
     /* Update */
     {
-        static f32 win_x = 10.0f;
-        static f32 win_y = 10.0f;
+        static f32 win_x = 0.0f;
+        static f32 win_y = 0.0f;
 
         f32 win_w = 180.0f;
         f32 win_h = 240.0f;
 
         static f32 font_size = 16.0f;
+        static f32 font_advancement_factor = 0.55f;
         static f32 ui_scale = 1.0f;
         static f32 ui_padding = 8.0f;
 
@@ -498,7 +507,8 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                       (f32)state->input.mouse.x,
                       (f32)state->window.height - (f32)state->input.mouse.y,
                       state->input.mouse.keys_is_down[VAST_MOUSE_KEY_LEFT],
-                      ui_scale, ui_padding);
+                      ui_scale, ui_padding,
+                      font_size, font_advancement_factor);
 
         header = vast_ui_drag_header(&ui_ctx, 1, &win_x, &win_y, win_w, win_h, font_size);
         panel = vast_ui_panel_begin(&ui_ctx, vast_ui_rect_init(win_x, win_y, win_w, win_h));
@@ -506,7 +516,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
 
         {
             vast_ui_push_rect(&ui_ctx, header, 0xFF333344);
-            vast_ui_push_text(&ui_ctx, "Vast UI", header.rect, font_size, 0xFFFFFFFF);
+            vast_ui_push_text(&ui_ctx, "Vast UI", header.rect, 0xFFFFFFFF);
 
             /* Space past header */
             ui_ctx.cursor_y += font_size;
@@ -523,7 +533,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
-                vast_ui_push_text(&ui_ctx, "Post Process (B)", btn.rect, font_size, 0xFFFFFFFF);
+                vast_ui_push_text(&ui_ctx, "Post Process (B)", btn.rect, 0xFFFFFFFF);
             }
         }
 
@@ -548,10 +558,10 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
             }
 
             vast_ui_push_rect(&ui_ctx, btn_minus, btn_minus_color);
-            vast_ui_push_text(&ui_ctx, "-", btn_minus.rect, font_size, 0xFFFFFFFF);
+            vast_ui_push_text(&ui_ctx, "-", btn_minus.rect, 0xFFFFFFFF);
 
             vast_ui_push_rect(&ui_ctx, btn_plus, btn_plus_color);
-            vast_ui_push_text(&ui_ctx, "+", btn_plus.rect, font_size, 0xFFFFFFFF);
+            vast_ui_push_text(&ui_ctx, "+", btn_plus.rect, 0xFFFFFFFF);
         }
 
         /* FPS */
@@ -566,7 +576,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
             vast_sb_i32_pad(&sb, (i32)state->timing.frame_rate, 8, ' ', VAST_SB_PAD_LEFT);
             vast_sb_s8(&sb, "\0");
 
-            vast_ui_label(&ui_ctx, buffer, font_size, 0xFFFFFFFF);
+            vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
             sb.length = 0;
 
@@ -574,7 +584,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
             vast_sb_f64_pad(&sb, (f64)state->timing.time_delta, 4, 8, ' ', VAST_SB_PAD_LEFT);
             vast_sb_s8(&sb, "\0");
 
-            vast_ui_label(&ui_ctx, buffer, font_size, 0xFFFFFFFF);
+            vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
             sb.length = 0;
 
@@ -583,7 +593,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
             vast_sb_s8(&sb, " KB");
             vast_sb_s8(&sb, "\0");
 
-            vast_ui_label(&ui_ctx, buffer, font_size, 0xFFFFFFFF);
+            vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
         }
 
         vast_ui_panel_end(&ui_ctx);
@@ -593,7 +603,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
         {
             static f32 prof_win_w = 550.0f;
             static f32 prof_win_h = 300.0f;
-            static f32 prof_win_x = 10.0f;
+            static f32 prof_win_x = 0.0f;
 
             f32 prof_win_y = (f32)state->window.height - (prof_win_h + prof_win_x);
 
@@ -606,7 +616,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
 
             {
                 vast_ui_push_rect(&ui_ctx, prof_header, 0xFF333344);
-                vast_ui_push_text(&ui_ctx, "Profiler Metrics (milliseconds)", prof_header.rect, font_size, 0xFFFFFFFF);
+                vast_ui_push_text(&ui_ctx, "Profiler Metrics (milliseconds)", prof_header.rect, 0xFFFFFFFF);
 
                 /* Space past header */
                 ui_ctx.cursor_y += font_size;
@@ -634,7 +644,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                             vast_sb_s8_pad(&sb, "cnt", 6, ' ', VAST_SB_PAD_LEFT);
                             vast_sb_s8(&sb, "\0");
 
-                            vast_ui_label(&ui_ctx, prof_buf, font_size, 0xFFAAAAAA);
+                            vast_ui_label(&ui_ctx, prof_buf, 0xFFAAAAAA);
                             sb.length = 0;
                         }
 
@@ -646,12 +656,12 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                         vast_sb_i32_pad(&sb, (i32)entry.counter, 6, ' ', VAST_SB_PAD_LEFT);
                         vast_sb_s8(&sb, "\0");
 
-                        vast_ui_label(&ui_ctx, prof_buf, font_size, 0xFFFFFFFF);
+                        vast_ui_label(&ui_ctx, prof_buf, 0xFFFFFFFF);
                     }
                 }
                 else
                 {
-                    vast_ui_label(&ui_ctx, "No profiler entries found.", font_size, 0xFF888888);
+                    vast_ui_label(&ui_ctx, "No profiler entries found.", 0xFF888888);
                 }
             }
             vast_ui_panel_end(&ui_ctx);

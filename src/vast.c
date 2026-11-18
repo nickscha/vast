@@ -9,7 +9,7 @@ void vast_update(vast_platform_state *platform_state)
     {
         platform_state->api.io_print("VAST - Virtual Adaptive Sparse Tiles\n");
 
-        platform_state->window.title = "VAST - Virtual Adaptive Sparse Tiles (F1=Debug, V=Viz. Modes)\n";
+        platform_state->window.title = "VAST - Virtual Adaptive Sparse Tiles (F1=Show/Hide UI, V=Viz. Modes, F9=Borderless, F11=Fullscreen)\n";
         platform_state->window.title_changed = 1;
 
         platform_state->window.clear_color_r = 0.1f;
