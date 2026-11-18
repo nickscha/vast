@@ -393,6 +393,22 @@ VAST_API VAST_INLINE void vast_ui_label(vast_ui_context *ctx, s8 *text, u32 rgba
  * # [SECTION] UI Renderer
  * #############################################################################
  */
+VAST_API VAST_INLINE u32 vast_ui_profiler_color(f64 ms)
+{
+    if (ms < 0.1)
+    {
+        return 0xFFFFFFFF; /* Normal */
+    }
+    else if (ms < 1.0)
+    {
+        return 0xFF00AAFF; /* Orange */
+    }
+    else
+    {
+        return 0xFF3333FF; /* Red */
+    }
+}
+
 VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enabled)
 {
     static u8 ui_initialized = 0;
@@ -656,7 +672,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                         vast_sb_i32_pad(&sb, (i32)entry.counter, 7, ' ', VAST_SB_PAD_LEFT);
                         vast_sb_s8(&sb, "\0");
 
-                        vast_ui_label(&ui_ctx, prof_buf, 0xFFFFFFFF);
+                        vast_ui_label(&ui_ctx, prof_buf, vast_ui_profiler_color(entry.time_ms_last));
                     }
                 }
                 else
