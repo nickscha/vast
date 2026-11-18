@@ -511,8 +511,9 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
             /* Space past header */
             ui_ctx.cursor_y += font_size;
 
+            /* Post Process Button */
             {
-                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 13 * font_size * 0.55f, font_size));
+                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
                 u32 btn_color = *post_process_enabled ? 0xFF00AA00 : 0xFF0000AA;
 
@@ -522,7 +523,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
-                vast_ui_push_text(&ui_ctx, "Post Process", btn.rect, font_size, 0xFFFFFFFF);
+                vast_ui_push_text(&ui_ctx, "Post Process (B)", btn.rect, font_size, 0xFFFFFFFF);
             }
         }
 
