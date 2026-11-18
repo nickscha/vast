@@ -105,7 +105,7 @@ void main()
     vec2 vigUV = vUV * (1.0 - vUV.yx);
     float vig = vigUV.x * vigUV.y * 15.0;
     vig = pow(clamp(vig, 0.0, 1.0), 0.25);
-    col *= mix(1.0, vig, 0.45);          
+    col *= mix(1.0, vig, 0.25);          
 
     // Grain
     col += grain(vUV, iTime) * 0.025;
