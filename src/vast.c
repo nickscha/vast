@@ -1,6 +1,12 @@
 #define VAST_APPLICATION
 #include "vast.h"
 
+typedef struct vast_state
+{
+    u8 initialized;
+
+} vast_state;
+
 void vast_update(vast_platform_state *platform_state)
 {
     vast_platform_input_keyboard *keyboard = &platform_state->input.keyboard;
