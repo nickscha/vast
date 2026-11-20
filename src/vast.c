@@ -26,18 +26,6 @@ void vast_update(vast_platform_state *platform_state)
         platform_state->application_initialized = 1;
     }
 
-    if (keyboard->keys_is_down[VAST_KEYBOARD_KEY_W])
-    {
-        platform_state->window.clear_color_r += 0.05f;
-        platform_state->window.clear_color_changed = 1;
-    }
-
-    if (keyboard->keys_is_down[VAST_KEYBOARD_KEY_S])
-    {
-        platform_state->window.clear_color_r -= 0.05f;
-        platform_state->window.clear_color_changed = 1;
-    }
-
     /* Change window mode */
     if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F9] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F9])
     {
