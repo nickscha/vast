@@ -37,4 +37,17 @@ void vast_update(vast_platform_state *platform_state)
         platform_state->window.clear_color_r -= 0.05f;
         platform_state->window.clear_color_changed = 1;
     }
+
+    /* Change window mode */
+    if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F9] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F9])
+    {
+        platform_state->window.window_mode = platform_state->window.window_mode > 0 ? VAST_PLATFORM_WINDOW_MODE_WINDOWED : VAST_PLATFORM_WINDOW_MODE_BORDERLESS;
+        platform_state->window.window_mode_changed = 1;
+    }
+
+    if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F11] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F11])
+    {
+        platform_state->window.window_mode = platform_state->window.window_mode > 0 ? VAST_PLATFORM_WINDOW_MODE_WINDOWED : VAST_PLATFORM_WINDOW_MODE_FULLSCREEN;
+        platform_state->window.window_mode_changed = 1;
+    }
 }

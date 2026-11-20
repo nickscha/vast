@@ -90,8 +90,6 @@ typedef struct win32_vast_state
 
   u8 shader_paused;
   u8 ui_enabled;
-  u8 fullscreen_enabled;
-  u8 borderless_enabled;
   u8 screen_recording_enabled;
   u8 screen_recording_initialized;
 
@@ -1783,38 +1781,24 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
       }
 
       /******************************/
-      /* Full or Borderless (F9,F11)*/
+      /* Handle Window modes        */
       /******************************/
-      if (state.platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F9] && !state.platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F9]) /* F9 */
+      if (state.platform_state.window.window_mode_changed)
       {
-        state.borderless_enabled = !state.borderless_enabled;
-
-        if (state.borderless_enabled && !state.fullscreen_enabled)
+        switch (state.platform_state.window.window_mode)
         {
+        case VAST_PLATFORM_WINDOW_MODE_BORDERLESS:
           win32_window_enter_borderless(&state);
-        }
-        else
-        {
-          state.fullscreen_enabled = 0;
-          state.borderless_enabled = 0;
-          win32_window_enter_windowed(&state);
-        }
-      }
-
-      if (state.platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_F11] && !state.platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_F11])
-      {
-        state.fullscreen_enabled = !state.fullscreen_enabled;
-
-        if (state.fullscreen_enabled && !state.borderless_enabled)
-        {
+          break;
+        case VAST_PLATFORM_WINDOW_MODE_FULLSCREEN:
           win32_window_enter_fullscreen(&state);
-        }
-        else
-        {
-          state.fullscreen_enabled = 0;
-          state.borderless_enabled = 0;
+          break;
+        default:
           win32_window_enter_windowed(&state);
+          break;
         }
+
+        state.platform_state.window.window_mode_changed = 0;
       }
 
       /******************************/

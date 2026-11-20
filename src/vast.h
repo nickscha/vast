@@ -190,11 +190,21 @@ typedef struct vast_platform_input
  * # [SECTION] Platform Window
  * #############################################################################
  */
+typedef enum vast_platform_window_mode
+{
+    VAST_PLATFORM_WINDOW_MODE_WINDOWED = 0,
+    VAST_PLATFORM_WINDOW_MODE_BORDERLESS = 1,
+    VAST_PLATFORM_WINDOW_MODE_FULLSCREEN = 2
+} vast_platform_window_mode;
+
 typedef struct vast_platform_window
 {
     u8 size_changed;
     u8 clear_color_changed;
     u8 title_changed;
+    u8 window_mode_changed;
+
+    vast_platform_window_mode window_mode;
 
     u8 minimized;
 
@@ -381,7 +391,7 @@ void *vast_io_file_read_to_memory(vast_platform_state *state, vast_platform_memo
     }
 
     /* TODO(nickscha): + 1 unsafe! */
-    data = vast_memory_allocate(memory, file_size + 1); 
+    data = vast_memory_allocate(memory, file_size + 1);
 
     if (!data)
     {
