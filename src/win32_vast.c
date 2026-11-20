@@ -88,8 +88,6 @@ typedef struct win32_vast_state
   u8 controller_id;           /* The XInput id associated with this controller */
   u8 controller_check_needed; /* If a device is plugged in or disconnected we should check XInput controller state again */
 
-  u8 shader_paused;
-  u8 ui_enabled;
   u8 screen_recording_enabled;
   u8 screen_recording_initialized;
 
@@ -1810,14 +1808,6 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
         state.platform_state.window.height = state.window_height_pending;
         state.platform_state.graphics.opengl.glViewport(0, 0, (i32)state.platform_state.window.width, (i32)state.platform_state.window.height);
         state.platform_state.window.size_changed = 0;
-      }
-
-      /******************************/
-      /* Pause Shader (P)           */
-      /******************************/
-      if (state.platform_state.input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_P] && !state.platform_state.input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_P])
-      {
-        state.shader_paused = !state.shader_paused;
       }
 
       /******************************/
