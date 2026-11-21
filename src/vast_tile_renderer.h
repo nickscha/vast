@@ -188,7 +188,11 @@ VAST_API void vast_tile_shader_hot_reload(
     vast_tile_shader_normalmap *tiles_nm_shader,
     f32 camera_position_x, f32 camera_position_z)
 {
-    if (state->timing.frame_count % 30 == 0)
+    static f64 hot_reload_accum = 0.0;
+
+    hot_reload_accum += state->timing.time_delta;
+
+    if (hot_reload_accum >= 2.0)
     {
         static u8 hot_reload_initialized = 0;
 
@@ -202,6 +206,8 @@ VAST_API void vast_tile_shader_hot_reload(
         u32 tile_shader_heightmap_now = 0;
         u32 tile_shader_normalmap_now = 0;
         u32 tile_shader_final_now = 0;
+
+        hot_reload_accum = 0.0;
 
         VAST_PROFILER_BEGIN(tile_hot_reload);
 
