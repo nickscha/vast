@@ -11,6 +11,12 @@
  * # [SECTION] Structs and Data
  * #############################################################################
  */
+#ifndef VAST_UI_MAX_STACK
+#define VAST_UI_MAX_STACK 8
+#endif
+
+#define VAST_UI_SOLID_FILL_MAGIC_INDEX 424242u
+
 typedef struct vast_ui_instance_data
 {
     f32 pos_x;       /* Screen X in pixels (or NDC) */
@@ -18,19 +24,9 @@ typedef struct vast_ui_instance_data
     f32 size_x;      /* Glyph width in pixels */
     f32 size_y;      /* Glyph height in pixels */
     u32 color;       /* Packed RGBA8 (0xAABBGGRR) */
-    u32 glyph_index; /* 0..255 index into the 16x16 atlas */
+    u32 glyph_index; /* 0..255 index into the 16x16 atlas or SOLID_FILL_MAGIC */
 
 } vast_ui_instance_data;
-
-/* #############################################################################
- * # [SECTION] Immediate Mode API
- * #############################################################################
- */
-#ifndef VAST_UI_MAX_STACK
-#define VAST_UI_MAX_STACK 8
-#endif
-
-#define VAST_UI_SOLID_FILL_MAGIC_INDEX 424242u
 
 typedef struct vast_ui_rect
 {
@@ -93,18 +89,10 @@ typedef struct vast_ui_result
     u8 state;
 } vast_ui_result;
 
-VAST_API VAST_INLINE vast_ui_rect vast_ui_rect_init(f32 x, f32 y, f32 width, f32 height)
-{
-    vast_ui_rect result;
-
-    result.x = x;
-    result.y = y;
-    result.w = width;
-    result.h = height;
-
-    return result;
-}
-
+/* #############################################################################
+ * # [SECTION] Immediate Mode API
+ * #############################################################################
+ */
 VAST_API VAST_INLINE void vast_ui_begin(
     vast_ui_context *ctx,
     u32 window_width, u32 window_height,
@@ -145,6 +133,18 @@ VAST_API VAST_INLINE void vast_ui_begin(
 VAST_API VAST_INLINE void vast_ui_end(vast_ui_context *ctx)
 {
     (void)ctx;
+}
+
+VAST_API VAST_INLINE vast_ui_rect vast_ui_rect_init(f32 x, f32 y, f32 width, f32 height)
+{
+    vast_ui_rect result;
+
+    result.x = x;
+    result.y = y;
+    result.w = width;
+    result.h = height;
+
+    return result;
 }
 
 VAST_API VAST_INLINE vast_ui_result vast_ui_internal_process(vast_ui_context *ctx, u32 id, vast_ui_rect rect)
@@ -215,6 +215,7 @@ VAST_API VAST_INLINE vast_ui_result vast_ui_internal_process(vast_ui_context *ct
         if (ctx->mouse_released)
         {
             ctx->active_id = 0;
+
             if (is_over)
             {
                 res.state |= VAST_UI_STATE_RELEASED;
@@ -239,6 +240,7 @@ VAST_API VAST_INLINE vast_ui_result vast_ui_panel_begin(vast_ui_context *ctx, va
     if (ctx->stack_ptr < VAST_UI_MAX_STACK)
     {
         vast_ui_rect *r = &ctx->stack[ctx->stack_ptr++];
+        
         r->x = res.rect.x;
         r->y = res.rect.y;
         r->w = res.rect.w;
