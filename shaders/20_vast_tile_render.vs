@@ -48,9 +48,7 @@ void main()
         height = mix(height_coarse, height, a_instance_data.z);
     }
 
-    if (a_is_skirt > 0.5f) {
-        height -= 50.0f;
-    }
+    height -= (a_is_skirt > 0.5) ? 50.0 : 0.0;
     
     v_is_dirty_pass       = a_instance_data.y;
     v_texture_array_layer = a_instance_data.x;
