@@ -261,9 +261,13 @@ void main()
 
     float cloudShadow = getCloudShadow(v_worldPos, sDir, iTime);
 
+    float steepness  = clamp(1.0 - slope, 0.0, 1.0);
+    float ndotl      = max(dot(normal, sDir), 0.0);
+    float fakeShadow = pow(ndotl, mix(0.5, 1.0, steepness));
+
     vec3 light = vec3(0.0);
 
-    light += sunDif * sunLightCol * cloudShadow; 
+    light += sunDif * fakeShadow * sunLightCol * cloudShadow; 
     light += moonDif * moonLightCol;
     light += skyDome * zenith * 0.6 * cavityAO;
     light += bounce * zenith * 0.2;
