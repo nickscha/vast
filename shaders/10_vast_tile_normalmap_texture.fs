@@ -46,28 +46,25 @@ float Terrain(vec2 p)
     {
         float n = Noise(pos);
         
-        n = 1.0 - abs(n * 2.0 - 1.0);
-        n = n * n;
-
-        f += w * n;
-        w *= -0.42;
+        n   = 1.0 - abs(n * 2.0 - 1.0);
+        f  += w * n * n;
+        w  *= -0.42;
         pos = rotate2D * pos;
     }
 
     float ff = Noise(pos * 0.002);
-    f += pow(abs(ff), 4.0) * 280.0 - 5.0;
+    ff *= ff;
+    f  += ff * ff * 280.0 - 5.0;
 
     /* add 6 more octaves of detail for high res normal map */
 	for (int i = 0; i < 6; i++)
 	{
-		f += w * Noise(pos);
-		w =  - w * 0.4;
+		f  += w * Noise(pos);
+		w   = -w * 0.4;
 		pos = rotate2D * pos;
 	}
 
-    if (f > 15.0) {
-        f += (f - 15.0) * 0.35;
-    }
+    f += max(f - 15.0, 0.0) * 0.35;
 
     return f;
 }
