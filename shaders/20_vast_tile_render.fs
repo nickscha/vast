@@ -60,7 +60,6 @@ vec3 getFogColor(vec3 rd)
     float nightAmount = 1.0 - dayAmount;
     float sunsetAmount = exp(-abs(sunDir.y) * 7.0);
 
-    /* Colors from your Sky Shader */
     vec3 dayZenith     = vec3(0.08, 0.30, 0.80);
     vec3 dayHorizon    = vec3(0.70, 0.85, 1.00);
     vec3 sunsetZenith  = vec3(0.70, 0.25, 0.35);
