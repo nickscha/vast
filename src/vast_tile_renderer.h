@@ -209,7 +209,7 @@ VAST_API void vast_tile_shader_hot_reload(
 
         hot_reload_accum = 0.0;
 
-        VAST_PROFILER_BEGIN(tile_hot_reload);
+        VAST_PROFILER_BEGIN(tile_shader_hot_reload);
 
         /* Get initial modifcation dates of shaders for hot reloading */
         if (!hot_reload_initialized)
@@ -246,7 +246,7 @@ VAST_API void vast_tile_shader_hot_reload(
             tile_shader_final_last = tile_shader_final_now;
         }
 
-        VAST_PROFILER_END(tile_hot_reload);
+        VAST_PROFILER_END(tile_shader_hot_reload);
     }
 }
 #endif
