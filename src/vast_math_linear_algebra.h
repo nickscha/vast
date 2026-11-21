@@ -9,9 +9,17 @@
 #include "vast_math_basic.h" /* Basic math (sin, cos, sqrt)   */
 
 /* #############################################################################
- * # [SECTION] Linear Algebra Math (Scalar)
+ * # [SECTION] Structs and Data
  * #############################################################################
  */
+#define VAST_MAT4X4_ELEMENT_COUNT 16
+
+#ifdef VAST_MAT_ROW_MAJOR_ORDER
+#define VAST_MAT4X4_AT(row, col) ((row) * 4 + (col)) /* Row-major order */
+#else
+#define VAST_MAT4X4_AT(row, col) ((col) * 4 + (row)) /* Column-major order */
+#endif
+
 typedef struct vast_vec2
 {
     f32 x;
@@ -19,6 +27,53 @@ typedef struct vast_vec2
 
 } vast_vec2;
 
+typedef struct vast_vec3
+{
+    f32 x;
+    f32 y;
+    f32 z;
+
+} vast_vec3;
+
+typedef struct vast_vec4
+{
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+
+} vast_vec4;
+
+typedef struct vast_mat4x4
+{
+    f32 e[VAST_MAT4X4_ELEMENT_COUNT];
+} vast_mat4x4;
+
+typedef enum vast_frustum_plane
+{
+    VAST_FRUSTUM_LEFT = 0,
+    VAST_FRUSTUM_RIGHT,
+    VAST_FRUSTUM_BOTTOM,
+    VAST_FRUSTUM_TOP,
+    VAST_FRUSTUM_NEAR,
+    VAST_FRUSTUM_FAR,
+    VAST_FRUSTUM_COUNT
+
+} vast_frustum_plane;
+
+typedef struct vast_frustum
+{
+    vast_vec4 planes[VAST_FRUSTUM_COUNT];
+
+} vast_frustum;
+
+static vast_vec3 vast_vec3_zero = {0.0f, 0.0f, 0.0f};
+static vast_mat4x4 vast_mat4x4_zero = {{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}};
+
+/* #############################################################################
+ * # [SECTION] Linear Algebra Math (Vector 2)
+ * #############################################################################
+ */
 VAST_API VAST_INLINE vast_vec2 vast_vec2_init(f32 x, f32 y)
 {
     vast_vec2 result;
@@ -34,16 +89,10 @@ VAST_API VAST_INLINE f32 vast_vec2_dot(vast_vec2 a, vast_vec2 b)
     return a.x * b.x + a.y * b.y;
 }
 
-typedef struct vast_vec3
-{
-    f32 x;
-    f32 y;
-    f32 z;
-
-} vast_vec3;
-
-static vast_vec3 vast_vec3_zero = {0.0f, 0.0f, 0.0f};
-
+/* #############################################################################
+ * # [SECTION] Linear Algebra Math (Vector 3)
+ * #############################################################################
+ */
 VAST_API VAST_INLINE vast_vec3 vast_vec3_init(f32 x, f32 y, f32 z)
 {
     vast_vec3 result;
@@ -222,77 +271,26 @@ VAST_API VAST_INLINE vast_vec3 vast_vec3_normalize(vast_vec3 a)
     return result;
 }
 
-#define VAST_MAT2X2_ELEMENT_COUNT 4
-
-#ifdef VAST_MAT_ROW_MAJOR_ORDER
-#define VAST_MAT2X2_AT(row, col) ((row) * 2 + (col)) /* Row-major order */
-#else
-#define VAST_MAT2X2_AT(row, col) ((col) * 2 + (row)) /* Column-major order */
-#endif
-
-typedef struct vast_mat2x2
+/* #############################################################################
+ * # [SECTION] Linear Algebra Math (Vector 4)
+ * #############################################################################
+ */
+VAST_API VAST_INLINE vast_vec4 vast_vec4_init(f32 x, f32 y, f32 z, f32 w)
 {
-    f32 e[VAST_MAT2X2_ELEMENT_COUNT];
+    vast_vec4 result;
 
-} vast_mat2x2;
-
-VAST_API VAST_INLINE vast_mat2x2 vast_mat2x2_init(f32 m00, f32 m01, f32 m10, f32 m11)
-{
-    vast_mat2x2 result;
-
-    result.e[VAST_MAT2X2_AT(0, 0)] = m00;
-    result.e[VAST_MAT2X2_AT(0, 1)] = m01;
-    result.e[VAST_MAT2X2_AT(1, 0)] = m10;
-    result.e[VAST_MAT2X2_AT(1, 1)] = m11;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
 
     return result;
 }
 
-VAST_API VAST_INLINE vast_mat2x2 vast_mat2x2_rot2d(f32 angle)
-{
-    f32 s = vast_sinf(angle);
-    f32 c = vast_cosf(angle);
-
-    return vast_mat2x2_init(c, -s, s, c);
-}
-
-VAST_API VAST_INLINE void vast_vec2_mul_mat2x2(f32 *a, f32 *b, vast_mat2x2 m)
-{
-    f32 x = *a;
-    f32 y = *b;
-
-    *a = x * m.e[VAST_MAT2X2_AT(0, 0)] + y * m.e[VAST_MAT2X2_AT(1, 0)];
-    *b = x * m.e[VAST_MAT2X2_AT(0, 1)] + y * m.e[VAST_MAT2X2_AT(1, 1)];
-}
-
-typedef struct vast_vec4
-{
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-
-} vast_vec4;
-
-#define VAST_MAT4X4_ELEMENT_COUNT 16
-
-#ifdef VAST_MAT_ROW_MAJOR_ORDER
-#define VAST_MAT4X4_AT(row, col) ((row) * 4 + (col)) /* Row-major order */
-#else
-#define VAST_MAT4X4_AT(row, col) ((col) * 4 + (row)) /* Column-major order */
-#endif
-
-typedef struct vast_mat4x4
-{
-    f32 e[VAST_MAT4X4_ELEMENT_COUNT];
-} vast_mat4x4;
-
-static vast_mat4x4 vast_mat4x4_zero =
-    {{0.0f, 0.0f, 0.0f, 0.0f,
-      0.0f, 0.0f, 0.0f, 0.0f,
-      0.0f, 0.0f, 0.0f, 0.0f,
-      0.0f, 0.0f, 0.0f, 0.0f}};
-
+/* #############################################################################
+ * # [SECTION] Linear Algebra Math (Matrix 4x4)
+ * #############################################################################
+ */
 VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_mul(vast_mat4x4 a, vast_mat4x4 b)
 {
     vast_mat4x4 result;
@@ -408,36 +406,10 @@ VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_look_at(vast_vec3 eye, vast_vec3 ta
     return result;
 }
 
-VAST_API VAST_INLINE vast_vec4 vast_vec4_init(f32 x, f32 y, f32 z, f32 w)
-{
-    vast_vec4 result;
-
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    result.w = w;
-
-    return result;
-}
-
-typedef enum vast_frustum_plane
-{
-    VAST_FRUSTUM_LEFT = 0,
-    VAST_FRUSTUM_RIGHT,
-    VAST_FRUSTUM_BOTTOM,
-    VAST_FRUSTUM_TOP,
-    VAST_FRUSTUM_NEAR,
-    VAST_FRUSTUM_FAR,
-    VAST_FRUSTUM_COUNT
-
-} vast_frustum_plane;
-
-typedef struct vast_frustum
-{
-    vast_vec4 planes[VAST_FRUSTUM_COUNT];
-
-} vast_frustum;
-
+/* #############################################################################
+ * # [SECTION] Linear Algebra Math (Frustums)
+ * #############################################################################
+ */
 VAST_API vast_frustum vast_frustum_extract(vast_mat4x4 m)
 {
     vast_frustum f = {0};
