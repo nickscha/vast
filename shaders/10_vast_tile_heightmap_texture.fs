@@ -61,9 +61,10 @@ float Terrain(vec2 p)
 
 void main()
 {
-    vec2 grid_pos = gl_FragCoord.xy - vec2(0.5);
-    vec2 local_pos = (grid_pos / (u_texture_size - 1.0) - vec2(0.5)) * u_tile_size;
-    vec2 worldPos = local_pos + (u_tile_offset * u_tile_size);
+    vec2 worldPos =
+        ((gl_FragCoord.xy - vec2(0.5)) /
+        (u_texture_size - 1.0) - vec2(0.5) +
+        u_tile_offset) * u_tile_size;
 
     outHeight = Terrain(worldPos);
 }
