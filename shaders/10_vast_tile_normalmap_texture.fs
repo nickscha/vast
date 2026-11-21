@@ -4,9 +4,9 @@ in vec2 v_uv;
 
 layout(location = 0) out vec3 outNormal;
 
-uniform vec2 u_tile_offset; /* where the tile starts */
-uniform float u_tile_size; /* size of a tile (e.g 256.0f world units) */
-uniform float u_texture_size; /* size of the output normal map */
+uniform vec2  u_tile_offset;  /* where the tile starts                   */
+uniform float u_tile_size;    /* size of a tile (e.g 256.0f world units) */
+uniform float u_texture_size; /* size of the output normal map           */
 
 #define HASHSCALE1 0.1031
 
