@@ -48,6 +48,31 @@ VAST_API VAST_INLINE u32 vast_ui_profiler_color(f64 ms)
     }
 }
 
+VAST_API VAST_INLINE u32 vast_ui_color_darken(u32 color, f32 factor)
+{
+    u32 a = color & 0xFF000000u;
+    u32 b = (u32)((f32)((color >> 16) & 0xFFu) * factor);
+    u32 g = (u32)((f32)((color >> 8) & 0xFFu) * factor);
+    u32 r = (u32)((f32)(color & 0xFFu) * factor);
+
+    if (b > 0xFFu)
+    {
+        b = 0xFFu;
+    }
+
+    if (g > 0xFFu)
+    {
+        g = 0xFFu;
+    }
+
+    if (r > 0xFFu)
+    {
+        r = 0xFFu;
+    }
+
+    return a | ((b & 0xFFu) << 16) | ((g & 0xFFu) << 8) | (r & 0xFFu);
+}
+
 VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8 *post_process_enabled, u8 *render_terrain, u8 *render_sky)
 {
     static u8 ui_initialized = 0;
@@ -182,6 +207,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
                 u32 btn_color = *post_process_enabled ? 0xFF00AA00 : 0xFF0000AA;
 
+                if (btn.state & VAST_UI_STATE_HOVER)
+                {
+                    btn_color = vast_ui_color_darken(btn_color, 0.8f);
+                }
+
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
                     *post_process_enabled = !(*post_process_enabled);
@@ -197,6 +227,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
                 u32 btn_color = *render_terrain ? 0xFF00AA00 : 0xFF0000AA;
 
+                if (btn.state & VAST_UI_STATE_HOVER)
+                {
+                    btn_color = vast_ui_color_darken(btn_color, 0.8f);
+                }
+
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
                     *render_terrain = !(*render_terrain);
@@ -211,6 +246,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
                 u32 btn_color = *render_sky ? 0xFF00AA00 : 0xFF0000AA;
+
+                if (btn.state & VAST_UI_STATE_HOVER)
+                {
+                    btn_color = vast_ui_color_darken(btn_color, 0.8f);
+                }
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
