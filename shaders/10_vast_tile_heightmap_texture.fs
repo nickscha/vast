@@ -67,4 +67,9 @@ void main()
         u_tile_offset) * u_tile_size;
 
     outHeight = Terrain(worldPos);
+
+    // TODO(nickscha): make terrain more streched
+    // float stretch = 2.0; // tiwce as streched horizontally
+    // float hScale  = 1.5; // scale height
+    // outHeight = Terrain(worldPos / stretch) * hScale;
 }
