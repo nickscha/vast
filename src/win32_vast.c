@@ -1301,6 +1301,8 @@ VAST_API void vast_render_scene(win32_vast_state *state)
     static i32 last_height = 0;
 
     static u8 post_process_enabled = 1;
+    static u8 render_terrain = 1;
+    static u8 render_sky = 1;
 
     static s8 *shader_code_vertex =
         "#version 330 core\n"
@@ -1442,8 +1444,16 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
     /* Main rendering */
     state->platform_state.graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, post_process_fbo, post_process_enabled);
-    vast_sky_render(&state->platform_state, &camera, sun_dir, post_process_fbo, post_process_enabled);
+
+    if (render_terrain)
+    {
+      vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, post_process_fbo, post_process_enabled);
+    }
+
+    if (render_sky)
+    {
+      vast_sky_render(&state->platform_state, &camera, sun_dir, post_process_fbo, post_process_enabled);
+    }
 
     (void)vast_sb_f64;
     (void)vast_sb_s8_pad;
@@ -1499,7 +1509,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
       if (ui_enabled)
       {
-        vast_ui_render(&state->platform_state, &camera, &post_process_enabled);
+        vast_ui_render(&state->platform_state, &camera, &post_process_enabled, &render_terrain, &render_sky);
       }
     }
   }

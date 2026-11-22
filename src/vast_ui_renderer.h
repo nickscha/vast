@@ -48,7 +48,7 @@ VAST_API VAST_INLINE u32 vast_ui_profiler_color(f64 ms)
     }
 }
 
-VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8 *post_process_enabled)
+VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8 *post_process_enabled, u8 *render_terrain, u8 *render_sky)
 {
     static u8 ui_initialized = 0;
 
@@ -189,6 +189,36 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
                 vast_ui_push_text(&ui_ctx, "Post Process (B)", btn.rect, 0xFFFFFFFF);
+            }
+
+            /* Scene Render Terrain */
+            {
+                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
+
+                u32 btn_color = *render_terrain ? 0xFF00AA00 : 0xFF0000AA;
+
+                if (btn.state & VAST_UI_STATE_PRESSED)
+                {
+                    *render_terrain = !(*render_terrain);
+                }
+
+                vast_ui_push_rect(&ui_ctx, btn, btn_color);
+                vast_ui_push_text(&ui_ctx, "Render Terrain", btn.rect, 0xFFFFFFFF);
+            }
+
+            /* Scene Render Sky */
+            {
+                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
+
+                u32 btn_color = *render_sky ? 0xFF00AA00 : 0xFF0000AA;
+
+                if (btn.state & VAST_UI_STATE_PRESSED)
+                {
+                    *render_sky = !(*render_sky);
+                }
+
+                vast_ui_push_rect(&ui_ctx, btn, btn_color);
+                vast_ui_push_text(&ui_ctx, "Render Sky", btn.rect, 0xFFFFFFFF);
             }
         }
 
