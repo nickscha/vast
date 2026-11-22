@@ -10,6 +10,7 @@
 #include "vast_ui.h"                  /* Immediate Mode UI API         */
 #include "vast_profiler.h"            /* Profiler metrics              */
 #include "vast_math_linear_algebra.h" /* Linear Algebra                */
+#include "vast_camera.h"              /* Camera                        */
 #include "vast_string_builder.h"      /* String parsing                */
 #include "vast_opengl.h"              /* OpenGL functions              */
 
@@ -47,7 +48,7 @@ VAST_API VAST_INLINE u32 vast_ui_profiler_color(f64 ms)
     }
 }
 
-VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enabled)
+VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8 *post_process_enabled)
 {
     static u8 ui_initialized = 0;
 
@@ -144,7 +145,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
         static f32 win_y = 0.0f;
 
         f32 win_w = 180.0f;
-        f32 win_h = 240.0f;
+        f32 win_h = 220.0f;
 
         static f32 font_size = 16.0f;
         static f32 font_advancement_factor = 0.55f;
@@ -316,6 +317,118 @@ VAST_API void vast_ui_render(vast_platform_state *state, u8 *post_process_enable
                 else
                 {
                     vast_ui_label(&ui_ctx, "No profiler entries found.", 0xFF888888);
+                }
+            }
+            vast_ui_panel_end(&ui_ctx);
+        }
+
+        /* Camera Information Window */
+        {
+            static f32 cam_win_w = 320.0f;
+            static f32 cam_win_h = 220.0f;
+            static f32 cam_win_x = 180.0f + 10.0f;
+            static f32 cam_win_y = 0.0f;
+
+            vast_ui_result cam_header;
+            vast_ui_result cam_panel;
+
+            cam_header = vast_ui_drag_header(&ui_ctx, 20, &cam_win_x, &cam_win_y, cam_win_w, cam_win_h, font_size);
+            cam_panel = vast_ui_panel_begin(&ui_ctx, vast_ui_rect_init(cam_win_x, cam_win_y, cam_win_w, cam_win_h));
+            vast_ui_push_rect(&ui_ctx, cam_panel, 0xEE1E1E26);
+
+            {
+                vast_ui_push_rect(&ui_ctx, cam_header, 0xFF333344);
+                vast_ui_push_text(&ui_ctx, "Camera Information", cam_header.rect, 0xFFFFFFFF);
+
+                /* Space past header */
+                ui_ctx.cursor_y += font_size;
+
+                {
+                    static s8 buffer[64];
+
+                    vast_sb sb = {0};
+                    sb.buffer = buffer;
+                    sb.size = 64;
+
+                    vast_sb_s8(&sb, "Position: ");
+                    vast_sb_f64_pad(&sb, (f64)camera->position.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->position.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->position.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8(&sb, "Forward : ");
+                    vast_sb_f64_pad(&sb, (f64)camera->forward.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->forward.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->forward.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8(&sb, "Up      : ");
+                    vast_sb_f64_pad(&sb, (f64)camera->up.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->up.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->up.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8(&sb, "Right   : ");
+                    vast_sb_f64_pad(&sb, (f64)camera->right.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->right.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "/");
+                    vast_sb_f64_pad(&sb, (f64)camera->right.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8(&sb, "Yaw     : ");
+                    vast_sb_f64_pad(&sb, (f64)camera->yaw, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8(&sb, "Pitch   : ");
+                    vast_sb_f64_pad(&sb, (f64)camera->pitch, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8(&sb, "Roll    : ");
+                    vast_sb_f64_pad(&sb, (f64)camera->roll, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8(&sb, "Fov     : ");
+                    vast_sb_f64_pad(&sb, (f64)camera->fov, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
                 }
             }
             vast_ui_panel_end(&ui_ctx);

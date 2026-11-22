@@ -1499,7 +1499,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
       if (ui_enabled)
       {
-        vast_ui_render(&state->platform_state, &post_process_enabled);
+        vast_ui_render(&state->platform_state, &camera, &post_process_enabled);
       }
     }
   }
