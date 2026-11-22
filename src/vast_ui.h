@@ -240,7 +240,7 @@ VAST_API VAST_INLINE vast_ui_result vast_ui_panel_begin(vast_ui_context *ctx, va
     if (ctx->stack_ptr < VAST_UI_MAX_STACK)
     {
         vast_ui_rect *r = &ctx->stack[ctx->stack_ptr++];
-        
+
         r->x = res.rect.x;
         r->y = res.rect.y;
         r->w = res.rect.w;
@@ -335,6 +335,13 @@ VAST_API VAST_INLINE void vast_ui_push_text(vast_ui_context *ctx, s8 *text, vast
     while (text[i] != '\0' && ctx->instances_count < ctx->instances_size)
     {
         vast_ui_instance_data glyph;
+
+        if (text[i] == ' ')
+        {
+            cursor_x += advance;
+            i++;
+            continue;
+        }
 
         glyph.pos_x = (f32)(i32)(cursor_x + 0.5f);
         glyph.pos_y = (f32)(i32)(cursor_y + 0.5f);
