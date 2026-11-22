@@ -73,7 +73,7 @@ VAST_API VAST_INLINE u32 vast_ui_color_darken(u32 color, f32 factor)
     return a | ((b & 0xFFu) << 16) | ((g & 0xFFu) << 8) | (r & 0xFFu);
 }
 
-VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8 *post_process_enabled, u8 *render_terrain, u8 *render_sky)
+VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8 *post_process_enabled, u8 *render_terrain, u8 *render_grass, u8 *render_trees, u8 *render_sky)
 {
     static u8 ui_initialized = 0;
 
@@ -170,7 +170,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
         static f32 win_y = 0.0f;
 
         f32 win_w = 180.0f;
-        f32 win_h = 220.0f;
+        f32 win_h = 270.0f;
 
         static f32 font_size = 16.0f;
         static f32 font_advancement_factor = 0.55f;
@@ -239,6 +239,46 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
                 vast_ui_push_text(&ui_ctx, "Render Terrain", btn.rect, 0xFFFFFFFF);
+            }
+
+            /* Scene Render Grass */
+            {
+                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
+
+                u32 btn_color = *render_grass ? 0xFF00AA00 : 0xFF0000AA;
+
+                if (btn.state & VAST_UI_STATE_HOVER)
+                {
+                    btn_color = vast_ui_color_darken(btn_color, 0.8f);
+                }
+
+                if (btn.state & VAST_UI_STATE_PRESSED)
+                {
+                    *render_grass = !(*render_grass);
+                }
+
+                vast_ui_push_rect(&ui_ctx, btn, btn_color);
+                vast_ui_push_text(&ui_ctx, "Render Grass", btn.rect, 0xFFFFFFFF);
+            }
+
+            /* Scene Render Trees */
+            {
+                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
+
+                u32 btn_color = *render_trees ? 0xFF00AA00 : 0xFF0000AA;
+
+                if (btn.state & VAST_UI_STATE_HOVER)
+                {
+                    btn_color = vast_ui_color_darken(btn_color, 0.8f);
+                }
+
+                if (btn.state & VAST_UI_STATE_PRESSED)
+                {
+                    *render_trees = !(*render_trees);
+                }
+
+                vast_ui_push_rect(&ui_ctx, btn, btn_color);
+                vast_ui_push_text(&ui_ctx, "Render Trees", btn.rect, 0xFFFFFFFF);
             }
 
             /* Scene Render Sky */
