@@ -1924,6 +1924,29 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
 
       SwapBuffers(state.device_context);
 
+      /* Print FPS */
+      {
+        static f64 hot_reload_accum = 0.0;
+
+        hot_reload_accum += state.platform_state.timing.time_delta;
+
+        if (hot_reload_accum >= 2.0)
+        {
+          s8 tmp[32];
+          vast_sb sb = {0};
+          sb.size = sizeof(tmp);
+          sb.buffer = tmp;
+
+          vast_sb_s8(&sb, "fps: ");
+          vast_sb_f64_pad(&sb, state.platform_state.timing.frame_rate, 4, 10, ' ', VAST_SB_PAD_LEFT);
+          vast_sb_s8(&sb, "\n");
+
+          win32_print(sb.buffer);
+
+          hot_reload_accum = 0.0;
+        }
+      }
+
       /* Measure RAW FPS (rendering without cap)*/
       {
         i64 time_render_now;
