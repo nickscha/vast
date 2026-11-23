@@ -302,7 +302,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
             }
         }
 
-        /* UI Scaling */
+        /* FPS Setting */
         {
             vast_ui_result btn_minus = vast_ui_button(&ui_ctx, 3, vast_ui_rect_init(0.0f, 0.0f, 2 * font_size * 0.55f, font_size));
             vast_ui_result btn_plus = vast_ui_button(&ui_ctx, 4, vast_ui_rect_init(0.0f, 0.0f, 2 * font_size * 0.55f, font_size));
@@ -312,14 +312,22 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
             if (btn_minus.state & VAST_UI_STATE_PRESSED)
             {
+                state->timing.frame_rate_target = (u32)vast_maxf((f32)state->timing.frame_rate_target - 10.0f, 0.0f);
+
+                /*
                 ui_scale -= 0.1f;
                 ui_scale = vast_maxf(0.5f, ui_scale);
+                */
             }
 
             if (btn_plus.state & VAST_UI_STATE_PRESSED)
             {
+                state->timing.frame_rate_target = (u32)vast_minf((f32)state->timing.frame_rate_target + 10.0f, 2000.0f);
+
+                /*
                 ui_scale += 0.1f;
                 ui_scale = vast_minf(2.0f, ui_scale);
+                */
             }
 
             vast_ui_push_rect(&ui_ctx, btn_minus, btn_minus_color);
