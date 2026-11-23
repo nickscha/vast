@@ -1302,8 +1302,6 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
     static u8 post_process_enabled = 1;
     static u8 render_terrain = 1;
-    static u8 render_grass = 0;
-    static u8 render_trees = 0;
     static u8 render_sky = 1;
 
     static s8 *shader_code_vertex =
@@ -1452,14 +1450,6 @@ VAST_API void vast_render_scene(win32_vast_state *state)
       vast_tile_render(&state->platform_state, &camera, sun_dir, &state->draw_calls, post_process_fbo, post_process_enabled);
     }
 
-    if (render_grass)
-    {
-    }
-
-    if (render_trees)
-    {
-    }
-
     if (render_sky)
     {
       vast_sky_render(&state->platform_state, &camera, sun_dir, post_process_fbo, post_process_enabled);
@@ -1519,7 +1509,7 @@ VAST_API void vast_render_scene(win32_vast_state *state)
 
       if (ui_enabled)
       {
-        vast_ui_render(&state->platform_state, &camera, &post_process_enabled, &render_terrain, &render_grass, &render_trees, &render_sky);
+        vast_ui_render(&state->platform_state, &camera, &post_process_enabled, &render_terrain, &render_sky);
       }
     }
   }

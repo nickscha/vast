@@ -425,7 +425,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static vast_tile_shader_normalmap tiles_nm_shader = {0};
     static vast_tile_shader_final tiles_shader = {0};
     static vast_tile_shader_water water_shader = {0};
-    static f32 global_water_level = 0.0f;
+    static f32 global_water_level = -0.5f;
 
     static u32 grid_vaos[LOD_COUNT];
     static u32 grid_vbos[LOD_COUNT];
