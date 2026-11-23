@@ -410,7 +410,7 @@ VAST_API VAST_INLINE vast_mat4x4 vast_mat4x4_look_at(vast_vec3 eye, vast_vec3 ta
  * # [SECTION] Linear Algebra Math (Frustums)
  * #############################################################################
  */
-VAST_API vast_frustum vast_frustum_extract(vast_mat4x4 m)
+VAST_API VAST_INLINE vast_frustum vast_frustum_extract(vast_mat4x4 m)
 {
     vast_frustum f = {0};
 
