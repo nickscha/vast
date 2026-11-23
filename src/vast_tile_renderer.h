@@ -880,7 +880,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         }
         VAST_PROFILER_END(water_render);
 
-        gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (post_process_enabled)
+        {
+            gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
     }
     VAST_PROFILER_END(tile_render);
 }

@@ -127,7 +127,10 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
     gl->glDepthMask(GL_TRUE);
     gl->glDepthFunc(GL_LESS);
 
-    gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (post_process_enabled)
+    {
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 
     VAST_PROFILER_END(sky_render);
 }
