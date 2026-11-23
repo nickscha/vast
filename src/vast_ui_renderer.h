@@ -343,7 +343,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
         /* Profiler Metrics Window */
         {
             static f32 prof_win_w = 620.0f;
-            static f32 prof_win_h = 300.0f;
+            static f32 prof_win_h = 310.0f;
             static f32 prof_win_x = 0.0f;
 
             f32 prof_win_y = (f32)state->window.height - (prof_win_h + prof_win_x);
