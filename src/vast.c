@@ -3,12 +3,15 @@
 
 typedef struct vast_state
 {
-    u8 initialized;
+    /* Memory Regions */
+    vast_platform_memory memory_region_permanent;
+    vast_platform_memory memory_region_transient;
 
 } vast_state;
 
 void vast_update(vast_platform_state *platform_state)
 {
+    vast_state *state = (vast_state *)platform_state->memory.data;
     vast_platform_window *window = &platform_state->window;
     vast_platform_input_keyboard *keyboard = &platform_state->input.keyboard;
 
@@ -23,6 +26,26 @@ void vast_update(vast_platform_state *platform_state)
         window->clear_color_g = 0.6f;
         window->clear_color_b = 0.1f;
         window->clear_color_changed = 1;
+
+        /* Assign memory regions */
+        {
+            u32 state_struct_size = (u32)sizeof(vast_state);
+            u8 *base = (u8 *)platform_state->memory.data;
+
+            /* Permanent */
+            state->memory_region_permanent.data = base;
+            state->memory_region_permanent.offset = state_struct_size;
+            state->memory_region_permanent.size = state_struct_size;
+
+            /* Transient */
+            state->memory_region_transient.data = base + state_struct_size;
+            state->memory_region_transient.offset = 0;
+            state->memory_region_transient.size = (platform_state->memory.size > state_struct_size) ? (platform_state->memory.size - state_struct_size) : 0;
+
+            /* Mark Platform Memory as consumed */
+            platform_state->memory.offset = platform_state->memory.size;
+            platform_state->application_initialized = 1;
+        }
 
         platform_state->application_initialized = 1;
     }
@@ -39,4 +62,7 @@ void vast_update(vast_platform_state *platform_state)
         window->window_mode = window->window_mode > 0 ? VAST_PLATFORM_WINDOW_MODE_WINDOWED : VAST_PLATFORM_WINDOW_MODE_FULLSCREEN;
         window->window_mode_changed = 1;
     }
+
+    /* Reset transient memory after every update */
+    state->memory_region_transient.offset = 0;
 }

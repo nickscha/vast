@@ -89,9 +89,9 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
     if (!ui_initialized)
     {
-        u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/50_vast_ui.vs");
-        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/50_vast_ui.fs");
-        u8 *font_data = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "assets/font.raw");
+        u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/50_vast_ui.vs");
+        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/50_vast_ui.fs");
+        u8 *font_data = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "assets/font.raw");
 
 #define INSTANCE_DATA_COUNT 1024
         static vast_ui_instance_data instance_data[INSTANCE_DATA_COUNT];

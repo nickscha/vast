@@ -378,15 +378,15 @@ void *vast_memory_allocate(vast_platform_memory *memory, u32 size)
     return ptr;
 }
 
-void *vast_io_file_read_to_memory(vast_platform_state *state, vast_platform_memory *memory, s8 *filename)
+void *vast_io_file_read_to_memory(vast_platform_api *api, vast_platform_memory *memory, s8 *filename)
 {
     u32 file_size = 0;
     void *data;
 
-    if (!state->api.io_file_size(filename, &file_size) || file_size < 1)
+    if (!api->io_file_size(filename, &file_size) || file_size < 1)
     {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot obtain file size!\n");
+        api->io_print(filename);
+        api->io_print(": Cannot obtain file size!\n");
         return VAST_NULL;
     }
 
@@ -395,15 +395,15 @@ void *vast_io_file_read_to_memory(vast_platform_state *state, vast_platform_memo
 
     if (!data)
     {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot allocate memory for file data!\n");
+        api->io_print(filename);
+        api->io_print(": Cannot allocate memory for file data!\n");
         return VAST_NULL;
     }
 
-    if (!state->api.io_file_read(filename, (u8 *)data, file_size))
+    if (!api->io_file_read(filename, (u8 *)data, file_size))
     {
-        state->api.io_print(filename);
-        state->api.io_print(": Cannot read file into memory!\n");
+        api->io_print(filename);
+        api->io_print(": Cannot read file into memory!\n");
         return VAST_NULL;
     }
 
