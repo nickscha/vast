@@ -327,12 +327,23 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
             sb.length = 0;
 
-            vast_sb_s8(&sb, "MEM   : ");
-            vast_sb_i32_pad(&sb, (i32)state->memory.size / 1024, 8, ' ', VAST_SB_PAD_LEFT);
+            vast_sb_s8(&sb, "MEM_P : ");
+            vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.size, 8, ' ', VAST_SB_PAD_LEFT);
+            vast_sb_s8(&sb, "  B");
+            vast_sb_s8(&sb, "\0");
+
+            vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+            sb.length = 0;
+
+            vast_sb_s8(&sb, "MEM_T : ");
+            vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.size / 1024, 8, ' ', VAST_SB_PAD_LEFT);
             vast_sb_s8(&sb, " KB");
             vast_sb_s8(&sb, "\0");
 
             vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+            sb.length = 0;
         }
 
         vast_ui_panel_end(&ui_ctx);

@@ -290,7 +290,6 @@ typedef struct vast_platform_state
     vast_platform_api api;           /* Platform provided functions */
     vast_platform_window window;     /* Platform window information */
     vast_platform_input input;       /* Platform input              */
-    vast_platform_memory memory;     /* Platform memory             */
     vast_platform_timing timing;     /* Platform timing             */
     vast_platform_graphics graphics; /* Platform provided graphics  */
 
@@ -304,7 +303,7 @@ typedef struct vast_platform_state
  * #############################################################################
  */
 #ifdef VAST_APPLICATION
-void vast_update(vast_platform_state *platform_state);
+void vast_update(vast_platform_state *platform_state, vast_platform_memory *platform_memory);
 
 #ifndef VAST_RELEASE
 #ifdef _WIN32
@@ -321,14 +320,14 @@ i32 DllMainCRTStartup(void)
 #else
 
 #ifndef VAST_RELEASE
-VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state)
+VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state, vast_platform_memory *platform_memory)
 {
-    if (!platform_state->memory.data)
+    if (!platform_memory->data)
     {
         platform_state->api.io_print("[vast][error] The platform layer did not allocate any memory (platform_state->memory.data)!\n");
     }
 
-    if (platform_state->memory.size < 1)
+    if (platform_memory->size < 1)
     {
         platform_state->api.io_print("[vast][error] The platform layer did not set memory size (platform_state->memory.size)!\n");
     }
@@ -347,7 +346,7 @@ VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state)
     platform_state->window.title_changed = 1;
 }
 
-typedef void (*vast_update_function)(vast_platform_state *platform_state);
+typedef void (*vast_update_function)(vast_platform_state *platform_state, vast_platform_memory *platform_memory);
 
 static vast_update_function vast_update = vast_update_stub;
 #else
