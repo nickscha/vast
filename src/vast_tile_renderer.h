@@ -61,6 +61,25 @@ typedef struct vast_tile_shader_final
 
 } vast_tile_shader_final;
 
+typedef struct vast_tile_shader_water
+{
+    shader_header header;
+
+    i32 loc_tile_offset;
+    i32 loc_view_projection;
+    i32 loc_heightmap;
+    i32 loc_normalmap;
+    i32 loc_texture_array_layer;
+    i32 loc_water_level;
+    i32 loc_tile_size;
+    i32 loc_grid_res;
+    i32 loc_iTime;
+    i32 loc_sun_dir;
+    i32 loc_camera;
+    i32 loc_texture_size;
+
+} vast_tile_shader_water;
+
 typedef struct vast_tile_instance_data
 {
     f32 offset_x;
@@ -174,6 +193,41 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
     else
     {
         state->api.io_print("Cannot compile tiles shaders!\n");
+    }
+
+    state->memory.offset = 0;
+}
+
+VAST_API void vast_tile_shader_water_load(vast_platform_state *state, vast_tile_shader_water *water_shader)
+{
+    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/25_vast_water.vs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(state, &state->memory, "shaders/25_vast_water.fs");
+    vast_opengl_api *gl = &state->graphics.opengl;
+
+    if (!shader_data_vertex || !shader_data_fragment)
+    {
+        state->memory.offset = 0;
+        return;
+    }
+
+    if (opengl_shader_load(&water_shader->header, (s8 *)shader_data_vertex, (s8 *)shader_data_fragment, state->api.io_print, gl))
+    {
+        water_shader->loc_tile_offset = gl->glGetUniformLocation(water_shader->header.program, "u_tile_offset");
+        water_shader->loc_view_projection = gl->glGetUniformLocation(water_shader->header.program, "u_vp");
+        water_shader->loc_heightmap = gl->glGetUniformLocation(water_shader->header.program, "u_heightmap");
+        water_shader->loc_normalmap = gl->glGetUniformLocation(water_shader->header.program, "u_normalmap");
+        water_shader->loc_texture_array_layer = gl->glGetUniformLocation(water_shader->header.program, "u_texture_array_layer");
+        water_shader->loc_water_level = gl->glGetUniformLocation(water_shader->header.program, "u_water_level");
+        water_shader->loc_tile_size = gl->glGetUniformLocation(water_shader->header.program, "u_tile_size");
+        water_shader->loc_grid_res = gl->glGetUniformLocation(water_shader->header.program, "u_grid_res");
+        water_shader->loc_iTime = gl->glGetUniformLocation(water_shader->header.program, "iTime");
+        water_shader->loc_sun_dir = gl->glGetUniformLocation(water_shader->header.program, "sunDir");
+        water_shader->loc_camera = gl->glGetUniformLocation(water_shader->header.program, "iCamera");
+        water_shader->loc_texture_size = gl->glGetUniformLocation(water_shader->header.program, "u_texture_size");
+    }
+    else
+    {
+        state->api.io_print("Cannot compile water shaders!\n");
     }
 
     state->memory.offset = 0;
@@ -367,9 +421,11 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static u8 tiles_initialized = 0;
     static vast_tiles t = {0};
 
-    static vast_tile_shader_final tiles_shader = {0};
     static vast_tile_shader_heightmap tiles_hm_shader = {0};
     static vast_tile_shader_normalmap tiles_nm_shader = {0};
+    static vast_tile_shader_final tiles_shader = {0};
+    static vast_tile_shader_water water_shader = {0};
+    static f32 global_water_level = 0.0f;
 
     static u32 grid_vaos[LOD_COUNT];
     static u32 grid_vbos[LOD_COUNT];
@@ -439,6 +495,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         vast_tile_shader_heightmap_load(state, &tiles_hm_shader);
         vast_tile_shader_normalmap_load(state, &tiles_nm_shader);
         vast_tile_shader_final_load(state, &tiles_shader);
+        vast_tile_shader_water_load(state, &water_shader);
 
         /* Dummy vertex and framebuffer object */
         gl->glGenVertexArrays(1, &scratch_vao);
@@ -748,6 +805,80 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
         gl->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         gl->glDisable(GL_CULL_FACE);
+
+        /* Render Water Pass */
+        VAST_PROFILER_BEGIN(water_render);
+        {
+            gl->glUseProgram(water_shader.header.program);
+            gl->glUniformMatrix4fv(water_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
+            gl->glUniform1f(water_shader.loc_water_level, global_water_level);
+            gl->glUniform1f(water_shader.loc_tile_size, t.world_size);
+            gl->glUniform1f(water_shader.loc_iTime, (f32)state->timing.time_elapsed);
+            gl->glUniform3f(water_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
+            gl->glUniform3f(water_shader.loc_camera, camera->position.x, camera->position.y, camera->position.z);
+            gl->glUniform1i(water_shader.loc_heightmap, 0);
+
+            /* Enable alpha blending for transparent water */
+            gl->glEnable(GL_BLEND);
+            gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            /* Keep depth testing enabled so terrain occludes water correctly,
+               but disable depth writing so overlapping water waves blend smoothly */
+            gl->glDepthMask(GL_FALSE);
+
+            for (lod = 0; lod < LOD_COUNT; ++lod)
+            {
+                i32 instance_count = 0;
+                u32 tile_index;
+                i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
+                i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)lod)) + 1; /* Match your terrain height size calculation */
+
+                gl->glUniform1f(water_shader.loc_grid_res, (f32)grid_res);
+                gl->glUniform1f(water_shader.loc_texture_size, (f32)height_tex_size);
+
+                for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
+                {
+                    i32 tile_lod_current = t.tile_lod_current[tile_index];
+                    i32 texture_array_layer = texture_layer[tile_index];
+
+                    if (tile_lod_current != (i32)lod || texture_array_layer < 0)
+                    {
+                        continue;
+                    }
+
+                    if (!vast_tile_is_visible(&t, &frustum, tile_index, -200.0f, 600.0f))
+                    {
+                        continue;
+                    }
+
+                    instance_buffer[instance_count].offset_x = (f32)t.tile_x[tile_index];
+                    instance_buffer[instance_count].offset_z = (f32)t.tile_z[tile_index];
+                    instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
+                    instance_count++;
+                }
+
+                if (instance_count == 0)
+                {
+                    continue;
+                }
+
+                gl->glUniform1f(water_shader.loc_grid_res, (f32)grid_res);
+
+                gl->glActiveTexture(GL_TEXTURE0);
+                gl->glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[lod]);
+
+                gl->glBindBuffer(GL_ARRAY_BUFFER, lod_instance_vbos[lod]);
+                gl->glBufferSubData(GL_ARRAY_BUFFER, 0, instance_count * (i32)sizeof(vast_tile_instance_data), instance_buffer);
+
+                gl->glBindVertexArray(grid_vaos[lod]);
+                gl->glDrawElementsInstanced(GL_TRIANGLES, gridIndexCounts[lod], GL_UNSIGNED_SHORT, VAST_NULL, instance_count);
+            }
+
+            /* Restore OpenGL state */
+            gl->glDepthMask(GL_TRUE);
+            gl->glDisable(GL_BLEND);
+        }
+        VAST_PROFILER_END(water_render);
 
         gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
