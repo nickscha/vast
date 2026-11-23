@@ -7,6 +7,7 @@
  */
 #include "vast_types.h"               /* Basic types (u8, u32, ...)    */
 #include "vast.h"                     /* Platform State                */
+#include "vast_state.h"               /* Vast state struct             */
 #include "vast_profiler.h"            /* Profiler metrics              */
 #include "vast_camera.h"              /* Camera                        */
 #include "vast_math_linear_algebra.h" /* Linear Algebra                */
@@ -32,14 +33,14 @@ typedef struct shader_sky
  * # [SECTION] Sky Renderer
  * #############################################################################
  */
-VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 fbo, u8 post_process_enabled)
+VAST_API void vast_sky_render(vast_platform_state *platform_state, vast_state *state)
 {
     static u8 sky_initialized = 0;
     static shader_sky sky_shader = {0};
     static u32 sky_vao;
     static f32 camera_basis[9];
 
-    vast_opengl_api *gl = &state->graphics.opengl;
+    vast_opengl_api *gl = &platform_state->graphics.opengl;
 
     if (!sky_initialized)
     {
@@ -61,15 +62,14 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
             "    gl_Position = vec4(p, 1.0, 1.0);\n"
             "}";
 
-        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/30_vast_sky.fs");
+        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&platform_state->api, &state->memory_region_transient, "shaders/30_vast_sky.fs");
 
         if (!shader_data_fragment)
         {
-            state->memory.offset = 0;
             return;
         }
 
-        if (opengl_shader_load(&sky_shader.header, shader_code_vertex, (s8 *)shader_data_fragment, state->api.io_print, gl))
+        if (opengl_shader_load(&sky_shader.header, shader_code_vertex, (s8 *)shader_data_fragment, platform_state->api.io_print, gl))
         {
             sky_shader.loc_iResolution = gl->glGetUniformLocation(sky_shader.header.program, "iResolution");
             sky_shader.loc_iTime = gl->glGetUniformLocation(sky_shader.header.program, "iTime");
@@ -79,10 +79,8 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
         }
         else
         {
-            state->api.io_print("Cannot compile sky shaders!\n");
+            platform_state->api.io_print("Cannot compile sky shaders!\n");
         }
-
-        state->memory.offset = 0;
 
         gl->glGenVertexArrays(1, &sky_vao);
 
@@ -93,20 +91,20 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
 
     /* Construct camera basis */
     /* TODO(nickscha): not really needed. Use camera instead for shader */
-    camera_basis[0] = camera->right.x;
-    camera_basis[1] = camera->right.y;
-    camera_basis[2] = camera->right.z;
-    camera_basis[3] = camera->up.x;
-    camera_basis[4] = camera->up.y;
-    camera_basis[5] = camera->up.z;
-    camera_basis[6] = camera->forward.x;
-    camera_basis[7] = camera->forward.y;
-    camera_basis[8] = camera->forward.z;
+    camera_basis[0] = state->camera.right.x;
+    camera_basis[1] = state->camera.right.y;
+    camera_basis[2] = state->camera.right.z;
+    camera_basis[3] = state->camera.up.x;
+    camera_basis[4] = state->camera.up.y;
+    camera_basis[5] = state->camera.up.z;
+    camera_basis[6] = state->camera.forward.x;
+    camera_basis[7] = state->camera.forward.y;
+    camera_basis[8] = state->camera.forward.z;
 
     /* Render */
-    if (post_process_enabled)
+    if (state->rendering_enabled_post)
     {
-        gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, state->post_framebuffer_object_id);
     }
 
     gl->glEnable(GL_DEPTH_TEST);
@@ -116,10 +114,10 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
     gl->glUseProgram(sky_shader.header.program);
     gl->glBindVertexArray(sky_vao);
 
-    gl->glUniform3f(sky_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
-    gl->glUniform1f(sky_shader.loc_iTime, (f32)state->timing.time_elapsed);
-    gl->glUniform3f(sky_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
-    gl->glUniform3f(sky_shader.loc_camera, camera->position.x, camera->position.y, camera->position.z);
+    gl->glUniform3f(sky_shader.loc_iResolution, (f32)platform_state->window.width, (f32)platform_state->window.height, 1.0f);
+    gl->glUniform1f(sky_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
+    gl->glUniform3f(sky_shader.loc_sun_dir, state->sun_direction.x, state->sun_direction.y, state->sun_direction.z);
+    gl->glUniform3f(sky_shader.loc_camera, state->camera.position.x, state->camera.position.y, state->camera.position.z);
     gl->glUniformMatrix3fv(sky_shader.loc_camera_basis, 1, GL_FALSE, camera_basis);
 
     gl->glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -127,7 +125,9 @@ VAST_API void vast_sky_render(vast_platform_state *state, vast_camera *camera, v
     gl->glDepthMask(GL_TRUE);
     gl->glDepthFunc(GL_LESS);
 
-    if (post_process_enabled)
+    state->rendering_draw_calls_sky++;
+
+    if (state->rendering_enabled_post)
     {
         gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }

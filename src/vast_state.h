@@ -5,10 +5,10 @@
  * # [SECTION] Dependencies
  * #############################################################################
  */
-#include "vast_types.h" /* Basic types (u8, u32, ...)    */
-#include "vast.h"
-#include "vast_math_linear_algebra.h"
-#include "vast_camera.h"
+#include "vast_types.h"               /* Basic types (u8, u32, ...) */
+#include "vast.h"                     /* Platform memory struct     */
+#include "vast_math_linear_algebra.h" /* Vectors/Matrices           */
+#include "vast_camera.h"              /* Camera data                */
 
 /* #############################################################################
  * # [SECTION] State Single source of truth
@@ -47,6 +47,9 @@ typedef struct vast_state
     /* Ligthing and Weather data */
     vast_vec3 sun_direction;
     vast_vec3 wind_direction;
+
+    /* Post processing fields */
+    u32 post_framebuffer_object_id;
 
     /* UI information */
     f32 ui_scale;   /* Default 1.0f */

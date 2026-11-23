@@ -7,6 +7,7 @@
  */
 #include "vast_types.h"               /* Basic types (u8, u32, ...)    */
 #include "vast.h"                     /* Platform State                */
+#include "vast_state.h"               /* Vast state struct             */
 #include "vast_string_builder.h"      /* String printing               */
 #include "vast_profiler.h"            /* Profiler metrics              */
 #include "vast_tiles.h"               /* Toriodal Tiling Grid logic    */
@@ -14,6 +15,7 @@
 #include "vast_geometry.h"            /* Calc. Grid with Skirts        */
 #include "vast_math_linear_algebra.h" /* Linear Algebra                */
 #include "vast_opengl_api.h"          /* OpenGL Flags                  */
+#include "vast_opengl.h"              /* TODO(nickscha): Only shader_header */
 
 /* #############################################################################
  * # [SECTION] Structs and Data
@@ -108,14 +110,13 @@ static s8 *vast_tile_texture_vertex_data =
 #define VAST_TILE_GRID_SIZE 65
 #define VAST_TILE_MAX_INDICES ((VAST_TILE_GRID_SIZE - 1) * (VAST_TILE_GRID_SIZE - 1) * 6)
 
-VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_tile_shader_heightmap *tiles_hm_shader)
+VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_state *vstate, vast_tile_shader_heightmap *tiles_hm_shader)
 {
-    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/10_vast_tile_heightmap_texture.fs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/10_vast_tile_heightmap_texture.fs");
     vast_opengl_api *gl = &state->graphics.opengl;
 
     if (!shader_data_fragment)
     {
-        state->memory.offset = 0;
         return;
     }
 
@@ -129,18 +130,15 @@ VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_t
     {
         state->api.io_print("Cannot compile tile heightmap shaders!\n");
     }
-
-    state->memory.offset = 0;
 }
 
-VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_tile_shader_normalmap *tiles_nm_shader)
+VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_state *vstate, vast_tile_shader_normalmap *tiles_nm_shader)
 {
-    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/10_vast_tile_normalmap_texture.fs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/10_vast_tile_normalmap_texture.fs");
     vast_opengl_api *gl = &state->graphics.opengl;
 
     if (!shader_data_fragment)
     {
-        state->memory.offset = 0;
         return;
     }
 
@@ -154,20 +152,17 @@ VAST_API void vast_tile_shader_normalmap_load(vast_platform_state *state, vast_t
     {
         state->api.io_print("Cannot compile tile normal map shaders!\n");
     }
-
-    state->memory.offset = 0;
 }
 
-VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_shader_final *tiles_shader)
+VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_state *vstate, vast_tile_shader_final *tiles_shader)
 {
 
-    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/20_vast_tile_render.vs");
-    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/20_vast_tile_render.fs");
+    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/20_vast_tile_render.vs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/20_vast_tile_render.fs");
     vast_opengl_api *gl = &state->graphics.opengl;
 
     if (!shader_data_vertex || !shader_data_fragment)
     {
-        state->memory.offset = 0;
         return;
     }
 
@@ -194,19 +189,16 @@ VAST_API void vast_tile_shader_final_load(vast_platform_state *state, vast_tile_
     {
         state->api.io_print("Cannot compile tiles shaders!\n");
     }
-
-    state->memory.offset = 0;
 }
 
-VAST_API void vast_tile_shader_water_load(vast_platform_state *state, vast_tile_shader_water *water_shader)
+VAST_API void vast_tile_shader_water_load(vast_platform_state *state, vast_state *vstate, vast_tile_shader_water *water_shader)
 {
-    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/25_vast_water.vs");
-    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/25_vast_water.fs");
+    u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/25_vast_water.vs");
+    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/25_vast_water.fs");
     vast_opengl_api *gl = &state->graphics.opengl;
 
     if (!shader_data_vertex || !shader_data_fragment)
     {
-        state->memory.offset = 0;
         return;
     }
 
@@ -229,13 +221,12 @@ VAST_API void vast_tile_shader_water_load(vast_platform_state *state, vast_tile_
     {
         state->api.io_print("Cannot compile water shaders!\n");
     }
-
-    state->memory.offset = 0;
 }
 
 #ifndef VAST_RELEASE
 VAST_API void vast_tile_shader_hot_reload(
     vast_platform_state *state,
+    vast_state *vstate,
     vast_tiles *tiles,
     vast_tile_shader_final *tiles_shader,
     vast_tile_shader_heightmap *tiles_hm_shader,
@@ -282,21 +273,21 @@ VAST_API void vast_tile_shader_hot_reload(
 
         if (tile_shader_heightmap_now != tile_shader_heightmap_last)
         {
-            vast_tile_shader_heightmap_load(state, tiles_hm_shader);
+            vast_tile_shader_heightmap_load(state, vstate, tiles_hm_shader);
             vast_tiles_init(tiles, camera_position_x, camera_position_z, tiles->world_size); /* Regenerate terrain fully */
             tile_shader_heightmap_last = tile_shader_heightmap_now;
         }
 
         if (tile_shader_normalmap_now != tile_shader_normalmap_last)
         {
-            vast_tile_shader_normalmap_load(state, tiles_nm_shader);
+            vast_tile_shader_normalmap_load(state, vstate, tiles_nm_shader);
             vast_tiles_init(tiles, camera_position_x, camera_position_z, tiles->world_size); /* Regenerate terrain fully */
             tile_shader_normalmap_last = tile_shader_normalmap_now;
         }
 
         if (tile_shader_final_now != tile_shader_final_last)
         {
-            vast_tile_shader_final_load(state, tiles_shader);
+            vast_tile_shader_final_load(state, vstate, tiles_shader);
             tile_shader_final_last = tile_shader_final_now;
         }
 
@@ -416,7 +407,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
  * #############################################################################
  */
 /* TODO(nickscha): texture pool capacity = tile_count + burst_headroom */
-VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, vast_vec3 sun_dir, u32 *draw_calls, u32 fbo, u8 post_process_enabled)
+VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *state)
 {
     static u8 tiles_initialized = 0;
     static vast_tiles t = {0};
@@ -441,7 +432,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     static u32 lod_heightmap_arrays[LOD_COUNT];
     static u32 lod_normalmap_arrays[LOD_COUNT];
 
-    vast_opengl_api *gl = &state->graphics.opengl;
+    vast_opengl_api *gl = &platform_state->graphics.opengl;
 
     if (!tiles_initialized)
     {
@@ -449,7 +440,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         f32 tile_world_size = 256.0f;
 
         VAST_PROFILER_BEGIN(tile_init);
-        vast_tiles_init(&t, camera->position.x, camera->position.z, tile_world_size);
+        vast_tiles_init(&t, state->camera.position.x, state->camera.position.z, tile_world_size);
         VAST_PROFILER_END(tile_init);
 
         {
@@ -492,10 +483,10 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         }
 
         /* Setup tiles shaders */
-        vast_tile_shader_heightmap_load(state, &tiles_hm_shader);
-        vast_tile_shader_normalmap_load(state, &tiles_nm_shader);
-        vast_tile_shader_final_load(state, &tiles_shader);
-        vast_tile_shader_water_load(state, &water_shader);
+        vast_tile_shader_heightmap_load(platform_state, state, &tiles_hm_shader);
+        vast_tile_shader_normalmap_load(platform_state, state, &tiles_nm_shader);
+        vast_tile_shader_final_load(platform_state, state, &tiles_shader);
+        vast_tile_shader_water_load(platform_state, state, &water_shader);
 
         /* Dummy vertex and framebuffer object */
         gl->glGenVertexArrays(1, &scratch_vao);
@@ -557,32 +548,32 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
     }
 
 #ifndef VAST_RELEASE
-    vast_tile_shader_hot_reload(state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, camera->position.x, camera->position.z);
+    vast_tile_shader_hot_reload(platform_state, state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, state->camera.position.x, state->camera.position.z);
 #endif
 
     /* Test camera movement tile change */
-    if (state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_I] && !state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_I])
+    if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_I] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_I])
     {
         static u8 camera_sim_enabled = 0;
 
         if (!camera_sim_enabled)
         {
-            camera->position = vast_vec3_init(-128.0f, 146.0f, 51.0f);
-            camera->forward = vast_vec3_init(1.0f, 0.0f, 0.0f);
-            camera->right = vast_vec3_init(0.0f, 0.0f, 1.0f);
-            camera->yaw = 2.8f;
-            camera->fov = 29.0f;
+            state->camera.position = vast_vec3_init(-128.0f, 146.0f, 51.0f);
+            state->camera.forward = vast_vec3_init(1.0f, 0.0f, 0.0f);
+            state->camera.right = vast_vec3_init(0.0f, 0.0f, 1.0f);
+            state->camera.yaw = 2.8f;
+            state->camera.fov = 29.0f;
             camera_sim_enabled = 1;
         }
         else
         {
-            camera->position.x = camera->position.x < -128.0f ? -128.0f : -129.0f;
+            state->camera.position.x = state->camera.position.x < -128.0f ? -128.0f : -129.0f;
         }
     }
 
     /* Check for new dirty tiles */
     VAST_PROFILER_BEGIN(tile_update);
-    vast_tiles_update(&t, camera->position.x, camera->position.z);
+    vast_tiles_update(&t, state->camera.position.x, state->camera.position.z);
     VAST_PROFILER_END(tile_update);
 
     /* Process dirty tiles */
@@ -620,8 +611,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                 vast_sb_i32(&sb, (i32)tile_lod_required);
                 vast_sb_s8(&sb, "\n");
 
-                state->api.io_print("[ERROR] no next free texutre_array_layer left!\n");
-                state->api.io_print(sb.buffer);
+                platform_state->api.io_print("[ERROR] no next free texutre_array_layer left!\n");
+                platform_state->api.io_print(sb.buffer);
             }
 
             gl->glBindVertexArray(scratch_vao);
@@ -662,7 +653,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             VAST_PROFILER_END(tile_render_normalmap);
 
             /* Restore Viewport state */
-            gl->glViewport(0, 0, (i32)state->window.width, (i32)state->window.height);
+            gl->glViewport(0, 0, (i32)platform_state->window.width, (i32)platform_state->window.height);
             gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             t.tile_lod_current[tile_idx] = tile_lod_required;
@@ -682,19 +673,17 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
         u32 lod;
 
-        vast_mat4x4 projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(camera->fov), (f32)state->window.width / (f32)state->window.height, 0.1f, 8192.0f);
-        vast_mat4x4 view = vast_mat4x4_look_at(camera->position, vast_vec3_add(camera->position, camera->forward), camera->up);
+        vast_mat4x4 projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(state->camera.fov), (f32)platform_state->window.width / (f32)platform_state->window.height, 0.1f, 8192.0f);
+        vast_mat4x4 view = vast_mat4x4_look_at(state->camera.position, vast_vec3_add(state->camera.position, state->camera.forward), state->camera.up);
         vast_mat4x4 mvp = vast_mat4x4_mul(projection, view);
         vast_frustum frustum = vast_frustum_extract(mvp);
 
-        *draw_calls = 0;
-
-        if (state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_TAB] && !state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_TAB])
+        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_TAB] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_TAB])
         {
             wireframe_enabled = !wireframe_enabled;
         }
 
-        if (state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_V] && !state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_V])
+        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_V] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_V])
         {
             visualization_mode++;
 
@@ -704,9 +693,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             }
         }
 
-        if (post_process_enabled)
+        if (state->rendering_enabled_post)
         {
-            gl->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+            gl->glBindFramebuffer(GL_FRAMEBUFFER, state->post_framebuffer_object_id);
         }
 
         gl->glEnable(GL_CULL_FACE);
@@ -718,12 +707,12 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
         gl->glUseProgram(tiles_shader.header.program);
         gl->glUniformMatrix4fv(tiles_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
-        gl->glUniform3f(tiles_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
-        gl->glUniform1f(tiles_shader.loc_iTime, (f32)state->timing.time_elapsed);
-        gl->glUniform3f(tiles_shader.loc_iMouse, (f32)state->input.mouse.x, (f32)state->input.mouse.y, 0.0f);
-        gl->glUniform3f(tiles_shader.loc_camera, camera->position.x, camera->position.y, camera->position.z);
-        gl->glUniform3f(tiles_shader.loc_camera_view_dir, camera->forward.x, camera->forward.y, camera->forward.z);
-        gl->glUniform3f(tiles_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
+        gl->glUniform3f(tiles_shader.loc_iResolution, (f32)platform_state->window.width, (f32)platform_state->window.height, 1.0f);
+        gl->glUniform1f(tiles_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
+        gl->glUniform3f(tiles_shader.loc_iMouse, (f32)platform_state->input.mouse.x, (f32)platform_state->input.mouse.y, 0.0f);
+        gl->glUniform3f(tiles_shader.loc_camera, state->camera.position.x, state->camera.position.y, state->camera.position.z);
+        gl->glUniform3f(tiles_shader.loc_camera_view_dir, state->camera.forward.x, state->camera.forward.y, state->camera.forward.z);
+        gl->glUniform3f(tiles_shader.loc_sun_dir, state->sun_direction.x, state->sun_direction.y, state->sun_direction.z);
         gl->glUniform1f(tiles_shader.loc_visualization_mode, (f32)visualization_mode);
 
         gl->glUniform1f(tiles_shader.loc_tile_size, t.world_size);
@@ -764,8 +753,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
                     /* 1.0f at boundary - 0.0f at edge */
                     f32 camera_tile_factor = vast_tile_calculate_camera_backface_edge_factor(
                         &t,
-                        camera->position.x, camera->position.z,
-                        camera->forward.x, camera->forward.z,
+                        state->camera.position.x, state->camera.position.z,
+                        state->camera.forward.x, state->camera.forward.z,
                         threshold);
 
                     (void)camera_tile_factor;
@@ -800,7 +789,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             gl->glBindVertexArray(grid_vaos[lod]);
             gl->glDrawElementsInstanced(GL_TRIANGLES, gridIndexCounts[lod], GL_UNSIGNED_SHORT, VAST_NULL, instance_count);
 
-            (*draw_calls)++;
+            state->rendering_draw_calls_terrain++;
         }
 
         gl->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -813,9 +802,9 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
             gl->glUniformMatrix4fv(water_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
             gl->glUniform1f(water_shader.loc_water_level, global_water_level);
             gl->glUniform1f(water_shader.loc_tile_size, t.world_size);
-            gl->glUniform1f(water_shader.loc_iTime, (f32)state->timing.time_elapsed);
-            gl->glUniform3f(water_shader.loc_sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
-            gl->glUniform3f(water_shader.loc_camera, camera->position.x, camera->position.y, camera->position.z);
+            gl->glUniform1f(water_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
+            gl->glUniform3f(water_shader.loc_sun_dir, state->sun_direction.x, state->sun_direction.y, state->sun_direction.z);
+            gl->glUniform3f(water_shader.loc_camera, state->camera.position.x, state->camera.position.y, state->camera.position.z);
             gl->glUniform1i(water_shader.loc_heightmap, 0);
 
             /* Enable alpha blending for transparent water */
@@ -872,6 +861,8 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
 
                 gl->glBindVertexArray(grid_vaos[lod]);
                 gl->glDrawElementsInstanced(GL_TRIANGLES, gridIndexCounts[lod], GL_UNSIGNED_SHORT, VAST_NULL, instance_count);
+
+                state->rendering_draw_calls_water++;
             }
 
             /* Restore OpenGL state */
@@ -880,7 +871,7 @@ VAST_API void vast_tile_render(vast_platform_state *state, vast_camera *camera, 
         }
         VAST_PROFILER_END(water_render);
 
-        if (post_process_enabled)
+        if (state->rendering_enabled_post)
         {
             gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }

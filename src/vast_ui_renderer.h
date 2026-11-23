@@ -7,6 +7,7 @@
  */
 #include "vast_types.h"               /* Basic types (u8, u32, ...)    */
 #include "vast.h"                     /* Platform State                */
+#include "vast_state.h"               /* Vast state struct             */
 #include "vast_ui.h"                  /* Immediate Mode UI API         */
 #include "vast_profiler.h"            /* Profiler metrics              */
 #include "vast_math_linear_algebra.h" /* Linear Algebra                */
@@ -73,7 +74,7 @@ VAST_API VAST_INLINE u32 vast_ui_color_darken(u32 color, f32 factor)
     return a | ((b & 0xFFu) << 16) | ((g & 0xFFu) << 8) | (r & 0xFFu);
 }
 
-VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8 *post_process_enabled, u8 *render_terrain, u8 *render_sky)
+VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 {
     static u8 ui_initialized = 0;
 
@@ -89,16 +90,15 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
     if (!ui_initialized)
     {
-        u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/50_vast_ui.vs");
-        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "shaders/50_vast_ui.fs");
-        u8 *font_data = (u8 *)vast_io_file_read_to_memory(&state->api, &state->memory, "assets/font.raw");
+        u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/50_vast_ui.vs");
+        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/50_vast_ui.fs");
+        u8 *font_data = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "assets/font.raw");
 
 #define INSTANCE_DATA_COUNT 1024
         static vast_ui_instance_data instance_data[INSTANCE_DATA_COUNT];
 
         if (!shader_data_vertex || !shader_data_fragment || !font_data)
         {
-            state->memory.offset = 0;
             return;
         }
 
@@ -132,8 +132,6 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
         gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (i32)font_texture_width, (i32)font_texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, font_data);
         gl->glGenerateMipmap(GL_TEXTURE_2D);
         gl->glActiveTexture(GL_TEXTURE0);
-
-        state->memory.offset = 0;
 
         /* Setup Instanced VAO + VBO */
         gl->glGenVertexArrays(1, &ui_vao);
@@ -205,7 +203,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
-                u32 btn_color = *post_process_enabled ? 0xFF00AA00 : 0xFF0000AA;
+                u32 btn_color = vstate->rendering_enabled_post ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_HOVER)
                 {
@@ -214,7 +212,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
-                    *post_process_enabled = !(*post_process_enabled);
+                    vstate->rendering_enabled_post = !vstate->rendering_enabled_post;
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
@@ -225,7 +223,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
-                u32 btn_color = *render_terrain ? 0xFF00AA00 : 0xFF0000AA;
+                u32 btn_color = vstate->rendering_enabled_terrain ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_HOVER)
                 {
@@ -234,7 +232,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
-                    *render_terrain = !(*render_terrain);
+                    vstate->rendering_enabled_terrain = !vstate->rendering_enabled_terrain;
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
@@ -245,7 +243,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
-                u32 btn_color = *render_sky ? 0xFF00AA00 : 0xFF0000AA;
+                u32 btn_color = vstate->rendering_enabled_sky ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_HOVER)
                 {
@@ -254,7 +252,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
-                    *render_sky = !(*render_sky);
+                    vstate->rendering_enabled_sky = !vstate->rendering_enabled_sky;
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
@@ -437,11 +435,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.size = 64;
 
                     vast_sb_s8(&sb, "Position: ");
-                    vast_sb_f64_pad(&sb, (f64)camera->position.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.position.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->position.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.position.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->position.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.position.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -449,11 +447,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Forward : ");
-                    vast_sb_f64_pad(&sb, (f64)camera->forward.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.forward.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->forward.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.forward.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->forward.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.forward.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -461,11 +459,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Up      : ");
-                    vast_sb_f64_pad(&sb, (f64)camera->up.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.up.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->up.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.up.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->up.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.up.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -473,11 +471,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Right   : ");
-                    vast_sb_f64_pad(&sb, (f64)camera->right.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.right.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->right.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.right.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)camera->right.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.right.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -485,7 +483,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Yaw     : ");
-                    vast_sb_f64_pad(&sb, (f64)camera->yaw, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.yaw, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -493,7 +491,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Pitch   : ");
-                    vast_sb_f64_pad(&sb, (f64)camera->pitch, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.pitch, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -501,7 +499,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Roll    : ");
-                    vast_sb_f64_pad(&sb, (f64)camera->roll, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.roll, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -509,7 +507,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_camera *camera, u8
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Fov     : ");
-                    vast_sb_f64_pad(&sb, (f64)camera->fov, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->camera.fov, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
