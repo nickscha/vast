@@ -2,6 +2,12 @@
 #include "vast.h"
 #include "vast_state.h"
 
+VAST_API VAST_INLINE void vast_scene(vast_state *state, vast_platform_state *platform_state)
+{
+    (void) state;
+    (void) platform_state;
+}
+
 void vast_update(vast_platform_state *platform_state)
 {
     vast_state *state = (vast_state *)platform_state->memory.data;
@@ -55,6 +61,8 @@ void vast_update(vast_platform_state *platform_state)
         window->window_mode = window->window_mode > 0 ? VAST_PLATFORM_WINDOW_MODE_WINDOWED : VAST_PLATFORM_WINDOW_MODE_FULLSCREEN;
         window->window_mode_changed = 1;
     }
+
+    vast_scene(state, platform_state);
 
     /* Reset transient memory after every update */
     state->memory_region_transient.offset = 0;
