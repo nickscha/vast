@@ -1111,8 +1111,8 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   state.platform_state.window.clear_color_b = 0.1f;
 
   /* Platform Memory Setup */
-  state.platform_memory.size = 1024 * 1024 * 8; /* 8 MB */
-  state.platform_memory.data = VirtualAlloc(0, state.platform_memory.size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+  state.platform_state.memory.size = 1024 * 1024 * 8; /* 8 MB */
+  state.platform_state.memory.data = VirtualAlloc(0, state.platform_state.memory.size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
   (void)vast_sb_f64;
   (void)vast_sb_s8_pad;
@@ -1402,7 +1402,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
       /******************************/
       /* Main Application Logic     */
       /******************************/
-      vast_update(&state.platform_state, &state.platform_memory);
+      vast_update(&state.platform_state);
 
       /* Application updated the window size */
       if (state.platform_state.window.size_changed)

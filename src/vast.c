@@ -422,9 +422,9 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
     }
 }
 
-void vast_update(vast_platform_state *platform_state, vast_platform_memory *platform_memory)
+void vast_update(vast_platform_state *platform_state)
 {
-    vast_state *state = (vast_state *)platform_memory->data;
+    vast_state *state = (vast_state *)platform_state->memory.data;
     vast_platform_window *window = &platform_state->window;
     vast_platform_input_keyboard *keyboard = &platform_state->input.keyboard;
 
@@ -445,7 +445,7 @@ void vast_update(vast_platform_state *platform_state, vast_platform_memory *plat
         /* Assign memory regions */
         {
             u32 state_struct_size = (u32)sizeof(vast_state);
-            u8 *base = (u8 *)platform_memory->data;
+            u8 *base = (u8 *)platform_state->memory.data;
 
             /* Permanent */
             state->memory_region_permanent.data = base;
@@ -455,10 +455,10 @@ void vast_update(vast_platform_state *platform_state, vast_platform_memory *plat
             /* Transient */
             state->memory_region_transient.data = base + state_struct_size;
             state->memory_region_transient.offset = 0;
-            state->memory_region_transient.size = (platform_memory->size > state_struct_size) ? (platform_memory->size - state_struct_size) : 0;
+            state->memory_region_transient.size = (platform_state->memory.size > state_struct_size) ? (platform_state->memory.size - state_struct_size) : 0;
 
             /* Mark Platform Memory as consumed */
-            platform_memory->offset = platform_memory->size;
+            platform_state->memory.offset = platform_state->memory.size;
             platform_state->application_initialized = 1;
         }
 
