@@ -239,6 +239,26 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                 vast_ui_push_text(&ui_ctx, "Render Terrain", btn.rect, 0xFFFFFFFF);
             }
 
+            /* Scene Render Water */
+            {
+                vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
+
+                u32 btn_color = vstate->rendering_enabled_water ? 0xFF00AA00 : 0xFF0000AA;
+
+                if (btn.state & VAST_UI_STATE_HOVER)
+                {
+                    btn_color = vast_ui_color_darken(btn_color, 0.8f);
+                }
+
+                if (btn.state & VAST_UI_STATE_PRESSED)
+                {
+                    vstate->rendering_enabled_water = !vstate->rendering_enabled_water;
+                }
+
+                vast_ui_push_rect(&ui_ctx, btn, btn_color);
+                vast_ui_push_text(&ui_ctx, "Render Water", btn.rect, 0xFFFFFFFF);
+            }
+
             /* Scene Render Sky */
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));

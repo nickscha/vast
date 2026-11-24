@@ -361,10 +361,7 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
         /* Main rendering */
         platform_state->graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (state->rendering_enabled_terrain)
-        {
-            vast_tile_render(platform_state, state);
-        }
+        vast_tile_render(platform_state, state);
 
         if (state->rendering_enabled_sky)
         {
