@@ -665,6 +665,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
     }
 
     /* Render Tiles */
+    VAST_PROFILER_BEGIN(tile_render);
     {
         static u8 wireframe_enabled = 0;
         static u32 visualization_mode = 0;
@@ -699,106 +700,108 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
         gl->glEnable(GL_CULL_FACE);
         gl->glCullFace(GL_BACK);
-        gl->glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled ? GL_LINE : GL_FILL);
 
         gl->glEnable(GL_DEPTH_TEST);
         gl->glDepthMask(GL_TRUE);
         gl->glDepthFunc(GL_LESS);
 
-        VAST_PROFILER_BEGIN(tile_render);
+        gl->glUseProgram(tiles_shader.header.program);
+        gl->glUniformMatrix4fv(tiles_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
+        gl->glUniform3f(tiles_shader.loc_iResolution, (f32)platform_state->window.width, (f32)platform_state->window.height, 1.0f);
+        gl->glUniform1f(tiles_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
+        gl->glUniform3f(tiles_shader.loc_iMouse, (f32)platform_state->input.mouse.x, (f32)platform_state->input.mouse.y, 0.0f);
+        gl->glUniform3f(tiles_shader.loc_camera, state->camera.position.x, state->camera.position.y, state->camera.position.z);
+        gl->glUniform3f(tiles_shader.loc_camera_view_dir, state->camera.forward.x, state->camera.forward.y, state->camera.forward.z);
+        gl->glUniform3f(tiles_shader.loc_sun_dir, state->sun_direction.x, state->sun_direction.y, state->sun_direction.z);
+        gl->glUniform1f(tiles_shader.loc_visualization_mode, (f32)visualization_mode);
 
-        if (state->rendering_enabled_terrain)
+        gl->glUniform1f(tiles_shader.loc_tile_size, t.world_size);
+        gl->glUniform1i(tiles_shader.loc_heightmap, 0);
+        gl->glUniform1i(tiles_shader.loc_normalmap, 1);
+
+        gl->glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled ? GL_LINE : GL_FILL);
+
+        for (lod = 0; lod < LOD_COUNT; ++lod)
         {
-            gl->glUseProgram(tiles_shader.header.program);
-            gl->glUniformMatrix4fv(tiles_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
-            gl->glUniform3f(tiles_shader.loc_iResolution, (f32)platform_state->window.width, (f32)platform_state->window.height, 1.0f);
-            gl->glUniform1f(tiles_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
-            gl->glUniform3f(tiles_shader.loc_iMouse, (f32)platform_state->input.mouse.x, (f32)platform_state->input.mouse.y, 0.0f);
-            gl->glUniform3f(tiles_shader.loc_camera, state->camera.position.x, state->camera.position.y, state->camera.position.z);
-            gl->glUniform3f(tiles_shader.loc_camera_view_dir, state->camera.forward.x, state->camera.forward.y, state->camera.forward.z);
-            gl->glUniform3f(tiles_shader.loc_sun_dir, state->sun_direction.x, state->sun_direction.y, state->sun_direction.z);
-            gl->glUniform1f(tiles_shader.loc_visualization_mode, (f32)visualization_mode);
 
-            gl->glUniform1f(tiles_shader.loc_tile_size, t.world_size);
-            gl->glUniform1i(tiles_shader.loc_heightmap, 0);
-            gl->glUniform1i(tiles_shader.loc_normalmap, 1);
+            i32 instance_count = 0;
+            u32 tile_index;
+            i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
 
-            for (lod = 0; lod < LOD_COUNT; ++lod)
+            for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
             {
+                i32 tile_lod_current = t.tile_lod_current[tile_index];
+                i32 texture_array_layer = texture_layer[tile_index];
 
-                i32 instance_count = 0;
-                u32 tile_index;
-                i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
-
-                for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
-                {
-                    i32 tile_lod_current = t.tile_lod_current[tile_index];
-                    i32 texture_array_layer = texture_layer[tile_index];
-
-                    if (tile_lod_current != (i32)lod || texture_array_layer < 0)
-                    {
-                        continue;
-                    }
-
-                    if (!vast_tile_is_visible(&t, &frustum, tile_index, -200.0f, 600.0f))
-                    {
-                        /* Stop LOD geomorphing since the tile is not visible */
-                        tile_transition_timer[tile_index] = 1.0f;
-                        continue;
-                    }
-
-                    /* LOD Geomorphing: Fine to Coarse transition when moving backwards */
-                    if (vast_tile_is_on_lod_outer_edge(&t, tile_index))
-                    {
-                        f32 threshold = 0.1f;
-
-                        /* 1.0f at boundary - 0.0f at edge */
-                        f32 camera_tile_factor = vast_tile_calculate_camera_backface_edge_factor(
-                            &t,
-                            state->camera.position.x, state->camera.position.z,
-                            state->camera.forward.x, state->camera.forward.z,
-                            threshold);
-
-                        (void)camera_tile_factor;
-
-                        /*tile_transition_timer[tile_index] = camera_tile_factor;*/
-                    }
-
-                    instance_buffer[instance_count].offset_x = (f32)t.tile_x[tile_index];
-                    instance_buffer[instance_count].offset_z = (f32)t.tile_z[tile_index];
-                    instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
-                    instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, tile_index);
-                    instance_buffer[instance_count].transition_factor = tile_transition_timer[tile_index];
-                    instance_count++;
-                }
-
-                if (instance_count == 0)
+                if (tile_lod_current != (i32)lod || texture_array_layer < 0)
                 {
                     continue;
                 }
 
-                gl->glUniform1f(tiles_shader.loc_grid_res, (f32)grid_res);
+                if (!vast_tile_is_visible(&t, &frustum, tile_index, -200.0f, 600.0f))
+                {
+                    /* Stop LOD geomorphing since the tile is not visible */
+                    tile_transition_timer[tile_index] = 1.0f;
+                    continue;
+                }
 
-                gl->glActiveTexture(GL_TEXTURE0);
-                gl->glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[lod]);
+                /* LOD Geomorphing: Fine to Coarse transition when moving backwards */
+                if (vast_tile_is_on_lod_outer_edge(&t, tile_index))
+                {
+                    f32 threshold = 0.1f;
 
-                gl->glActiveTexture(GL_TEXTURE1);
-                gl->glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[lod]);
+                    /* 1.0f at boundary - 0.0f at edge */
+                    f32 camera_tile_factor = vast_tile_calculate_camera_backface_edge_factor(
+                        &t,
+                        state->camera.position.x, state->camera.position.z,
+                        state->camera.forward.x, state->camera.forward.z,
+                        threshold);
 
-                gl->glBindBuffer(GL_ARRAY_BUFFER, lod_instance_vbos[lod]);
-                gl->glBufferSubData(GL_ARRAY_BUFFER, 0, instance_count * (i32)sizeof(vast_tile_instance_data), instance_buffer);
+                    (void)camera_tile_factor;
 
-                gl->glBindVertexArray(grid_vaos[lod]);
-                gl->glDrawElementsInstanced(GL_TRIANGLES, gridIndexCounts[lod], GL_UNSIGNED_SHORT, VAST_NULL, instance_count);
+                    /*tile_transition_timer[tile_index] = camera_tile_factor;*/
+                }
 
-                state->rendering_draw_calls_terrain++;
+                instance_buffer[instance_count].offset_x = (f32)t.tile_x[tile_index];
+                instance_buffer[instance_count].offset_z = (f32)t.tile_z[tile_index];
+                instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
+                instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, tile_index);
+                instance_buffer[instance_count].transition_factor = tile_transition_timer[tile_index];
+                instance_count++;
             }
+
+            if (instance_count == 0)
+            {
+                continue;
+            }
+
+            if (!state->rendering_enabled_terrain)
+            {
+                continue;
+            }
+
+            gl->glUniform1f(tiles_shader.loc_grid_res, (f32)grid_res);
+
+            gl->glActiveTexture(GL_TEXTURE0);
+            gl->glBindTexture(GL_TEXTURE_2D_ARRAY, lod_heightmap_arrays[lod]);
+
+            gl->glActiveTexture(GL_TEXTURE1);
+            gl->glBindTexture(GL_TEXTURE_2D_ARRAY, lod_normalmap_arrays[lod]);
+
+            gl->glBindBuffer(GL_ARRAY_BUFFER, lod_instance_vbos[lod]);
+            gl->glBufferSubData(GL_ARRAY_BUFFER, 0, instance_count * (i32)sizeof(vast_tile_instance_data), instance_buffer);
+
+            gl->glBindVertexArray(grid_vaos[lod]);
+            gl->glDrawElementsInstanced(GL_TRIANGLES, gridIndexCounts[lod], GL_UNSIGNED_SHORT, VAST_NULL, instance_count);
+
+            state->rendering_draw_calls_terrain++;
         }
-        VAST_PROFILER_END(tile_render);
+
+        gl->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        gl->glDisable(GL_CULL_FACE);
 
         /* Render Water Pass */
         VAST_PROFILER_BEGIN(water_render);
-        if (state->rendering_enabled_water)
         {
             gl->glUseProgram(water_shader.header.program);
             gl->glUniformMatrix4fv(water_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
@@ -853,6 +856,11 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                     continue;
                 }
 
+                if (!state->rendering_enabled_water)
+                {
+                    continue;
+                }
+
                 gl->glUniform1f(water_shader.loc_grid_res, (f32)grid_res);
 
                 gl->glActiveTexture(GL_TEXTURE0);
@@ -866,20 +874,19 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
                 state->rendering_draw_calls_water++;
             }
+
+            /* Restore OpenGL state */
+            gl->glDepthMask(GL_TRUE);
+            gl->glDisable(GL_BLEND);
         }
         VAST_PROFILER_END(water_render);
-
-        /* Restore OpenGL state */
-        gl->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        gl->glDisable(GL_CULL_FACE);
-        gl->glDepthMask(GL_TRUE);
-        gl->glDisable(GL_BLEND);
 
         if (state->rendering_enabled_post)
         {
             gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
     }
+    VAST_PROFILER_END(tile_render);
 }
 
 #endif /* VAST_TILE_RENDERER_H */
