@@ -333,7 +333,7 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
 
                 if (post_processing_shader_heightmap_now != post_processing_shader_heightmap_last)
                 {
-                    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&platform_state->api, &state->memory_region_transient, "shaders/vast_post.fs");
+                    u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&platform_state->api, &state->memory_region_transient, "shaders/40_vast_post.fs");
 
                     if (!shader_data_fragment)
                     {
