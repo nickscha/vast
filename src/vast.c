@@ -122,6 +122,63 @@ VAST_API VAST_INLINE void vast_camera_update_movement(vast_platform_state *platf
     vast_camera_update(camera);
 }
 
+VAST_API VAST_INLINE void vast_sun_update_movement(vast_platform_state *platform_state, vast_state *state)
+{
+    static u8 move_sun = 0;
+    static u8 move_sun_loop = 0;
+    static f32 move_val = 0.0f;
+
+    vast_vec3 sun_dir;
+
+    if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_M] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_M])
+    {
+        move_sun = !move_sun;
+
+        if (move_sun)
+        {
+            move_val = 0.0f;
+            move_sun_loop = 0;
+        }
+    }
+
+    sun_dir = vast_vec3_init(0.0f, 0.0f, -1.0f);
+
+    if (move_sun)
+    {
+
+        f32 t = (f32)platform_state->timing.time_elapsed * 0.5f;
+
+        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_L] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_L])
+        {
+            move_sun_loop = !move_sun_loop;
+        }
+
+        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_UP])
+        {
+            move_val += (f32)platform_state->timing.time_delta;
+        }
+
+        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_DOWN])
+        {
+            move_val -= (f32)platform_state->timing.time_delta;
+
+            if (move_val < 0.0f)
+            {
+                move_val = 0.0f;
+            }
+        }
+
+        sun_dir = vast_vec3_init(0.0f, vast_sinf(move_val), -vast_cosf(move_val));
+
+        if (move_sun_loop)
+        {
+            sun_dir = vast_vec3_init(0.0f, vast_sinf(t * 0.025f), -vast_cosf(t * 0.025f));
+        }
+    }
+
+    state->sun_direction = sun_dir;
+}
+
 typedef struct shader_post_processing
 {
     shader_header header;
@@ -154,62 +211,7 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
     vast_camera_update_movement(platform_state, state);
 
     /* Sun/Moon movement logic */
-    {
-
-        static u8 move_sun = 0;
-        static u8 move_sun_loop = 0;
-        static f32 move_val = 0.0f;
-
-        vast_vec3 sun_dir;
-
-        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_M] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_M])
-        {
-            move_sun = !move_sun;
-
-            if (move_sun)
-            {
-                move_val = 0.0f;
-                move_sun_loop = 0;
-            }
-        }
-
-        sun_dir = vast_vec3_init(0.0f, 0.0f, -1.0f);
-
-        if (move_sun)
-        {
-
-            f32 t = (f32)platform_state->timing.time_elapsed * 0.5f;
-
-            if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_L] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_L])
-            {
-                move_sun_loop = !move_sun_loop;
-            }
-
-            if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_UP])
-            {
-                move_val += (f32)platform_state->timing.time_delta;
-            }
-
-            if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_DOWN])
-            {
-                move_val -= (f32)platform_state->timing.time_delta;
-
-                if (move_val < 0.0f)
-                {
-                    move_val = 0.0f;
-                }
-            }
-
-            sun_dir = vast_vec3_init(0.0f, vast_sinf(move_val), -vast_cosf(move_val));
-
-            if (move_sun_loop)
-            {
-                sun_dir = vast_vec3_init(0.0f, vast_sinf(t * 0.025f), -vast_cosf(t * 0.025f));
-            }
-        }
-
-        state->sun_direction = vast_vec3_normalize(sun_dir);
-    }
+    vast_sun_update_movement(platform_state, state);
 
     state->rendering_draw_calls_terrain = 0;
     state->rendering_draw_calls_water = 0;
