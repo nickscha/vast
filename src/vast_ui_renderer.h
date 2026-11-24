@@ -168,7 +168,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         static f32 win_y = 0.0f;
 
         f32 win_w = 180.0f;
-        f32 win_h = 270.0f;
+        f32 win_h = 285.0f;
 
         static f32 font_size = 16.0f;
         static f32 font_advancement_factor = 0.55f;

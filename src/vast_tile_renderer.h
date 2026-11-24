@@ -673,11 +673,6 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
         u32 lod;
 
-        vast_mat4x4 projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(state->camera.fov), (f32)platform_state->window.width / (f32)platform_state->window.height, 0.1f, 8192.0f);
-        vast_mat4x4 view = vast_mat4x4_look_at(state->camera.position, vast_vec3_add(state->camera.position, state->camera.forward), state->camera.up);
-        vast_mat4x4 mvp = vast_mat4x4_mul(projection, view);
-        vast_frustum frustum = vast_frustum_extract(mvp);
-
         if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_TAB] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_TAB])
         {
             wireframe_enabled = !wireframe_enabled;
@@ -706,7 +701,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         gl->glDepthFunc(GL_LESS);
 
         gl->glUseProgram(tiles_shader.header.program);
-        gl->glUniformMatrix4fv(tiles_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
+        gl->glUniformMatrix4fv(tiles_shader.loc_view_projection, 1, GL_FALSE, state->view_projection.e);
         gl->glUniform3f(tiles_shader.loc_iResolution, (f32)platform_state->window.width, (f32)platform_state->window.height, 1.0f);
         gl->glUniform1f(tiles_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
         gl->glUniform3f(tiles_shader.loc_iMouse, (f32)platform_state->input.mouse.x, (f32)platform_state->input.mouse.y, 0.0f);
@@ -738,7 +733,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                     continue;
                 }
 
-                if (!vast_tile_is_visible(&t, &frustum, tile_index, -200.0f, 600.0f))
+                if (!vast_tile_is_visible(&t, &state->view_frustum, tile_index, -200.0f, 600.0f))
                 {
                     /* Stop LOD geomorphing since the tile is not visible */
                     tile_transition_timer[tile_index] = 1.0f;
@@ -804,7 +799,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         VAST_PROFILER_BEGIN(water_render);
         {
             gl->glUseProgram(water_shader.header.program);
-            gl->glUniformMatrix4fv(water_shader.loc_view_projection, 1, GL_FALSE, mvp.e);
+            gl->glUniformMatrix4fv(water_shader.loc_view_projection, 1, GL_FALSE, state->view_projection.e);
             gl->glUniform1f(water_shader.loc_water_level, global_water_level);
             gl->glUniform1f(water_shader.loc_tile_size, t.world_size);
             gl->glUniform1f(water_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
@@ -840,7 +835,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                         continue;
                     }
 
-                    if (!vast_tile_is_visible(&t, &frustum, tile_index, -200.0f, 600.0f))
+                    if (!vast_tile_is_visible(&t, &state->view_frustum, tile_index, -200.0f, 600.0f))
                     {
                         continue;
                     }

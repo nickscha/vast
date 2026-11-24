@@ -361,6 +361,14 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
         /* Main rendering */
         platform_state->graphics.opengl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        /* Updated matrices*/
+        {
+            state->projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(state->camera.fov), (f32)platform_state->window.width / (f32)platform_state->window.height, 0.1f, 8192.0f);
+            state->view = vast_mat4x4_look_at(state->camera.position, vast_vec3_add(state->camera.position, state->camera.forward), state->camera.up);
+            state->view_projection = vast_mat4x4_mul(state->projection, state->view);
+            state->view_frustum = vast_frustum_extract(state->view_projection);
+        }
+
         vast_tile_render(platform_state, state);
 
         if (state->rendering_enabled_sky)
@@ -376,12 +384,8 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
         {
             vast_opengl_api *gl = &platform_state->graphics.opengl;
 
-            vast_mat4x4 projection = vast_mat4x4_perspective(VAST_DEG_TO_RAD(state->camera.fov), (f32)platform_state->window.width / (f32)platform_state->window.height, 0.1f, 8192.0f);
-            vast_mat4x4 view = vast_mat4x4_look_at(state->camera.position, vast_vec3_add(state->camera.position, state->camera.forward), state->camera.up);
-            vast_mat4x4 mvp = vast_mat4x4_mul(projection, view);
-
             vast_vec3 sun_world_pos = vast_vec3_add(state->camera.position, vast_vec3_mulf(state->sun_direction, 5000.0f));
-            vast_vec4 sun_clip = vast_mat4x4_mul_vec4(mvp, vast_vec4_init(sun_world_pos.x, sun_world_pos.y, sun_world_pos.z, 1.0f));
+            vast_vec4 sun_clip = vast_mat4x4_mul_vec4(state->view_projection, vast_vec4_init(sun_world_pos.x, sun_world_pos.y, sun_world_pos.z, 1.0f));
             vast_vec2 sun_screen_pos = vast_vec2_init(0.5f, 0.5f);
 
             if (sun_clip.w > 0.0f)
