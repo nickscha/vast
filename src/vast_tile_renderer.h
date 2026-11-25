@@ -297,8 +297,6 @@ VAST_API void vast_tile_shader_hot_reload(
  * # [SECTION] Texture Pool Slot Allocations and Ownership Tracking
  * #############################################################################
  */
-#define VAST_TEXTURE_LAYER_USED(used_ptr, lod_idx, layer_idx) ((used_ptr)[((u32)(lod_idx) * (u32)VAST_TILES_TOTAL) + (u32)(layer_idx)])
-
 /* TODO(nickscha): Not bulletproof yet */
 VAST_API i32 vast_tile_aquire_texture_array_layer(
     vast_tiles *t, u32 tile_index,
@@ -339,7 +337,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(
     /* Current LOD has texture layer assigned. Free it. */
     if (texture_layer_current >= 0 && lod_current >= 0)
     {
-        VAST_TEXTURE_LAYER_USED(texture_layer_used, lod_current, texture_layer_current) = 0;
+        texture_layer_used[lod_current * VAST_TILES_TOTAL + texture_layer_current] = 0;
         texture_layer_next_free[lod_current] = texture_layer_current;
     }
 
@@ -351,7 +349,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(
     }
 
     /* Mark as used */
-    VAST_TEXTURE_LAYER_USED(texture_layer_used, lod_required, texture_layer_assigned) = 1;
+    texture_layer_used[lod_required * VAST_TILES_TOTAL + texture_layer_assigned] = 1;
 
     /* Find the next free texture layer */
     {
@@ -360,7 +358,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(
 
         for (i = 0; i < (u32)texture_array_layer_capacity_required; ++i)
         {
-            if (!VAST_TEXTURE_LAYER_USED(texture_layer_used, lod_required, i))
+            if (!texture_layer_used[lod_required * VAST_TILES_TOTAL + (i32)i])
             {
                 next_free = (i32)i;
                 break;
