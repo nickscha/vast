@@ -203,6 +203,7 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
     /* Sun/Moon movement logic */
     vast_update_movement_sun(platform_state, state);
 
+    /* Reset draw calls accumulators */
     state->rendering_draw_calls_terrain = 0;
     state->rendering_draw_calls_water = 0;
     state->rendering_draw_calls_sky = 0;
