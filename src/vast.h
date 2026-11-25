@@ -318,7 +318,7 @@ i32 DllMainCRTStartup(void)
 }
 #endif /* _WIN32 */
 #endif /* VAST_RELEASE */
-#else
+#else  /* VAST_APPLICATION */
 
 #ifndef VAST_RELEASE
 VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state)
@@ -350,7 +350,7 @@ VAST_API VAST_INLINE void vast_update_stub(vast_platform_state *platform_state)
 typedef void (*vast_update_function)(vast_platform_state *platform_state);
 
 static vast_update_function vast_update = vast_update_stub;
-#else
+#else /* VAST_RELEASE*/
 #include "vast.c"
 #endif /* VAST_RELEASE */
 
