@@ -10,10 +10,12 @@
 /* TODO(nickscha): Unclean !!! */
 static vast_platform_api *api;
 
+#ifndef VAST_RELEASE
 VAST_API f64 vast_profiler_time_ms(void)
 {
     return api->time_ms_current();
 }
+#endif
 
 VAST_API VAST_INLINE void vast_update_movement_camera(vast_platform_state *platform_state, vast_state *state)
 {
