@@ -20,14 +20,6 @@
 #define VAST_TILES_TOTAL (VAST_TILES_PER_SIDE * VAST_TILES_PER_SIDE)
 #define VAST_TILES_MAX_LOD_LEVELS 6 /* Not more than this */
 
-/* Edge Mask */
-#define VAST_EDGE_NONE 0
-#define VAST_EDGE_NORTH 1 << 0
-#define VAST_EDGE_SOUTH 1 << 1
-#define VAST_EDGE_WEST 1 << 2
-#define VAST_EDGE_EAST 1 << 3
-#define VAST_EDGE_COMBINATIONS 16
-
 /* SoA tiles setup */
 typedef struct vast_tiles
 {
@@ -125,84 +117,6 @@ VAST_API VAST_INLINE u8 vast_tile_is_on_lod_outer_edge(vast_tiles *t, u32 tile_i
     }
 
     return 0;
-}
-
-VAST_API VAST_INLINE u8 vast_tile_get_lod_edge_mask(vast_tiles *t, u32 tile_idx)
-{
-    i32 current_lod = t->tile_lod_current[tile_idx];
-    i32 x, z;
-    u8 mask;
-
-    if (current_lod < 0)
-    {
-        return VAST_EDGE_NONE;
-    }
-
-    x = t->tile_x[tile_idx];
-    z = t->tile_z[tile_idx];
-    mask = VAST_EDGE_NONE;
-
-    /* North neighbor (z - 1) */
-    {
-        u32 n_idx = vast_tile_index(x, z - 1);
-
-        if (t->tile_x[n_idx] == x && t->tile_z[n_idx] == z - 1)
-        {
-            i32 n_lod = t->tile_lod_current[n_idx];
-
-            if (n_lod > current_lod)
-            {
-                mask |= VAST_EDGE_NORTH;
-            }
-        }
-    }
-
-    /* East neighbor (x + 1) */
-    {
-        u32 e_idx = vast_tile_index(x + 1, z);
-
-        if (t->tile_x[e_idx] == x + 1 && t->tile_z[e_idx] == z)
-        {
-            i32 e_lod = t->tile_lod_current[e_idx];
-
-            if (e_lod > current_lod)
-            {
-                mask |= VAST_EDGE_EAST;
-            }
-        }
-    }
-
-    /* South neighbor (z + 1) */
-    {
-        u32 s_idx = vast_tile_index(x, z + 1);
-
-        if (t->tile_x[s_idx] == x && t->tile_z[s_idx] == z + 1)
-        {
-            i32 s_lod = t->tile_lod_current[s_idx];
-
-            if (s_lod > current_lod)
-            {
-                mask |= VAST_EDGE_SOUTH;
-            }
-        }
-    }
-
-    /* West neighbor (x - 1) */
-    {
-        u32 w_idx = vast_tile_index(x - 1, z);
-
-        if (t->tile_x[w_idx] == x - 1 && t->tile_z[w_idx] == z)
-        {
-            i32 w_lod = t->tile_lod_current[w_idx];
-
-            if (w_lod > current_lod)
-            {
-                mask |= VAST_EDGE_WEST;
-            }
-        }
-    }
-
-    return mask;
 }
 
 VAST_API VAST_INLINE u8 vast_tile_is_dirty(vast_tiles *t, u32 tile_index)
