@@ -40,7 +40,8 @@ typedef struct vast_tiles
     i32 tile_z[VAST_TILES_TOTAL];
     i8 tile_lod_required[VAST_TILES_TOTAL];           /* The LOD required after update */
     i8 tile_lod_current[VAST_TILES_TOTAL];            /* The current LOD used (has to be updated by application) */
-    f32 tile_lod_transition_factor[VAST_TILES_TOTAL]; /* TOOD(nickscha): LOD Geomorphing factor */
+    f32 tile_lod_transition_factor[VAST_TILES_TOTAL]; /* TODO(nickscha): LOD Geomorphing factor */
+    i32 texture_layer[VAST_TILES_TOTAL];              /* TODO(nickscha): OpenGL state, shouldnt be here but currently easier to manage */
 
     /* Sparse Dirty flag tracking */
     u16 dirty_indices[VAST_TILES_TOTAL]; /* Which index ot the tile_x/z is marked dirty */
@@ -325,6 +326,7 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, f32 camera_position_x, 
             t->tile_lod_required[tile_index] = tile_lod;
             t->tile_lod_current[tile_index] = -1;             /* -1 = Uninitialized/Unknown */
             t->tile_lod_transition_factor[tile_index] = 1.0f; /* Set transition to default 1.0f (unchanged) */
+            t->texture_layer[tile_index] = -1;                /* -1 = Uninitialized/Unknown */
             t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
             t->tile_per_lod_count[(i32)tile_lod]++;
 

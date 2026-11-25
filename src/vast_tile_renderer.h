@@ -107,8 +107,6 @@ static s8 *vast_tile_texture_vertex_data =
  * # [SECTION] Tile Renderer
  * #############################################################################
  */
-#define VAST_TILE_GRID_SIZE 65
-
 VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_state *vstate, vast_tile_shader_heightmap *tiles_hm_shader)
 {
     u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/10_vast_tile_heightmap_texture.fs");
@@ -299,12 +297,6 @@ VAST_API void vast_tile_shader_hot_reload(
  * # [SECTION] Texture Pool Slot Allocations and Ownership Tracking
  * #############################################################################
  */
-typedef struct vast_tile_pool_slot
-{
-    i32 current_lod;
-    i32 physical_layer;
-} vast_tile_pool_slot;
-
 /* TODO(nickscha) use calculated max lod level from tiles struct */
 #define LOD_COUNT 6
 
@@ -318,13 +310,9 @@ static i32 lod_texture_pool_size[LOD_COUNT] = {
     /* steady */ 728 + /* burst headroom */ 64  /* LOD 5:   4x4   height,   32x32   normal */
 };
 
-static i32 texture_layer[VAST_TILES_TOTAL] = {0};
-
 /* TODO(nickscha): Not bulletproof yet */
 VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
 {
-    static u8 initialized = 0;
-
     static u8 texture_layer_used[LOD_COUNT][VAST_TILES_TOTAL] = {0};
     static i32 texture_layer_next_free[LOD_COUNT] = {0};
 
@@ -335,24 +323,13 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
     i32 texture_layer_current;
     i32 texture_layer_assigned;
 
-    if (!initialized)
-    {
-
-        for (i = 0; i < VAST_TILES_TOTAL; ++i)
-        {
-            texture_layer[i] = -1;
-        }
-
-        initialized = 1;
-    }
-
     lod_current = t->tile_lod_current[tile_index];
     lod_required = t->tile_lod_required[tile_index];
 
     /* Nothing changes */
-    if (lod_current == lod_required && texture_layer[tile_index] >= 0)
+    if (lod_current == lod_required && t->texture_layer[tile_index] >= 0)
     {
-        return texture_layer[tile_index];
+        return t->texture_layer[tile_index];
     }
 
     if (lod_current == -1)
@@ -360,7 +337,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
         lod_current = lod_required;
     }
 
-    texture_layer_current = texture_layer[tile_index];
+    texture_layer_current = t->texture_layer[tile_index];
 
     /* Current LOD has texture layer assigned. Free it. */
     if (texture_layer_current >= 0)
@@ -395,7 +372,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
             return -1;
         }
 
-        texture_layer[tile_index] = texture_layer_assigned;
+        t->texture_layer[tile_index] = texture_layer_assigned;
     }
 
     return texture_layer_assigned;
@@ -417,18 +394,24 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
     static vast_tile_shader_water water_shader = {0};
     static f32 global_water_level = -0.5f;
 
-    static u32 grid_vaos[LOD_COUNT];
-    static u32 grid_vbos[LOD_COUNT];
-    static u32 grid_ibos[LOD_COUNT];
-    static i32 gridIndexCounts[LOD_COUNT] = {0};
-    static u32 lod_instance_vbos[LOD_COUNT];
+    static u32 *grid_vaos;
+    static u32 *grid_vbos;
+    static u32 *grid_ibos;
+    static i32 *gridIndexCounts;
+    static u32 *lod_instance_vbos;
 
     static u32 scratch_vao;
     static u32 scratch_fbo;
 
     /* Per-LOD Texture Array Handles */
-    static u32 lod_heightmap_arrays[LOD_COUNT];
-    static u32 lod_normalmap_arrays[LOD_COUNT];
+    static u32 *lod_heightmap_arrays;
+    static u32 *lod_normalmap_arrays;
+
+    /* Base resolutions for height and normalmap */
+    static i32 resolution_base_heightmap = 64;
+    static i32 resolution_base_normalmap = 1024;
+
+    static u32 lod_count = 0;
 
     vast_opengl_api *gl = &platform_state->graphics.opengl;
 
@@ -441,14 +424,27 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         vast_tiles_init(&t, state->camera.position.x, state->camera.position.z, tile_world_size);
         VAST_PROFILER_END(tile_init);
 
+        lod_count = (u32)t.tile_lod_max + 1;
+
+        /* Allocate permanent tile memory */
+        {
+            grid_vaos = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+            grid_vbos = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+            grid_ibos = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+            gridIndexCounts = (i32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(i32));
+            lod_instance_vbos = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+            lod_heightmap_arrays = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+            lod_normalmap_arrays = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+        }
+
         /* Setup tiles texture pools */
         {
             u32 lod;
 
-            for (lod = 0; lod < LOD_COUNT; ++lod)
+            for (lod = 0; lod < lod_count; ++lod)
             {
-                i32 resolution_heightmap = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
-                i32 resolution_normalmap = 1024 / (1 << lod);
+                i32 resolution_heightmap = resolution_base_heightmap / (1 << lod) + 1; /* +1 because of skirts */
+                i32 resolution_normalmap = resolution_base_normalmap / (1 << lod);
                 i32 texture_pool_size = lod_texture_pool_size[lod];
 
                 /* Heightmap Texture Array (GL_R32F / 4 byte) */
@@ -486,14 +482,15 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             u32 lod;
 
             /* Allocate enough memory for vertices and indices */
-            u32 vertices_count = VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE + 600;
-            u32 indices_count = (VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE * 6 + 1200);
+            u32 vertices_count = ((u32)resolution_base_heightmap + 1) * ((u32)resolution_base_heightmap + 1) + 600;
+            u32 indices_count = ((u32)resolution_base_heightmap + 1) * ((u32)resolution_base_heightmap + 1) * 6 + 2400;
+
             vast_geometry_vertex_skirt *vertices = (vast_geometry_vertex_skirt *)vast_memory_allocate(&state->memory_region_transient, sizeof(vast_geometry_vertex_skirt) * vertices_count);
             u16 *indices = (u16 *)vast_memory_allocate(&state->memory_region_transient, sizeof(u16) * indices_count);
 
-            for (lod = 0; lod < (u32)t.tile_lod_max + 1; ++lod)
+            for (lod = 0; lod < lod_count; ++lod)
             {
-                i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)lod)) + 1;
+                i32 grid_res = (resolution_base_heightmap / (1 << lod)) + 1;
 
                 gridIndexCounts[lod] = vast_geometry_grid_skirt(grid_res, vertices, indices);
 
@@ -584,8 +581,8 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
             i8 tile_lod_required = t.tile_lod_required[tile_idx];
 
-            i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)tile_lod_required)) + 1;
-            u32 normal_tex_size = 1024 / (1 << (u32)tile_lod_required);
+            i32 height_tex_size = resolution_base_heightmap / (1 << tile_lod_required) + 1; /* +1 because of skirts */
+            i32 normal_tex_size = resolution_base_normalmap / (1 << tile_lod_required);
 
             i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx);
 
@@ -615,7 +612,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             VAST_PROFILER_BEGIN(tile_render_heightmap);
             {
                 gl->glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_heightmap_arrays[(u32)tile_lod_required], 0, texture_array_layer);
-                gl->glViewport(0, 0, (i32)height_tex_size, (i32)height_tex_size);
+                gl->glViewport(0, 0, height_tex_size, height_tex_size);
 
                 gl->glUseProgram(tiles_hm_shader.header.program);
                 gl->glUniform2f(tiles_hm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
@@ -632,7 +629,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             VAST_PROFILER_BEGIN(tile_render_normalmap);
             {
                 gl->glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, lod_normalmap_arrays[(u32)tile_lod_required], 0, texture_array_layer);
-                gl->glViewport(0, 0, (i32)normal_tex_size, (i32)normal_tex_size);
+                gl->glViewport(0, 0, normal_tex_size, normal_tex_size);
 
                 gl->glUseProgram(tiles_nm_shader.header.program);
                 gl->glUniform2f(tiles_nm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
@@ -709,17 +706,17 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
         gl->glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled ? GL_LINE : GL_FILL);
 
-        for (lod = 0; lod < LOD_COUNT; ++lod)
+        for (lod = 0; lod < lod_count; ++lod)
         {
 
             i32 instance_count = 0;
             u32 tile_index;
-            i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
+            i32 grid_res = (resolution_base_heightmap / (1 << lod)) + 1;
 
             for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
             {
                 i32 tile_lod_current = t.tile_lod_current[tile_index];
-                i32 texture_array_layer = texture_layer[tile_index];
+                i32 texture_array_layer = t.texture_layer[tile_index];
 
                 if (tile_lod_current != (i32)lod || texture_array_layer < 0)
                 {
@@ -808,12 +805,12 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                but disable depth writing so overlapping water waves blend smoothly */
             gl->glDepthMask(GL_FALSE);
 
-            for (lod = 0; lod < LOD_COUNT; ++lod)
+            for (lod = 0; lod < lod_count; ++lod)
             {
                 i32 instance_count = 0;
                 u32 tile_index;
-                i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << lod)) + 1;
-                i32 height_tex_size = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)lod)) + 1; /* Match your terrain height size calculation */
+                i32 grid_res = (resolution_base_heightmap / (1 << lod)) + 1;
+                i32 height_tex_size = (resolution_base_heightmap / (1 << (u32)lod)) + 1; /* Match your terrain height size calculation */
 
                 gl->glUniform1f(water_shader.loc_grid_res, (f32)grid_res);
                 gl->glUniform1f(water_shader.loc_texture_size, (f32)height_tex_size);
@@ -821,7 +818,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
                 {
                     i32 tile_lod_current = t.tile_lod_current[tile_index];
-                    i32 texture_array_layer = texture_layer[tile_index];
+                    i32 texture_array_layer = t.texture_layer[tile_index];
 
                     if (tile_lod_current != (i32)lod || texture_array_layer < 0)
                     {
