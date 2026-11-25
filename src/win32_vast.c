@@ -630,7 +630,7 @@ VAST_API VAST_INLINE i64 win32_window_callback(void *window, u32 message, u64 wP
   {
     /* Check if a device notification arrived in order to find out when to requery XInput controller states */
     /* DBT_DEVNODES_CHANGED is the most reliable for USB plugging/unplugging */
-    if (wParam == DBT_DEVNODES_CHANGED || wParam == DBT_DEVICEARRIVAL || wParam == DBT_DEVICEREMOVECOMPLETE)
+    if (state && (wParam == DBT_DEVNODES_CHANGED || wParam == DBT_DEVICEARRIVAL || wParam == DBT_DEVICEREMOVECOMPLETE))
     {
       state->controller_check_needed = 1;
     }
