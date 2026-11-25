@@ -108,7 +108,6 @@ static s8 *vast_tile_texture_vertex_data =
  * #############################################################################
  */
 #define VAST_TILE_GRID_SIZE 65
-#define VAST_TILE_MAX_INDICES ((VAST_TILE_GRID_SIZE - 1) * (VAST_TILE_GRID_SIZE - 1) * 6)
 
 VAST_API void vast_tile_shader_heightmap_load(vast_platform_state *state, vast_state *vstate, vast_tile_shader_heightmap *tiles_hm_shader)
 {
@@ -486,11 +485,15 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         {
             u32 lod;
 
+            /* Allocate enough memory for vertices and indices */
+            u32 vertices_count = VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE + 600;
+            u32 indices_count = (VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE * 6 + 1200);
+            vast_geometry_vertex_skirt *vertices = (vast_geometry_vertex_skirt *)vast_memory_allocate(&state->memory_region_transient, sizeof(vast_geometry_vertex_skirt) * vertices_count);
+            u16 *indices = (u16 *)vast_memory_allocate(&state->memory_region_transient, sizeof(u16) * indices_count);
+
             for (lod = 0; lod < (u32)t.tile_lod_max + 1; ++lod)
             {
                 i32 grid_res = ((VAST_TILE_GRID_SIZE - 1) / (1 << (u32)lod)) + 1;
-                vast_geometry_vertex_skirt vertices[VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE + 600];
-                u16 indices[VAST_TILE_GRID_SIZE * VAST_TILE_GRID_SIZE * 6 + 1200];
 
                 gridIndexCounts[lod] = vast_geometry_grid_skirt(grid_res, vertices, indices);
 
@@ -500,7 +503,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 /* 1. Vertex Buffer */
                 gl->glGenBuffers(1, &grid_vbos[lod]);
                 gl->glBindBuffer(GL_ARRAY_BUFFER, grid_vbos[lod]);
-                gl->glBufferData(GL_ARRAY_BUFFER, (i32)sizeof(vast_geometry_vertex_skirt) * (grid_res * grid_res + 600), vertices, GL_STATIC_DRAW);
+                gl->glBufferData(GL_ARRAY_BUFFER, (i32)sizeof(vast_geometry_vertex_skirt) * (i32)vertices_count, vertices, GL_STATIC_DRAW);
 
                 /* 2. Index Buffer */
                 gl->glGenBuffers(1, &grid_ibos[lod]);
