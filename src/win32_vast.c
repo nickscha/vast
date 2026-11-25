@@ -736,13 +736,15 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
 {
   s8 *dllTempName = "vast_temp.dll";
 
-  win32_print("[win32] load application\n");
+  win32_print("[win32] load application: ");
+  win32_print(dllTempName);
+  win32_print("\n");
 
   if (state->application.hDLL != VAST_NULL)
   {
     if (!FreeLibrary(state->application.hDLL))
     {
-      win32_print("[win32] cannot free library: ");
+      win32_print("[win32][error] cannot free library: ");
       win32_print(dllTempName);
       win32_print("\n");
       return 0;
@@ -752,7 +754,7 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
 
   if (!CopyFileA(state->application.dllName, dllTempName, 0))
   {
-    win32_print("[win32] cannot copy file: ");
+    win32_print("[win32][error] cannot copy file: ");
     win32_print(state->application.dllName);
     win32_print("\n");
     return 0;
@@ -807,7 +809,7 @@ VAST_API PROC win32_opengl_load_function(s8 *name)
 
     if (!wglGetProcAddress)
     {
-      win32_print("[opengl] FATAL: cannot load wglGetProcAddress!\n");
+      win32_print("[opengl][fatal]: cannot load wglGetProcAddress!\n");
       FreeLibrary(win32_opengl_lib);
       win32_opengl_lib = VAST_NULL;
       return VAST_NULL;
@@ -1102,7 +1104,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
 
   if (!state.platform_state.memory.data)
   {
-    win32_print("[ERROR] Cannot allocate memory for application (VirtualAlloc)!\n");
+    win32_print("[win32][error] Cannot allocate memory for application (VirtualAlloc)!\n");
     return 1;
   }
 
@@ -1115,7 +1117,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
 #ifndef VAST_RELEASE
   if (!win32_load_application(&state))
   {
-    win32_print("[ERROR] Could not load application dll '");
+    win32_print("[win32][error] Could not load application dll '");
     win32_print(state.application.dllName);
     win32_print("' !\n");
     return 1;
@@ -1127,7 +1129,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   /******************************/
   if (!win32_enable_high_priority())
   {
-    win32_print("[WARNING] Failed to set high priority process\n");
+    win32_print("[win32][warning] Failed to set high priority process\n");
   }
 
   /******************************/
@@ -1135,7 +1137,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   /******************************/
   if (!win32_enable_dpi_awareness())
   {
-    win32_print("[WARNING] Cannot set DPI awareness\n");
+    win32_print("[win32][warning] Cannot set DPI awareness\n");
   }
 
   /******************************/
@@ -1143,7 +1145,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   /******************************/
   if (!win32_enable_high_resolution_timer())
   {
-    win32_print("[WARNING] Cannot set win32 high resolution timer using Winmm.dll (timeBeginPeriod)\n");
+    win32_print("[win32][warning] Cannot set win32 high resolution timer using Winmm.dll (timeBeginPeriod)\n");
   }
 
   /******************************/
@@ -1151,7 +1153,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   /******************************/
   if (!xinput_load())
   {
-    win32_print("[WARNING] Could not load XInput (xinput1_4.dll, xinput1_3.dll or xinput9_1_0.dll)! XInput gamepads/controllers (e.g. XBOX) are not functional.\n");
+    win32_print("[win32][warning] Could not load XInput (xinput1_4.dll, xinput1_3.dll or xinput9_1_0.dll)! XInput gamepads/controllers (e.g. XBOX) are not functional.\n");
   }
 
   /******************************/
@@ -1159,7 +1161,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   /******************************/
   if (!win32_opengl_create_context(&state))
   {
-    win32_print("[ERROR] Could not create opengl context!\n");
+    win32_print("[win32][error] Could not create opengl context!\n");
     return 1;
   }
 
@@ -1487,7 +1489,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
           sb.size = sizeof(tmp);
           sb.buffer = tmp;
 
-          vast_sb_s8(&sb, "fps: ");
+          vast_sb_s8(&sb, "[win32] fps: ");
           vast_sb_f64_pad(&sb, state.platform_state.timing.frame_rate, 4, 10, ' ', VAST_SB_PAD_LEFT);
           vast_sb_s8(&sb, "\n");
 
