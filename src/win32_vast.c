@@ -37,22 +37,6 @@ void *memset(void *dest, i32 c, u32 count)
   return dest;
 }
 
-VAST_API f64 vast_profiler_time_ms(void)
-{
-  static i64 freq;
-
-  i64 time;
-
-  if (!freq)
-  {
-    QueryPerformanceFrequency(&freq);
-  }
-
-  QueryPerformanceCounter(&time);
-
-  return ((f64)time * 1000.0) / (f64)freq;
-}
-
 /* #############################################################################
  * # [SECTION] Force Discrete GPU
  * #############################################################################
@@ -226,6 +210,22 @@ VAST_API VAST_INLINE FILETIME win32_file_mod_time(s8 *file)
   static FILETIME empty = {0, 0};
   WIN32_FILE_ATTRIBUTE_DATA fad;
   return GetFileAttributesExA(file, 0, &fad) ? fad.ftLastWriteTime : empty;
+}
+
+VAST_API f64 win32_time_ms_current(void)
+{
+  static i64 freq;
+
+  i64 time;
+
+  if (!freq)
+  {
+    QueryPerformanceFrequency(&freq);
+  }
+
+  QueryPerformanceCounter(&time);
+
+  return ((f64)time * 1000.0) / (f64)freq;
 }
 
 VAST_API VAST_INLINE u8 win32_enable_high_priority(void)
@@ -1101,7 +1101,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   state.platform_state.api.io_file_size = win32_file_size;
   state.platform_state.api.io_file_mod_signature = win32_file_mod_signature;
   state.platform_state.api.io_file_read = win32_file_read;
-  state.platform_state.api.time_ms_current = vast_profiler_time_ms;
+  state.platform_state.api.time_ms_current = win32_time_ms_current;
 
   /* Platform Window setup */
   state.platform_state.window.width = 800;
