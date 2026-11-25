@@ -1538,9 +1538,9 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
         if (remaining > 0.0)
         {
           /* Sleep most of it (milliseconds) */
-          if (remaining > 0.0005)
+          if (remaining > 0.001)
           {
-            u32 sleep_ms = (u32)((remaining - 0.00025) * 1000.0);
+            u32 sleep_ms = (u32)((remaining - 0.001) * 1000.0);
 
             if (sleep_ms > 0)
             {
@@ -1553,7 +1553,8 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
           {
             QueryPerformanceCounter(&time_end);
 
-            frame_time = (f64)(time_end - time_start_fps_cap) / (f64)perf_freq;
+            frame_time =
+                (f64)(time_end - time_start_fps_cap) / (f64)perf_freq;
 
             if (frame_time >= target_frame_time)
             {
@@ -1561,8 +1562,12 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
             }
           }
         }
+        else
+        {
+          QueryPerformanceCounter(&time_end);
+        }
 
-        /* Start timing next frame */
+        /* Always update the next frame's starting timestamp. */
         time_start_fps_cap = time_end;
       }
 
