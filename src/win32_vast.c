@@ -1114,6 +1114,12 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   state.platform_state.memory.size = 1024 * 1024 * 8; /* 8 MB */
   state.platform_state.memory.data = VirtualAlloc(0, state.platform_state.memory.size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
+  if (!state.platform_state.memory.data)
+  {
+    win32_print("[ERROR] Cannot allocate memory for application (VirtualAlloc)!\n");
+    return 1;
+  }
+
   (void)vast_sb_f64;
   (void)vast_sb_s8_pad;
 
