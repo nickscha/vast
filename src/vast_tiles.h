@@ -38,8 +38,9 @@ typedef struct vast_tiles
     /* Data Arrays (Indexed via toroidal wrapping) */
     i32 tile_x[VAST_TILES_TOTAL];
     i32 tile_z[VAST_TILES_TOTAL];
-    i8 tile_lod_required[VAST_TILES_TOTAL]; /* The LOD required after update */
-    i8 tile_lod_current[VAST_TILES_TOTAL];  /* The current LOD used (has to be updated by application) */
+    i8 tile_lod_required[VAST_TILES_TOTAL];           /* The LOD required after update */
+    i8 tile_lod_current[VAST_TILES_TOTAL];            /* The current LOD used (has to be updated by application) */
+    f32 tile_lod_transition_factor[VAST_TILES_TOTAL]; /* TOOD(nickscha): LOD Geomorphing factor */
 
     /* Sparse Dirty flag tracking */
     u16 dirty_indices[VAST_TILES_TOTAL]; /* Which index ot the tile_x/z is marked dirty */
@@ -322,7 +323,8 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, f32 camera_position_x, 
             t->tile_x[tile_index] = x;
             t->tile_z[tile_index] = z;
             t->tile_lod_required[tile_index] = tile_lod;
-            t->tile_lod_current[tile_index] = -1; /* -1 = Uninitialized/Unknown */
+            t->tile_lod_current[tile_index] = -1;             /* -1 = Uninitialized/Unknown */
+            t->tile_lod_transition_factor[tile_index] = 1.0f; /* Set transition to default 1.0f (unchanged) */
             t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
             t->tile_per_lod_count[(i32)tile_lod]++;
 

@@ -423,7 +423,6 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
     static u32 grid_ibos[LOD_COUNT];
     static i32 gridIndexCounts[LOD_COUNT] = {0};
     static u32 lod_instance_vbos[LOD_COUNT];
-    static f32 tile_transition_timer[VAST_TILES_TOTAL] = {0};
 
     static u32 scratch_vao;
     static u32 scratch_fbo;
@@ -442,15 +441,6 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         VAST_PROFILER_BEGIN(tile_init);
         vast_tiles_init(&t, state->camera.position.x, state->camera.position.z, tile_world_size);
         VAST_PROFILER_END(tile_init);
-
-        {
-            u32 tile_index;
-
-            for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
-            {
-                tile_transition_timer[tile_index] = 1.0f;
-            }
-        }
 
         /* Setup tiles texture pools */
         {
@@ -736,7 +726,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 if (!vast_tile_is_visible(&t, &state->view_frustum, tile_index, -200.0f, 600.0f))
                 {
                     /* Stop LOD geomorphing since the tile is not visible */
-                    tile_transition_timer[tile_index] = 1.0f;
+                    t.tile_lod_transition_factor[tile_index] = 1.0f;
                     continue;
                 }
 
@@ -761,7 +751,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 instance_buffer[instance_count].offset_z = (f32)t.tile_z[tile_index];
                 instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
                 instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, tile_index);
-                instance_buffer[instance_count].transition_factor = tile_transition_timer[tile_index];
+                instance_buffer[instance_count].transition_factor = t.tile_lod_transition_factor[tile_index];
                 instance_count++;
             }
 
