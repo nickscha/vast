@@ -53,7 +53,7 @@ static s8 *vast_screen_recording_shader_fragment =
     "}";
 
 /* #############################################################################
- * # [SECTION] UI Setup & Rendering
+ * # [SECTION] Screen Recording Setup & Rendering
  * #############################################################################
  */
 VAST_API void vast_screen_recording_render(
