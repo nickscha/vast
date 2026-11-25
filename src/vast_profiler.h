@@ -24,6 +24,8 @@ typedef struct vast_profiler_entry
 
 } vast_profiler_entry;
 
+#define VAST_PROFILER_ENTRY_INVALID 0xFFFFFFFF
+
 /* #############################################################################
  * # [SECTION] Profiler Release Version
  * #############################################################################
@@ -47,8 +49,6 @@ static u32 vast_profiler_entries_count = 0;
 #ifndef VAST_PROFILER_MAX_ENTRIES
 #define VAST_PROFILER_MAX_ENTRIES 512
 #endif
-
-#define VAST_PROFILER_ENTRY_INVALID 0xFFFFFFFF
 
 static vast_profiler_entry vast_profiler_entries[VAST_PROFILER_MAX_ENTRIES];
 static u32 vast_profiler_entries_count = 0;
