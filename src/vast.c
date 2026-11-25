@@ -21,7 +21,9 @@ VAST_API VAST_INLINE void vast_update_movement_camera(vast_platform_state *platf
 
     vast_camera *camera = &state->camera;
     f32 cam_speed = state->camera_speed * (f32)platform_state->timing.time_delta;
+
     vast_platform_input_keyboard *kb = &platform_state->input.keyboard;
+    vast_platform_input_mouse *mouse = &platform_state->input.mouse;
 
     if (kb->keys_is_down[VAST_KEYBOARD_KEY_W])
     {
@@ -102,7 +104,7 @@ VAST_API VAST_INLINE void vast_update_movement_camera(vast_platform_state *platf
     }
 
     /* Mouse handling */
-    if (platform_state->input.mouse.keys_is_down[VAST_MOUSE_KEY_RIGHT] && !platform_state->input.mouse.keys_was_down[VAST_MOUSE_KEY_RIGHT])
+    if (mouse->keys_is_down[VAST_MOUSE_KEY_RIGHT] && !mouse->keys_was_down[VAST_MOUSE_KEY_RIGHT])
     {
         mouse_attached = !mouse_attached;
     }
@@ -110,13 +112,13 @@ VAST_API VAST_INLINE void vast_update_movement_camera(vast_platform_state *platf
     if (mouse_attached)
     {
         f32 mouseSensitivity = 0.1f;
-        camera->yaw += vast_minf((f32)platform_state->input.mouse.dx * mouseSensitivity, 89.0f);
-        camera->pitch += vast_maxf((f32)platform_state->input.mouse.dy * mouseSensitivity, -89.0f);
+        camera->yaw += vast_minf((f32)mouse->dx * mouseSensitivity, 89.0f);
+        camera->pitch += vast_maxf((f32)mouse->dy * mouseSensitivity, -89.0f);
         camera->pitch = vast_clampf(camera->pitch, -89.0f, 89.0f);
 
-        if (platform_state->input.mouse.scroll != 0.0f)
+        if (mouse->scroll != 0.0f)
         {
-            camera->fov = vast_clampf(camera->fov - (platform_state->input.mouse.scroll * 2), 1.0f, 179.0f);
+            camera->fov = vast_clampf(camera->fov - (mouse->scroll * 2), 1.0f, 179.0f);
         }
     }
 
@@ -131,7 +133,9 @@ VAST_API VAST_INLINE void vast_update_movement_sun(vast_platform_state *platform
 
     vast_vec3 sun_dir;
 
-    if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_M] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_M])
+    vast_platform_input_keyboard *kb = &platform_state->input.keyboard;
+
+    if (kb->keys_is_down[VAST_KEYBOARD_KEY_M] && !kb->keys_was_down[VAST_KEYBOARD_KEY_M])
     {
         move_sun = !move_sun;
 
@@ -146,22 +150,22 @@ VAST_API VAST_INLINE void vast_update_movement_sun(vast_platform_state *platform
 
     if (move_sun)
     {
+        f32 time = (f32)platform_state->timing.time_elapsed * 0.5f;
+        f32 delta = (f32)platform_state->timing.time_delta;
 
-        f32 t = (f32)platform_state->timing.time_elapsed * 0.5f;
-
-        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_L] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_L])
+        if (kb->keys_is_down[VAST_KEYBOARD_KEY_L] && !kb->keys_was_down[VAST_KEYBOARD_KEY_L])
         {
             move_sun_loop = !move_sun_loop;
         }
 
-        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_UP])
+        if (kb->keys_is_down[VAST_KEYBOARD_KEY_UP])
         {
-            move_val += (f32)platform_state->timing.time_delta;
+            move_val += delta;
         }
 
-        if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_DOWN])
+        if (kb->keys_is_down[VAST_KEYBOARD_KEY_DOWN])
         {
-            move_val -= (f32)platform_state->timing.time_delta;
+            move_val -= delta;
 
             if (move_val < 0.0f)
             {
@@ -173,7 +177,7 @@ VAST_API VAST_INLINE void vast_update_movement_sun(vast_platform_state *platform
 
         if (move_sun_loop)
         {
-            sun_dir = vast_vec3_init(0.0f, vast_sinf(t * 0.025f), -vast_cosf(t * 0.025f));
+            sun_dir = vast_vec3_init(0.0f, vast_sinf(time * 0.025f), -vast_cosf(time * 0.025f));
         }
     }
 
