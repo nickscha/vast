@@ -77,18 +77,6 @@ typedef struct win32_vast_state
   WINDOWPLACEMENT g_wpPrev;
   i32 thread_count;
 
-  /* OpenGL information */
-  s8 *gl_version;
-  s8 *gl_renderer;
-  s8 *gl_vendor;
-  s8 *gl_shading_language_version;
-  i32 gl_context_profile_mask;
-  i32 gl_num_extensions;
-  i32 gl_max_texture_size;
-  i32 gl_max_3d_texture_size;
-  i32 gl_max_array_texture_layer;
-  i32 gl_max_texture_image_units;
-
 } win32_vast_state;
 
 typedef struct win32_process_memory_info
@@ -1006,17 +994,17 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
   {
     vast_opengl_api *gl = &state->platform_state.graphics.opengl;
 
-    state->gl_vendor = (s8 *)gl->glGetString(GL_VENDOR);
-    state->gl_renderer = (s8 *)gl->glGetString(GL_RENDERER);
-    state->gl_version = (s8 *)gl->glGetString(GL_VERSION);
-    state->gl_shading_language_version = (s8 *)gl->glGetString(GL_SHADING_LANGUAGE_VERSION);
+    state->platform_state.graphics.opengl.gl_vendor = (s8 *)gl->glGetString(GL_VENDOR);
+    state->platform_state.graphics.opengl.gl_renderer = (s8 *)gl->glGetString(GL_RENDERER);
+    state->platform_state.graphics.opengl.gl_version = (s8 *)gl->glGetString(GL_VERSION);
+    state->platform_state.graphics.opengl.gl_shading_language_version = (s8 *)gl->glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    gl->glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &state->gl_context_profile_mask);
-    gl->glGetIntegerv(GL_NUM_EXTENSIONS, &state->gl_num_extensions);
-    gl->glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_max_texture_size);
-    gl->glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &state->gl_max_3d_texture_size);
-    gl->glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &state->gl_max_array_texture_layer);
-    gl->glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &state->gl_max_texture_image_units);
+    gl->glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &state->platform_state.graphics.opengl.gl_context_profile_mask);
+    gl->glGetIntegerv(GL_NUM_EXTENSIONS, &state->platform_state.graphics.opengl.gl_num_extensions);
+    gl->glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->platform_state.graphics.opengl.gl_max_texture_size);
+    gl->glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &state->platform_state.graphics.opengl.gl_max_3d_texture_size);
+    gl->glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &state->platform_state.graphics.opengl.gl_max_array_texture_layer);
+    gl->glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &state->platform_state.graphics.opengl.gl_max_texture_image_units);
   }
 
   /* Print opengl information */
@@ -1028,49 +1016,49 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
     sb.buffer = buffer;
 
     vast_sb_s8(&sb, "[opengl] gl_vendor                  : ");
-    vast_sb_s8(&sb, state->gl_vendor);
+    vast_sb_s8(&sb, state->platform_state.graphics.opengl.gl_vendor);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_renderer                : ");
-    vast_sb_s8(&sb, state->gl_renderer);
+    vast_sb_s8(&sb, state->platform_state.graphics.opengl.gl_renderer);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_version                 : ");
-    vast_sb_s8(&sb, state->gl_version);
+    vast_sb_s8(&sb, state->platform_state.graphics.opengl.gl_version);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_shading_language_version: ");
-    vast_sb_s8(&sb, state->gl_shading_language_version);
+    vast_sb_s8(&sb, state->platform_state.graphics.opengl.gl_shading_language_version);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_context_profile_mask    : ");
-    vast_sb_i32(&sb, state->gl_context_profile_mask);
+    vast_sb_i32(&sb, state->platform_state.graphics.opengl.gl_context_profile_mask);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_num_extensions          : ");
-    vast_sb_i32(&sb, state->gl_num_extensions);
+    vast_sb_i32(&sb, state->platform_state.graphics.opengl.gl_num_extensions);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_max_texture_size        : ");
-    vast_sb_i32(&sb, state->gl_max_texture_size);
+    vast_sb_i32(&sb, state->platform_state.graphics.opengl.gl_max_texture_size);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_max_3d_texture_size     : ");
-    vast_sb_i32(&sb, state->gl_max_3d_texture_size);
+    vast_sb_i32(&sb, state->platform_state.graphics.opengl.gl_max_3d_texture_size);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_max_array_texture_layer : ");
-    vast_sb_i32(&sb, state->gl_max_array_texture_layer);
+    vast_sb_i32(&sb, state->platform_state.graphics.opengl.gl_max_array_texture_layer);
     vast_sb_s8(&sb, "\n");
 
     vast_sb_s8(&sb, "[opengl] gl_max_texture_image_units : ");
-    vast_sb_i32(&sb, state->gl_max_texture_image_units);
+    vast_sb_i32(&sb, state->platform_state.graphics.opengl.gl_max_texture_image_units);
     vast_sb_s8(&sb, "\n");
 
     win32_print(sb.buffer);
   }
 
-  if ((state->gl_context_profile_mask & GL_CONTEXT_CORE_PROFILE_BIT) == 0)
+  if ((state->platform_state.graphics.opengl.gl_context_profile_mask & GL_CONTEXT_CORE_PROFILE_BIT) == 0)
   {
     win32_print("[opengl][error] OpenGL core profile required but not found! (GL_CONTEXT_CORE_PROFILE_BIT)\n");
     return 0;

@@ -176,6 +176,18 @@ typedef void (*PFNGLFRAMEBUFFERRENDERBUFFERPROC)(u32 target, u32 attachment, u32
 
 typedef struct vast_opengl_api
 {
+    /* OpenGL basic information */
+    s8 *gl_version;
+    s8 *gl_renderer;
+    s8 *gl_vendor;
+    s8 *gl_shading_language_version;
+    i32 gl_context_profile_mask;
+    i32 gl_num_extensions;
+    i32 gl_max_texture_size;
+    i32 gl_max_3d_texture_size;
+    i32 gl_max_array_texture_layer;
+    i32 gl_max_texture_image_units;
+
     /* OpenGL 1.1 functions */
     PFNGLCLEARCOLORPROC glClearColor;
     PFNGLCLEARPROC glClear;
