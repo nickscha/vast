@@ -311,10 +311,9 @@ static i32 lod_texture_pool_size[LOD_COUNT] = {
 };
 
 /* TODO(nickscha): Not bulletproof yet */
-VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index)
+VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index, i32 *texture_layer_next_free)
 {
     static u8 texture_layer_used[LOD_COUNT][VAST_TILES_TOTAL] = {0};
-    static i32 texture_layer_next_free[LOD_COUNT] = {0};
 
     u32 i;
 
@@ -406,6 +405,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
     /* Per-LOD Texture Array Handles */
     static u32 *lod_heightmap_arrays;
     static u32 *lod_normalmap_arrays;
+    static i32 *texture_layer_next_free;
 
     /* Base resolutions for height and normalmap */
     static i32 resolution_base_heightmap = 64;
@@ -435,6 +435,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             lod_instance_vbos = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
             lod_heightmap_arrays = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
             lod_normalmap_arrays = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+            texture_layer_next_free = (i32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(i32));
         }
 
         /* Setup tiles texture pools */
@@ -584,7 +585,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             i32 height_tex_size = resolution_base_heightmap / (1 << tile_lod_required) + 1; /* +1 because of skirts */
             i32 normal_tex_size = resolution_base_normalmap / (1 << tile_lod_required);
 
-            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx);
+            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx, texture_layer_next_free);
 
             if (texture_array_layer == -1)
             {
