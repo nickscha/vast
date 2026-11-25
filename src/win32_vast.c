@@ -908,6 +908,7 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
     return 0;
   }
 
+  /* Load wglCreateContext, wglMakeCurrent first */
   win32_vast_opengl_load_functions(win32_opengl_load_function, 1);
 
   fake_rc = wglCreateContext(fake_device_context);
@@ -939,7 +940,7 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
 
   state->device_context = GetDC(state->window_handle);
 
-  /* Load wgl function */
+  /* Load other wgl functions */
   win32_vast_opengl_load_functions(win32_opengl_load_function, 0);
 
   /* Load common opengl functions (platform independant) */
