@@ -448,21 +448,28 @@ void vast_update(vast_platform_state *platform_state)
         /* Assign memory regions */
         {
             u32 state_struct_size = (u32)sizeof(vast_state);
+            u32 perm_additional_size = 1024 * 1024 * 2;
+            u32 perm_total_size = state_struct_size + perm_additional_size;
             u8 *base = (u8 *)platform_state->memory.data;
 
-            /* Permanent */
-            state->memory_region_permanent.data = base;
-            state->memory_region_permanent.offset = state_struct_size;
-            state->memory_region_permanent.size = state_struct_size;
+            if (!base || platform_state->memory.size < perm_total_size)
+            {
+                platform_state->api.io_print("[ERROR] Insufficient platform memory for vast_state!\n");
+                return;
+            }
 
-            /* Transient */
-            state->memory_region_transient.data = base + state_struct_size;
+            /* Permanent region starts right after vast_state struct */
+            state->memory_region_permanent.data = base + state_struct_size;
+            state->memory_region_permanent.offset = state_struct_size;
+            state->memory_region_permanent.size = perm_additional_size;
+
+            /* Transient region takes the remainder of platform memory */
+            state->memory_region_transient.data = base + perm_total_size;
             state->memory_region_transient.offset = 0;
-            state->memory_region_transient.size = (platform_state->memory.size > state_struct_size) ? (platform_state->memory.size - state_struct_size) : 0;
+            state->memory_region_transient.size = platform_state->memory.size - perm_total_size;
 
             /* Mark Platform Memory as consumed */
             platform_state->memory.offset = platform_state->memory.size;
-            platform_state->application_initialized = 1;
         }
 
         /* Set state defaults */

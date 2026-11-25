@@ -168,7 +168,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         static f32 win_y = 0.0f;
 
         f32 win_w = 180.0f;
-        f32 win_h = 285.0f;
+        f32 win_h = 240.0f;
 
         static f32 font_size = 16.0f;
         static f32 font_advancement_factor = 0.55f;
@@ -341,24 +341,6 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
             vast_sb_s8(&sb, "DELTA : ");
             vast_sb_f64_pad(&sb, (f64)state->timing.time_delta, 4, 8, ' ', VAST_SB_PAD_LEFT);
-            vast_sb_s8(&sb, "\0");
-
-            vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
-
-            sb.length = 0;
-
-            vast_sb_s8(&sb, "MEM_P : ");
-            vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.size, 8, ' ', VAST_SB_PAD_LEFT);
-            vast_sb_s8(&sb, "  B");
-            vast_sb_s8(&sb, "\0");
-
-            vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
-
-            sb.length = 0;
-
-            vast_sb_s8(&sb, "MEM_T : ");
-            vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.size / 1024, 8, ' ', VAST_SB_PAD_LEFT);
-            vast_sb_s8(&sb, " KB");
             vast_sb_s8(&sb, "\0");
 
             vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -540,6 +522,64 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     vast_sb_s8(&sb, "Fov     : ");
                     vast_sb_f64_pad(&sb, (f64)vstate->camera.fov, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+                }
+            }
+            vast_ui_panel_end(&ui_ctx);
+        }
+
+        /* Memory Information Window */
+        {
+            static f32 mem_win_w = 260.0f;
+            static f32 mem_win_h = 100.0f;
+
+            f32 mem_win_x = (f32)state->window.width - mem_win_w;
+            f32 mem_win_y = 0.0f;
+
+            vast_ui_result mem_header;
+            vast_ui_result mem_panel;
+
+            mem_header = vast_ui_drag_header(&ui_ctx, 30, &mem_win_x, &mem_win_y, mem_win_w, mem_win_h, font_size);
+            mem_panel = vast_ui_panel_begin(&ui_ctx, vast_ui_rect_init(mem_win_x, mem_win_y, mem_win_w, mem_win_h));
+            vast_ui_push_rect(&ui_ctx, mem_panel, 0xEE1E1E26);
+
+            {
+                vast_ui_push_rect(&ui_ctx, mem_header, 0xFF333344);
+                vast_ui_push_text(&ui_ctx, "Memory Information (bytes)", mem_header.rect, 0xFFFFFFFF);
+
+                /* Space past header */
+                ui_ctx.cursor_y += font_size;
+
+                {
+                    static s8 buffer[128];
+
+                    vast_sb sb = {0};
+                    sb.buffer = buffer;
+                    sb.size = 128;
+
+                    vast_sb_s8_pad(&sb, "Name", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_s8_pad(&sb, "total", 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&sb, "used", 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, "\0");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFAAAAAA);
+
+                    sb.length = 0;
+
+                    vast_sb_s8_pad(&sb, "permanent", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.size, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.offset, 8, ' ', VAST_SB_PAD_LEFT);
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8_pad(&sb, "transient", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.size, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.offset, 8, ' ', VAST_SB_PAD_LEFT);
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
