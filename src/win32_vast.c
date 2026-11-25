@@ -215,33 +215,20 @@ VAST_API f64 win32_time_ms_current(void)
 
 VAST_API VAST_INLINE u8 win32_enable_high_priority(void)
 {
-  /* TODO(nickscha): Check integrated plus discrete GPU
-   *
-   * It was noticed that on a device with a integrated GPU (intel)
-   * and a discrete GPU (NVIDIA) the fans were spinning high even
-   * though there was only 1.5% total CPU and 2.4% GPU usage.
-   * Check carefully when these priority functions can be set safely.
-   *
   if (!SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS))
   {
-    return 1;
+    return 0;
   }
 
   if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST))
   {
-    return 1;
+    return 0;
   }
 
   if (!SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED))
   {
-    return 1;
+    return 0;
   }
-  */
-  (void)HIGH_PRIORITY_CLASS;
-  (void)THREAD_PRIORITY_HIGHEST;
-  (void)ES_CONTINUOUS;
-  (void)ES_DISPLAY_REQUIRED;
-  (void)ES_SYSTEM_REQUIRED;
 
   return 1;
 }
