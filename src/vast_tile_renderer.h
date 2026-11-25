@@ -297,33 +297,31 @@ VAST_API void vast_tile_shader_hot_reload(
  * # [SECTION] Texture Pool Slot Allocations and Ownership Tracking
  * #############################################################################
  */
-/* TODO(nickscha) use calculated max lod level from tiles struct */
-#define LOD_COUNT 6
-
-/* TODO(nickscha) hardcoded for now */
-static i32 lod_texture_pool_size[LOD_COUNT] = {
-    /* steady */ 9 + /* burst headroom */ 7,    /* LOD 0: 128x128 height, 1024x1024 normal */
-    /* steady */ 40 + /* burst headroom */ 24,  /* LOD 1:  64x64  height,  512x512  normal */
-    /* steady */ 72 + /* burst headroom */ 24,  /* LOD 2:  32x32  height,  256x256  normal */
-    /* steady */ 104 + /* burst headroom */ 32, /* LOD 3:  16x16  height,  128x128  normal */
-    /* steady */ 136 + /* burst headroom */ 56, /* LOD 4:   8x8   height,   64x64   normal */
-    /* steady */ 728 + /* burst headroom */ 64  /* LOD 5:   4x4   height,   32x32   normal */
-};
+#define VAST_TEXTURE_LAYER_USED(used_ptr, lod_idx, layer_idx) ((used_ptr)[((u32)(lod_idx) * (u32)VAST_TILES_TOTAL) + (u32)(layer_idx)])
 
 /* TODO(nickscha): Not bulletproof yet */
-VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index, i32 *texture_layer_next_free)
+VAST_API i32 vast_tile_aquire_texture_array_layer(
+    vast_tiles *t, u32 tile_index,
+    u8 *texture_layer_used,
+    i32 *texture_layer_next_free,
+    i32 *lod_texture_pool_size)
 {
-    static u8 texture_layer_used[LOD_COUNT][VAST_TILES_TOTAL] = {0};
-
     u32 i;
 
-    i32 lod_current;
-    i32 lod_required;
+    i32 lod_current = t->tile_lod_current[tile_index];
+    i32 lod_required = t->tile_lod_required[tile_index];
     i32 texture_layer_current;
     i32 texture_layer_assigned;
 
-    lod_current = t->tile_lod_current[tile_index];
-    lod_required = t->tile_lod_required[tile_index];
+    if (!t || !texture_layer_used || !texture_layer_next_free || !lod_texture_pool_size)
+    {
+        return -1;
+    }
+
+    if (lod_required < 0 || lod_required > t->tile_lod_max)
+    {
+        return -1;
+    }
 
     /* Nothing changes */
     if (lod_current == lod_required && t->texture_layer[tile_index] >= 0)
@@ -339,16 +337,21 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index,
     texture_layer_current = t->texture_layer[tile_index];
 
     /* Current LOD has texture layer assigned. Free it. */
-    if (texture_layer_current >= 0)
+    if (texture_layer_current >= 0 && lod_current >= 0)
     {
-        texture_layer_used[lod_current][texture_layer_current] = 0;
+        VAST_TEXTURE_LAYER_USED(texture_layer_used, lod_current, texture_layer_current) = 0;
         texture_layer_next_free[lod_current] = texture_layer_current;
     }
 
     texture_layer_assigned = texture_layer_next_free[lod_required];
 
+    if (texture_layer_assigned < 0 || texture_layer_assigned >= lod_texture_pool_size[lod_required])
+    {
+        return -1;
+    }
+
     /* Mark as used */
-    texture_layer_used[lod_required][texture_layer_assigned] = 1;
+    VAST_TEXTURE_LAYER_USED(texture_layer_used, lod_required, texture_layer_assigned) = 1;
 
     /* Find the next free texture layer */
     {
@@ -357,20 +360,14 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(vast_tiles *t, u32 tile_index,
 
         for (i = 0; i < (u32)texture_array_layer_capacity_required; ++i)
         {
-            if (!texture_layer_used[lod_required][i])
+            if (!VAST_TEXTURE_LAYER_USED(texture_layer_used, lod_required, i))
             {
                 next_free = (i32)i;
                 break;
             }
         }
 
-        texture_layer_next_free[lod_required] = (i32)next_free;
-
-        if (next_free == -1)
-        {
-            return -1;
-        }
-
+        texture_layer_next_free[lod_required] = next_free;
         t->texture_layer[tile_index] = texture_layer_assigned;
     }
 
@@ -405,7 +402,9 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
     /* Per-LOD Texture Array Handles */
     static u32 *lod_heightmap_arrays;
     static u32 *lod_normalmap_arrays;
+    static u8 *texture_layer_used;
     static i32 *texture_layer_next_free;
+    static i32 *lod_texture_pool_size;
 
     /* Base resolutions for height and normalmap */
     static i32 resolution_base_heightmap = 64;
@@ -435,7 +434,34 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             lod_instance_vbos = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
             lod_heightmap_arrays = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
             lod_normalmap_arrays = (u32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(u32));
+            texture_layer_used = (u8 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * VAST_TILES_TOTAL * sizeof(u8));
             texture_layer_next_free = (i32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(i32));
+            lod_texture_pool_size = (i32 *)vast_memory_allocate(&state->memory_region_permanent, lod_count * sizeof(i32));
+        }
+
+        /* Calculate texture pool size */
+        {
+            u32 lod;
+
+            for (lod = 0; lod < lod_count; ++lod)
+            {
+                u32 texture_pool_size = vast_tile_calc_pool_size(&t, lod);
+
+                s8 tmp[128];
+                vast_sb sb = {0};
+                sb.size = sizeof(tmp);
+                sb.buffer = tmp;
+
+                vast_sb_s8(&sb, "lod: ");
+                vast_sb_i32(&sb, (i32)lod);
+                vast_sb_s8(&sb, ", texture_pool_size: ");
+                vast_sb_i32(&sb, (i32)texture_pool_size);
+                vast_sb_s8(&sb, "\n");
+
+                platform_state->api.io_print(sb.buffer);
+
+                lod_texture_pool_size[lod] = (i32)texture_pool_size;
+            }
         }
 
         /* Setup tiles texture pools */
@@ -585,7 +611,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             i32 height_tex_size = resolution_base_heightmap / (1 << tile_lod_required) + 1; /* +1 because of skirts */
             i32 normal_tex_size = resolution_base_normalmap / (1 << tile_lod_required);
 
-            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx, texture_layer_next_free);
+            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx, texture_layer_used, texture_layer_next_free, lod_texture_pool_size);
 
             if (texture_array_layer == -1)
             {

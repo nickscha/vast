@@ -105,6 +105,51 @@ VAST_API VAST_INLINE u8 vast_tile_is_on_lod_outer_edge(vast_tiles *t, u32 tile_i
     return 0;
 }
 
+VAST_API VAST_INLINE u32 vast_tile_calc_pool_size(vast_tiles *t, u32 lod)
+{
+    u32 steady;
+    u32 lod_count;
+    u32 headroom;
+    u32 total;
+
+    lod_count = (u32)t->tile_lod_max + 1;
+
+    if (lod_count < 1)
+    {
+        lod_count = 1;
+    }
+
+    if (lod >= lod_count)
+    {
+        lod = lod_count - 1;
+    }
+
+    steady = (u32)t->tile_per_lod_count[lod];
+
+    /* Scale headroom by grid size and coarse-LOD ring size */
+    headroom = (VAST_TILES_PER_SIDE / 4) * (lod + 1) * 2 + 1;
+
+    /* Keep finer LODs tighter on large pools while giving outer LODs extra margin */
+    if (lod == 0 && headroom > 7)
+    {
+        headroom = 7;
+    }
+
+    total = steady + headroom;
+
+    if (total > VAST_TILES_TOTAL)
+    {
+        total = VAST_TILES_TOTAL;
+    }
+
+    if (total < 1)
+    {
+        total = 1;
+    }
+
+    return total;
+}
+
 VAST_API VAST_INLINE u8 vast_tile_is_dirty(vast_tiles *t, u32 tile_index)
 {
     u16 dirty_index;
