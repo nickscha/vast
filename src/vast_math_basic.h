@@ -162,14 +162,35 @@ VAST_API VAST_INLINE f32 vast_absf(f32 x)
     return conv.f;
 }
 
+VAST_API VAST_INLINE i32 vast_absi(i32 v)
+{
+    return v < 0 ? -v : v;
+}
+
+VAST_API VAST_INLINE i32 vast_modi(i32 a, i32 b)
+{
+    i32 r = a % b;
+    return r < 0 ? r + b : r;
+}
+
 VAST_API VAST_INLINE f32 vast_minf(f32 a, f32 b)
 {
     return (a < b) ? a : b;
 }
 
+VAST_API VAST_INLINE i32 vast_mini(i32 a, i32 b)
+{
+    return a < b ? a : b;
+}
+
 VAST_API VAST_INLINE f32 vast_maxf(f32 a, f32 b)
 {
     return (a > b) ? a : b;
+}
+
+VAST_API VAST_INLINE i32 vast_maxi(i32 a, i32 b)
+{
+    return a > b ? a : b;
 }
 
 VAST_API VAST_INLINE f32 vast_clampf(f32 x, f32 a, f32 b)

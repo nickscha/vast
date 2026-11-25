@@ -47,22 +47,6 @@ typedef struct vast_tiles
 
 } vast_tiles;
 
-VAST_API VAST_INLINE i32 vast_modi(i32 a, i32 b)
-{
-    i32 r = a % b;
-    return r < 0 ? r + b : r;
-}
-
-VAST_API VAST_INLINE i32 vast_absi(i32 v)
-{
-    return v < 0 ? -v : v;
-}
-
-VAST_API VAST_INLINE i32 vast_maxi(i32 a, i32 b)
-{
-    return a > b ? a : b;
-}
-
 VAST_API VAST_INLINE u32 vast_tile_index(i32 x, i32 z)
 {
     i32 slot_x = vast_modi(x, VAST_TILES_PER_SIDE);
