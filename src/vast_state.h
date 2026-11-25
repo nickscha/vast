@@ -38,6 +38,9 @@ typedef struct vast_state
     vast_camera camera;
     f32 camera_speed;
 
+    /* Mouse */
+    f32 mouse_sensitivity;
+
     /* View and Frustum data */
     vast_mat4x4 projection;
     vast_mat4x4 view;

@@ -111,9 +111,8 @@ VAST_API VAST_INLINE void vast_update_movement_camera(vast_platform_state *platf
 
     if (mouse_attached)
     {
-        f32 mouseSensitivity = 0.1f;
-        camera->yaw += vast_minf((f32)mouse->dx * mouseSensitivity, 89.0f);
-        camera->pitch += vast_maxf((f32)mouse->dy * mouseSensitivity, -89.0f);
+        camera->yaw += vast_minf((f32)mouse->dx * state->mouse_sensitivity, 89.0f);
+        camera->pitch += vast_maxf((f32)mouse->dy * state->mouse_sensitivity, -89.0f);
         camera->pitch = vast_clampf(camera->pitch, -89.0f, 89.0f);
 
         if (mouse->scroll != 0.0f)
@@ -197,6 +196,9 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
         state->camera.position.y = 250.0f;
         state->camera.position.z = -200.0f;
         state->camera_speed = 100.0f;
+
+        /* Mouse setup */
+        state->mouse_sensitivity = 0.1f;
 
         scene_initialized = 1;
     }
