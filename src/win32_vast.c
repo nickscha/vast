@@ -1014,7 +1014,7 @@ VAST_API VAST_INLINE i32 win32_opengl_create_context(win32_vast_state *state)
     state->gl_shading_language_version = (s8 *)gl->glGetString(GL_SHADING_LANGUAGE_VERSION);
 
     gl->glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &state->gl_context_profile_mask);
-    gl->glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_num_extensions);
+    gl->glGetIntegerv(GL_NUM_EXTENSIONS, &state->gl_num_extensions);
     gl->glGetIntegerv(GL_MAX_TEXTURE_SIZE, &state->gl_max_texture_size);
     gl->glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &state->gl_max_3d_texture_size);
     gl->glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &state->gl_max_array_texture_layer);
