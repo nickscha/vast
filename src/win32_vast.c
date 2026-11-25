@@ -89,9 +89,6 @@ typedef struct win32_vast_state
   i32 gl_max_array_texture_layer;
   i32 gl_max_texture_image_units;
 
-  /* TODO(nickscha): temporary. should be application state */
-  u32 draw_calls;
-
 } win32_vast_state;
 
 typedef struct win32_process_memory_info
