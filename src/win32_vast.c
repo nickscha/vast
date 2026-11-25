@@ -761,6 +761,7 @@ VAST_API u8 win32_load_application(win32_vast_state *state)
 
   if (!vast_update)
   {
+    win32_print("[win32][error] cannot load 'vast_update' process address!\n");
     return 0;
   }
 
