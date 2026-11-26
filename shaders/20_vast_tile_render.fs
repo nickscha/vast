@@ -218,6 +218,7 @@ void main()
     vec3 matGrass   = getMaterialGrass();
     vec3 matRock    = getMaterialRock();
     vec3 matSnow    = vec3(0.90, 0.92,  0.95);
+    vec3 matSand    = vec3(0.66, 0.55, 0.33);
     
     vec3 mate = matRock;
 
@@ -230,6 +231,7 @@ void main()
 
     mate = mix(mate, matGrass, grassBlend);
     mate = mix(mate, matSnow, snowBlend);
+    mate = mix(mate, matSand, 1.0 - smoothstep(-1.0, 1.0, height));
     mate *= mix(0.94, 1.06, detail);
 
     float dayAmount = clamp(sunDir.y * 0.5 + 0.5, 0.0, 1.0);
