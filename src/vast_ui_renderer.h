@@ -533,8 +533,8 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
         /* Memory Information Window */
         {
-            static f32 mem_win_w = 260.0f;
-            static f32 mem_win_h = 100.0f;
+            static f32 mem_win_w = 280.0f;
+            static f32 mem_win_h = 120.0f;
 
             f32 mem_win_x = (f32)state->window.width - mem_win_w;
             f32 mem_win_y = 0.0f;
@@ -562,7 +562,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     vast_sb_s8_pad(&sb, "Name", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_s8_pad(&sb, "total", 8, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_s8_pad(&sb, "used", 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8_pad(&sb, "used", 10, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFAAAAAA);
@@ -571,7 +571,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     vast_sb_s8_pad(&sb, "permanent", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.size, 8, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.offset, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.offset, 10, ' ', VAST_SB_PAD_LEFT);
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
@@ -579,7 +579,15 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     vast_sb_s8_pad(&sb, "transient", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.size, 8, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.offset, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.offset, 10, ' ', VAST_SB_PAD_LEFT);
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
+
+                    vast_sb_s8_pad(&sb, "vram", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_i32_pad(&sb, (i32)0, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)vstate->memory_vram_usage, 10, ' ', VAST_SB_PAD_LEFT);
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 

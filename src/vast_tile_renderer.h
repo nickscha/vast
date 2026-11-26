@@ -441,6 +441,8 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         {
             u32 lod;
 
+            state->memory_vram_usage = 0;
+
             for (lod = 0; lod < lod_count; ++lod)
             {
                 u32 texture_pool_size = vast_tile_calc_pool_size(&t, lod);
@@ -459,6 +461,16 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 platform_state->api.io_print(sb.buffer);
 
                 lod_texture_pool_size[lod] = (i32)texture_pool_size;
+
+                /* Calculate VRAM for height and normalmap textures */
+                {
+                    i32 resolution_heightmap = resolution_base_heightmap / (1 << lod) + 1; /* +1 because of skirts */
+                    i32 resolution_normalmap = resolution_base_normalmap / (1 << lod);
+
+                    state->memory_vram_usage +=
+                        ((u32)(resolution_heightmap * resolution_heightmap * 4) * texture_pool_size) +
+                        ((u32)(resolution_normalmap * resolution_normalmap * 3) * texture_pool_size);
+                }
             }
         }
 

@@ -20,6 +20,9 @@ typedef struct vast_state
     vast_platform_memory memory_region_permanent;
     vast_platform_memory memory_region_transient;
 
+    /* VRam Usage */
+    u32 memory_vram_usage;
+
     /* Rendering Toggle Flags */
     u8 rendering_enabled_terrain;
     u8 rendering_enabled_water;
