@@ -165,6 +165,31 @@ VAST_API VAST_INLINE u8 vast_tile_is_dirty(vast_tiles *t, u32 tile_index)
     return 0;
 }
 
+VAST_API VAST_INLINE void vast_tile_mark_dirty(vast_tiles *t, u32 tile_index)
+{
+    u32 i;
+
+    if (tile_index >= VAST_TILES_TOTAL)
+    {
+        return;
+    }
+
+    for (i = 0; i < (u32)t->dirty_indices_count; ++i)
+    {
+        if (t->dirty_indices[i] == tile_index)
+        {
+            return;
+        }
+    }
+
+    if (t->dirty_indices_count >= VAST_TILES_TOTAL)
+    {
+        return;
+    }
+
+    t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
+}
+
 VAST_API VAST_INLINE void vast_tiles_sort_dirty_by_distance(vast_tiles *t)
 {
     i32 n = (i32)t->dirty_indices_count;
@@ -398,7 +423,7 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, f32 camera_position_x, 
 VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x, f32 camera_position_z)
 {
     i32 x, z;
-    u32 i;
+    u32 tile_index;
     i32 new_origin_x;
     i32 new_origin_z;
 
@@ -436,7 +461,7 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
             t->tile_x[tile_index] = target_x;
             t->tile_z[tile_index] = z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
+            vast_tile_mark_dirty(t, tile_index);
         }
 
         t->origin_x++;
@@ -456,7 +481,7 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
             t->tile_x[tile_index] = target_x;
             t->tile_z[tile_index] = z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
+            vast_tile_mark_dirty(t, tile_index);
         }
     }
 
@@ -471,7 +496,7 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
             t->tile_x[tile_index] = x;
             t->tile_z[tile_index] = target_z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
+            vast_tile_mark_dirty(t, tile_index);
         }
 
         t->origin_z++;
@@ -491,24 +516,21 @@ VAST_API VAST_INLINE void vast_tiles_update(vast_tiles *t, f32 camera_position_x
 
             t->tile_x[tile_index] = x;
             t->tile_z[tile_index] = target_z;
-            t->dirty_indices[t->dirty_indices_count++] = (u16)tile_index;
+            vast_tile_mark_dirty(t, tile_index);
         }
     }
 
     /* Distance Calculation */
-    for (i = 0; i < VAST_TILES_TOTAL; ++i)
+    for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
     {
-        i32 distance_old = t->tile_lod_required[i];
-        i8 distance_new = vast_tile_lod(t->tile_x[i], t->tile_z[i], camera_tile_x, camera_tile_z);
+        i32 distance_old = t->tile_lod_required[tile_index];
+        i8 distance_new = vast_tile_lod(t->tile_x[tile_index], t->tile_z[tile_index], camera_tile_x, camera_tile_z);
 
         if (distance_old != distance_new)
         {
-            t->tile_lod_required[i] = distance_new;
+            t->tile_lod_required[tile_index] = distance_new;
 
-            if (!vast_tile_is_dirty(t, i))
-            {
-                t->dirty_indices[t->dirty_indices_count++] = (u16)i;
-            }
+            vast_tile_mark_dirty(t, tile_index);
         }
     }
 
