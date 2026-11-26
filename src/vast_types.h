@@ -63,4 +63,14 @@ VAST_TYPES_STATIC_ASSERT(sizeof(f32) == 4, f32_size_must_be_4);
 VAST_TYPES_STATIC_ASSERT(sizeof(f64) == 8, f64_size_must_be_8);
 #undef VAST_TYPES_STATIC_ASSERT
 
+#ifdef VAST_RELEASE
+#define VAST_ASSERT(expression)
+#else
+#define VAST_ASSERT(expression) \
+    if (!(expression))          \
+    {                           \
+        *(volatile i32 *)0 = 0; \
+    }
+#endif
+
 #endif /* VAST_TYPES_H */
