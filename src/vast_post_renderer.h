@@ -170,21 +170,6 @@ VAST_API void vast_post_render_end(vast_platform_state *platform_state, vast_sta
 {
     vast_opengl_api *gl = &platform_state->graphics.opengl;
 
-    vast_vec3 sun_world_pos = vast_vec3_add(state->camera.position, vast_vec3_mulf(state->sun_direction, 5000.0f));
-    vast_vec4 sun_clip = vast_mat4x4_mul_vec4(state->view_projection, vast_vec4_init(sun_world_pos.x, sun_world_pos.y, sun_world_pos.z, 1.0f));
-    vast_vec2 sun_screen_pos = vast_vec2_init(0.5f, 0.5f);
-
-    if (sun_clip.w > 0.0f)
-    {
-        sun_screen_pos.x = (sun_clip.x / sun_clip.w) * 0.5f + 0.5f;
-        sun_screen_pos.y = (sun_clip.y / sun_clip.w) * 0.5f + 0.5f;
-    }
-    else
-    {
-        sun_screen_pos.x = -10.0f;
-        sun_screen_pos.y = -10.0f;
-    }
-
     gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
     gl->glViewport(0, 0, (i32)platform_state->window.width, (i32)platform_state->window.height);
     gl->glDisable(GL_DEPTH_TEST);
@@ -193,7 +178,7 @@ VAST_API void vast_post_render_end(vast_platform_state *platform_state, vast_sta
     gl->glUniform1i(post_processing_shader.loc_scene_texture, 0);
     gl->glUniform3f(post_processing_shader.loc_iResolution, (f32)platform_state->window.width, (f32)platform_state->window.height, 1.0f);
     gl->glUniform1f(post_processing_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
-    gl->glUniform2f(post_processing_shader.loc_sunScreenPos, sun_screen_pos.x, sun_screen_pos.y);
+    gl->glUniform2f(post_processing_shader.loc_sunScreenPos, state->sun_screen_position.x, state->sun_screen_position.y);
 
     gl->glActiveTexture(GL_TEXTURE0);
     gl->glBindTexture(GL_TEXTURE_2D, post_processing_color_texture);

@@ -52,6 +52,7 @@ typedef struct vast_state
 
     /* Ligthing and Weather data */
     vast_vec3 sun_direction;
+    vast_vec2 sun_screen_position;
     vast_vec3 wind_direction;
 
     /* Post processing fields */

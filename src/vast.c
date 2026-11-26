@@ -211,6 +211,19 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
     /* Sun/Moon movement logic */
     vast_update_movement_sun(platform_state, state);
 
+    /* Calculate Sun Screen position */
+    {
+        vast_vec3 sun_world_pos = vast_vec3_add(state->camera.position, vast_vec3_mulf(state->sun_direction, 5000.0f));
+        vast_vec4 sun_clip = vast_mat4x4_mul_vec4(state->view_projection, vast_vec4_init(sun_world_pos.x, sun_world_pos.y, sun_world_pos.z, 1.0f));
+
+        state->sun_screen_position =
+            sun_clip.w > 0.0f
+                ? vast_vec2_init(
+                      (sun_clip.x / sun_clip.w) * 0.5f + 0.5f,
+                      (sun_clip.y / sun_clip.w) * 0.5f + 0.5f)
+                : vast_vec2_init(-10.0f, -10.0f);
+    }
+
     /* Reset draw calls accumulators */
     state->rendering_draw_calls_terrain = 0;
     state->rendering_draw_calls_water = 0;
