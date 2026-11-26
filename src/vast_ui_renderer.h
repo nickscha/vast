@@ -569,7 +569,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     sb.length = 0;
 
-                    vast_sb_s8_pad(&sb, "permanent", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_s8_pad(&sb, "cpu_perm", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.size, 8, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.offset, 10, ' ', VAST_SB_PAD_LEFT);
 
@@ -577,7 +577,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     sb.length = 0;
 
-                    vast_sb_s8_pad(&sb, "transient", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_s8_pad(&sb, "cpu_trans", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.size, 8, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.offset, 10, ' ', VAST_SB_PAD_LEFT);
 
@@ -585,7 +585,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     sb.length = 0;
 
-                    vast_sb_s8_pad(&sb, "vram", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_s8_pad(&sb, "gpu_vram", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_i32_pad(&sb, (i32)0, 8, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_i32_pad(&sb, (i32)vstate->memory_vram_usage, 10, ' ', VAST_SB_PAD_LEFT);
 
