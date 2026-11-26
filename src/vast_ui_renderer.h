@@ -79,8 +79,10 @@ VAST_API void vast_ui_window_tile(vast_platform_state *platform_state, vast_stat
     static s8 buffer[128];
     vast_sb sb = {sizeof(buffer), 0, buffer};
 
-    f32 win_w = 280.0f;
-    f32 win_h = 120.0f;
+    vast_vec4 tile_bounds = vast_tile_calculate_bounds(&state->tiles, state->camera.position.x, state->camera.position.z);
+
+    f32 win_w = 220.0f;
+    f32 win_h = 320.0f;
     f32 win_x = (f32)platform_state->window.width - win_w;
     f32 win_y = 180.0f;
 
@@ -99,8 +101,65 @@ VAST_API void vast_ui_window_tile(vast_platform_state *platform_state, vast_stat
     /* Space past header */
     ui_ctx->cursor_y += font_size;
 
-    vast_sb_s8(&sb, "Name\0");
+    vast_sb_s8_pad(&sb, "Name", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_s8_pad(&sb, "Value", 10, ' ', VAST_SB_PAD_LEFT);
+    vast_sb_s8(&sb, "\0");
     vast_ui_label(ui_ctx, buffer, 0xFFAAAAAA);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "origin_x", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_i32_pad(&sb, state->tiles.origin_x, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "origin_z", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_i32_pad(&sb, state->tiles.origin_z, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "camera_x", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_i32_pad(&sb, state->tiles.camera_x, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "camera_z", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_i32_pad(&sb, state->tiles.camera_z, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "tile_size", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_f64_pad(&sb, (f64)state->tiles.world_size, 4, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "lod_max", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_i32_pad(&sb, state->tiles.tile_lod_max, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "dirty_count", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_i32_pad(&sb, state->tiles.dirty_indices_count, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "x_min", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_f64_pad(&sb, (f64)tile_bounds.x, 4, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "x_max", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_f64_pad(&sb, (f64)tile_bounds.y, 4, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "z_min", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_f64_pad(&sb, (f64)tile_bounds.z, 4, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
+    sb.length = 0;
+
+    vast_sb_s8_pad(&sb, "z_max", 12, ' ', VAST_SB_PAD_RIGHT);
+    vast_sb_f64_pad(&sb, (f64)tile_bounds.w, 4, 10, ' ', VAST_SB_PAD_LEFT);
+    vast_ui_label(ui_ctx, buffer, 0xFFFFFFFF);
     sb.length = 0;
 
     vast_ui_panel_end(ui_ctx);
