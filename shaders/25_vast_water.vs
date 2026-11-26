@@ -13,6 +13,7 @@ uniform float iTime;
 out vec2       v_uv;
 out vec3       v_worldPos;
 out float      v_waveHeight;
+out float      v_is_skirt;
 flat out float v_texture_array_layer;
 
 float calcSurfaceWave(vec2 xz, float t)
@@ -36,11 +37,14 @@ void main()
     float waveH = 0.0;
     if (a_is_skirt < 0.5)
     {
-        waveH = calcSurfaceWave(world_pos, iTime);
+        float edgeDist = min(min(a_uv.x, 1.0 - a_uv.x), min(a_uv.y, 1.0 - a_uv.y));
+        float edgeFade = smoothstep(0.0, 0.05, edgeDist);
+        waveH    = calcSurfaceWave(world_pos, iTime) * edgeFade;
     }
 
     v_texture_array_layer = a_instance_data.x;
     v_waveHeight          = waveH;
+    v_is_skirt            = a_is_skirt;
     v_worldPos            = vec3(world_pos.x, u_water_level + waveH, world_pos.y);
     gl_Position           = u_vp * vec4(v_worldPos, 1.0);
 }

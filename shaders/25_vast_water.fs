@@ -3,6 +3,7 @@
 in vec2       v_uv;
 in vec3       v_worldPos;
 in float      v_waveHeight;
+in float      v_is_skirt;
 flat in float v_texture_array_layer;
 
 uniform sampler2DArray u_heightmap;
@@ -51,12 +52,14 @@ float fbm2(vec2 p)
 
 float sampleSmoothHeight(sampler2DArray tex, vec2 uv, float layer, float texSize)
 {
-    vec2 pixelCoord = uv * texSize - 0.5;
+    float maxIdx    = max(texSize - 1.0, 1.0);
+    vec2 pixelCoord = clamp(uv, 0.0, 1.0) * maxIdx;
     ivec2 baseCoord = ivec2(floor(pixelCoord));
-    vec2 f = fract(pixelCoord);
+    vec2 f          = fract(pixelCoord);
 
-    baseCoord = clamp(baseCoord, ivec2(0), ivec2(int(texSize) - 1));
-    ivec2 nextCoord = min(baseCoord + ivec2(1), ivec2(int(texSize) - 1));
+    int maxCoord    = int(texSize) - 1;
+    baseCoord       = clamp(baseCoord, ivec2(0), ivec2(maxCoord));
+    ivec2 nextCoord = min(baseCoord + ivec2(1), ivec2(maxCoord));
 
     float h00 = texelFetch(tex, ivec3(baseCoord.x, baseCoord.y, int(layer)), 0).r;
     float h10 = texelFetch(tex, ivec3(nextCoord.x, baseCoord.y, int(layer)), 0).r;
@@ -194,6 +197,11 @@ vec3 getAnimatedWaterNormal(vec2 xz, float time, float dist)
 
 void main()
 {
+    if (v_is_skirt > 0.001)
+    {
+        discard;
+    }
+
     float terrainHeight = sampleSmoothHeight(u_heightmap, v_uv, v_texture_array_layer, u_texture_size);
     float waterDepth    = v_worldPos.y - terrainHeight;
     float shoreWarp     = (noise2D(v_worldPos.xz * 0.14 + vec2(iTime * 0.18, -iTime * 0.14)) - 0.5) * 0.85;
