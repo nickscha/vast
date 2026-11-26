@@ -400,8 +400,8 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
     /* Per-LOD Texture Array Handles */
     static u32 *lod_heightmap_arrays;
     static u32 *lod_normalmap_arrays;
-    static u8 *texture_layer_used;
-    static i32 *texture_layer_next_free;
+    static u8 *texture_layer_used;       /* TODO(nickscha): Reset on tile init !*/
+    static i32 *texture_layer_next_free; /* TODO(nickscha): Reset on tile init !*/
     static i32 *lod_texture_pool_size;
 
     /* Base resolutions for height and normalmap */
