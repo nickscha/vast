@@ -383,7 +383,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                         static s8 prof_buf[256];
                         vast_sb sb = {0};
                         sb.buffer = prof_buf;
-                        sb.size = 256;
+                        sb.size = sizeof(prof_buf);
                         sb.length = 0;
 
                         if (i == 0)
@@ -445,7 +445,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     vast_sb sb = {0};
                     sb.buffer = buffer;
-                    sb.size = 64;
+                    sb.size = sizeof(buffer);
 
                     vast_sb_s8(&sb, "Position: ");
                     vast_sb_f64_pad(&sb, (f64)vstate->camera.position.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
@@ -534,7 +534,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         /* Memory Information Window */
         {
             static f32 mem_win_w = 280.0f;
-            static f32 mem_win_h = 120.0f;
+            static f32 mem_win_h = 140.0f;
 
             f32 mem_win_x = (f32)state->window.width - mem_win_w;
             f32 mem_win_y = 0.0f;
@@ -558,7 +558,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                     vast_sb sb = {0};
                     sb.buffer = buffer;
-                    sb.size = 128;
+                    sb.size = sizeof(buffer);
 
                     vast_sb_s8_pad(&sb, "Name", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_s8_pad(&sb, "total", 8, ' ', VAST_SB_PAD_LEFT);
@@ -584,10 +584,21 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
                     sb.length = 0;
+                }
+
+                /* Space past mem table */
+                ui_ctx.cursor_y += font_size;
+
+                {
+                    static s8 buffer[32];
+
+                    vast_sb sb = {0};
+                    sb.buffer = buffer;
+                    sb.size = sizeof(buffer);
 
                     vast_sb_s8_pad(&sb, "gpu_vram", 11, ' ', VAST_SB_PAD_RIGHT);
-                    vast_sb_i32_pad(&sb, (i32)0, 8, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_i32_pad(&sb, (i32)vstate->memory_vram_usage, 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)vstate->memory_vram_usage / 1024.0 / 1024.0, 4, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, " MB");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
