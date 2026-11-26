@@ -342,7 +342,7 @@ VAST_API VAST_INLINE u8 vast_tile_is_visible(
  */
 VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, f32 camera_position_x, f32 camera_position_z, f32 world_size)
 {
-    i32 x, z;
+    i32 x, z, lod;
 
     i32 camera_tile_x;
     i32 camera_tile_z;
@@ -357,6 +357,14 @@ VAST_API VAST_INLINE void vast_tiles_init(vast_tiles *t, f32 camera_position_x, 
     t->origin_z = camera_tile_z - VAST_TILES_HALF;
     t->camera_x = camera_tile_x - 424242; /* force update */
     t->camera_z = camera_tile_z - 424242; /* force update  */
+
+    /* Rest tile lod counter */
+    t->tile_lod_max = 0;
+
+    for (lod = 0; lod < VAST_TILES_MAX_LOD_LEVELS; ++lod)
+    {
+        t->tile_per_lod_count[lod] = 0;
+    }
 
     /* Mark all tiles dirty and calculate lod distance */
     for (z = t->origin_z; z < t->origin_z + VAST_TILES_PER_SIDE; ++z)
