@@ -74,7 +74,39 @@ VAST_API VAST_INLINE u32 vast_ui_color_darken(u32 color, f32 factor)
     return a | ((b & 0xFFu) << 16) | ((g & 0xFFu) << 8) | (r & 0xFFu);
 }
 
-VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
+VAST_API void vast_ui_window_tile(vast_platform_state *platform_state, vast_state *state, vast_ui_context *ui_ctx, f32 font_size)
+{
+    static s8 buffer[128];
+    vast_sb sb = {sizeof(buffer), 0, buffer};
+
+    f32 win_w = 280.0f;
+    f32 win_h = 120.0f;
+    f32 win_x = (f32)platform_state->window.width - win_w;
+    f32 win_y = 180.0f;
+
+    vast_ui_result header;
+    vast_ui_result panel;
+
+    header = vast_ui_drag_header(ui_ctx, 40, &win_x, &win_y, win_w, win_h, font_size);
+    panel = vast_ui_panel_begin(ui_ctx, vast_ui_rect_init(win_x, win_y, win_w, win_h));
+
+    vast_ui_push_rect(ui_ctx, panel, 0xEE1E1E26);
+    vast_ui_push_rect(ui_ctx, header, 0xFF333344);
+    vast_ui_push_text(ui_ctx, "Tile Info", header.rect, 0xFFFFFFFF);
+
+    (void)state;
+
+    /* Space past header */
+    ui_ctx->cursor_y += font_size;
+
+    vast_sb_s8(&sb, "Name\0");
+    vast_ui_label(ui_ctx, buffer, 0xFFAAAAAA);
+    sb.length = 0;
+
+    vast_ui_panel_end(ui_ctx);
+}
+
+VAST_API void vast_ui_render(vast_platform_state *platform_state, vast_state *state)
 {
     static u8 ui_initialized = 0;
 
@@ -86,13 +118,13 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
     static u32 font_texture_width = 1024;
     static u32 font_texture_height = 1024;
 
-    vast_opengl_api *gl = &state->graphics.opengl;
+    vast_opengl_api *gl = &platform_state->graphics.opengl;
 
     if (!ui_initialized)
     {
-        u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/50_vast_ui.vs");
-        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "shaders/50_vast_ui.fs");
-        u8 *font_data = (u8 *)vast_io_file_read_to_memory(&state->api, &vstate->memory_region_transient, "assets/font.raw");
+        u8 *shader_data_vertex = (u8 *)vast_io_file_read_to_memory(&platform_state->api, &state->memory_region_transient, "shaders/50_vast_ui.vs");
+        u8 *shader_data_fragment = (u8 *)vast_io_file_read_to_memory(&platform_state->api, &state->memory_region_transient, "shaders/50_vast_ui.fs");
+        u8 *font_data = (u8 *)vast_io_file_read_to_memory(&platform_state->api, &state->memory_region_transient, "assets/font.raw");
 
 #define INSTANCE_DATA_COUNT 1024
         static vast_ui_instance_data instance_data[INSTANCE_DATA_COUNT];
@@ -108,7 +140,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         ui_ctx.instances_size = INSTANCE_DATA_COUNT;
 
         /* Load Shader */
-        if (opengl_shader_load(&ui_shader.header, (s8 *)shader_data_vertex, (s8 *)shader_data_fragment, state->api.io_print, gl))
+        if (opengl_shader_load(&ui_shader.header, (s8 *)shader_data_vertex, (s8 *)shader_data_fragment, platform_state->api.io_print, gl))
         {
             ui_shader.loc_iResolution = gl->glGetUniformLocation(ui_shader.header.program, "iResolution");
             ui_shader.loc_iTime = gl->glGetUniformLocation(ui_shader.header.program, "iTime");
@@ -116,7 +148,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         }
         else
         {
-            state->api.io_print("Cannot compile font shaders!\n");
+            platform_state->api.io_print("Cannot compile font shaders!\n");
         }
 
         /* Load Font Texture */
@@ -181,10 +213,10 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         VAST_PROFILER_BEGIN(font_update);
 
         vast_ui_begin(&ui_ctx,
-                      state->window.width, state->window.height,
-                      (f32)state->input.mouse.x,
-                      (f32)state->window.height - (f32)state->input.mouse.y,
-                      state->input.mouse.keys_is_down[VAST_MOUSE_KEY_LEFT],
+                      platform_state->window.width, platform_state->window.height,
+                      (f32)platform_state->input.mouse.x,
+                      (f32)platform_state->window.height - (f32)platform_state->input.mouse.y,
+                      platform_state->input.mouse.keys_is_down[VAST_MOUSE_KEY_LEFT],
                       ui_scale, ui_padding,
                       font_size, font_advancement_factor);
 
@@ -203,7 +235,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
-                u32 btn_color = vstate->rendering_enabled_post ? 0xFF00AA00 : 0xFF0000AA;
+                u32 btn_color = state->rendering_enabled_post ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_HOVER)
                 {
@@ -212,7 +244,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
-                    vstate->rendering_enabled_post = !vstate->rendering_enabled_post;
+                    state->rendering_enabled_post = !state->rendering_enabled_post;
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
@@ -223,7 +255,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
-                u32 btn_color = vstate->rendering_enabled_terrain ? 0xFF00AA00 : 0xFF0000AA;
+                u32 btn_color = state->rendering_enabled_terrain ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_HOVER)
                 {
@@ -232,7 +264,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
-                    vstate->rendering_enabled_terrain = !vstate->rendering_enabled_terrain;
+                    state->rendering_enabled_terrain = !state->rendering_enabled_terrain;
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
@@ -243,7 +275,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
-                u32 btn_color = vstate->rendering_enabled_water ? 0xFF00AA00 : 0xFF0000AA;
+                u32 btn_color = state->rendering_enabled_water ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_HOVER)
                 {
@@ -252,7 +284,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
-                    vstate->rendering_enabled_water = !vstate->rendering_enabled_water;
+                    state->rendering_enabled_water = !state->rendering_enabled_water;
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
@@ -263,7 +295,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             {
                 vast_ui_result btn = vast_ui_button(&ui_ctx, 2, vast_ui_rect_init(0.0f, 0.0f, 17 * font_size * 0.55f, font_size));
 
-                u32 btn_color = vstate->rendering_enabled_sky ? 0xFF00AA00 : 0xFF0000AA;
+                u32 btn_color = state->rendering_enabled_sky ? 0xFF00AA00 : 0xFF0000AA;
 
                 if (btn.state & VAST_UI_STATE_HOVER)
                 {
@@ -272,7 +304,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
                 if (btn.state & VAST_UI_STATE_PRESSED)
                 {
-                    vstate->rendering_enabled_sky = !vstate->rendering_enabled_sky;
+                    state->rendering_enabled_sky = !state->rendering_enabled_sky;
                 }
 
                 vast_ui_push_rect(&ui_ctx, btn, btn_color);
@@ -290,7 +322,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
             if (btn_minus.state & VAST_UI_STATE_PRESSED)
             {
-                state->timing.frame_rate_target = (u32)vast_maxf((f32)state->timing.frame_rate_target - 10.0f, 0.0f);
+                platform_state->timing.frame_rate_target = (u32)vast_maxf((f32)platform_state->timing.frame_rate_target - 10.0f, 0.0f);
 
                 /*
                 ui_scale -= 0.1f;
@@ -300,7 +332,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
 
             if (btn_plus.state & VAST_UI_STATE_PRESSED)
             {
-                state->timing.frame_rate_target = (u32)vast_minf((f32)state->timing.frame_rate_target + 10.0f, 2000.0f);
+                platform_state->timing.frame_rate_target = (u32)vast_minf((f32)platform_state->timing.frame_rate_target + 10.0f, 2000.0f);
 
                 /*
                 ui_scale += 0.1f;
@@ -324,7 +356,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             sb.size = 64;
 
             vast_sb_s8(&sb, "FPS   : ");
-            vast_sb_i32_pad(&sb, (i32)state->timing.frame_rate, 8, ' ', VAST_SB_PAD_LEFT);
+            vast_sb_i32_pad(&sb, (i32)platform_state->timing.frame_rate, 8, ' ', VAST_SB_PAD_LEFT);
             vast_sb_s8(&sb, "\0");
 
             vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -332,7 +364,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             sb.length = 0;
 
             vast_sb_s8(&sb, "FPSCAP: ");
-            vast_sb_i32_pad(&sb, (i32)state->timing.frame_rate_target, 8, ' ', VAST_SB_PAD_LEFT);
+            vast_sb_i32_pad(&sb, (i32)platform_state->timing.frame_rate_target, 8, ' ', VAST_SB_PAD_LEFT);
             vast_sb_s8(&sb, "\0");
 
             vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -340,7 +372,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             sb.length = 0;
 
             vast_sb_s8(&sb, "DELTA : ");
-            vast_sb_f64_pad(&sb, (f64)state->timing.time_delta, 4, 8, ' ', VAST_SB_PAD_LEFT);
+            vast_sb_f64_pad(&sb, (f64)platform_state->timing.time_delta, 4, 8, ' ', VAST_SB_PAD_LEFT);
             vast_sb_s8(&sb, "\0");
 
             vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -357,7 +389,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             static f32 prof_win_h = 310.0f;
             static f32 prof_win_x = 0.0f;
 
-            f32 prof_win_y = (f32)state->window.height - (prof_win_h + prof_win_x);
+            f32 prof_win_y = (f32)platform_state->window.height - (prof_win_h + prof_win_x);
 
             vast_ui_result prof_header;
             vast_ui_result prof_panel;
@@ -448,11 +480,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.size = sizeof(buffer);
 
                     vast_sb_s8(&sb, "Position: ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.position.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.position.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.position.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.position.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.position.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.position.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -460,11 +492,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Forward : ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.forward.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.forward.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.forward.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.forward.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.forward.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.forward.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -472,11 +504,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Up      : ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.up.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.up.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.up.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.up.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.up.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.up.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -484,11 +516,11 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Right   : ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.right.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.right.x, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.right.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.right.y, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "/");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.right.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.right.z, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -496,7 +528,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Yaw     : ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.yaw, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.yaw, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -504,7 +536,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Pitch   : ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.pitch, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.pitch, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -512,7 +544,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Roll    : ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.roll, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.roll, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -520,7 +552,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8(&sb, "Fov     : ");
-                    vast_sb_f64_pad(&sb, (f64)vstate->camera.fov, 2, 7, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->camera.fov, 2, 7, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, "\0");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -536,7 +568,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             static f32 mem_win_w = 280.0f;
             static f32 mem_win_h = 160.0f;
 
-            f32 mem_win_x = (f32)state->window.width - mem_win_w;
+            f32 mem_win_x = (f32)platform_state->window.width - mem_win_w;
             f32 mem_win_y = 0.0f;
 
             vast_ui_result mem_header;
@@ -570,16 +602,16 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8_pad(&sb, "cpu_perm", 11, ' ', VAST_SB_PAD_RIGHT);
-                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.size, 8, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_permanent.offset, 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)state->memory_region_permanent.size, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)state->memory_region_permanent.offset, 10, ' ', VAST_SB_PAD_LEFT);
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
                     sb.length = 0;
 
                     vast_sb_s8_pad(&sb, "cpu_trans", 11, ' ', VAST_SB_PAD_RIGHT);
-                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.size, 8, ' ', VAST_SB_PAD_LEFT);
-                    vast_sb_i32_pad(&sb, (i32)vstate->memory_region_transient.offset, 10, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)state->memory_region_transient.size, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_i32_pad(&sb, (i32)state->memory_region_transient.offset, 10, ' ', VAST_SB_PAD_LEFT);
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
 
@@ -597,7 +629,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.size = sizeof(buffer);
 
                     vast_sb_s8_pad(&sb, "cpu_ram", 11, ' ', VAST_SB_PAD_RIGHT);
-                    vast_sb_f64_pad(&sb, (f64)(vstate->memory_region_permanent.offset + vstate->memory_region_transient.offset) / 1024.0 / 1024.0, 4, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)(state->memory_region_permanent.offset + state->memory_region_transient.offset) / 1024.0 / 1024.0, 4, 8, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, " MB");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -605,7 +637,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     sb.length = 0;
 
                     vast_sb_s8_pad(&sb, "gpu_vram", 11, ' ', VAST_SB_PAD_RIGHT);
-                    vast_sb_f64_pad(&sb, (f64)vstate->memory_vram_usage / 1024.0 / 1024.0, 4, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_f64_pad(&sb, (f64)state->memory_vram_usage / 1024.0 / 1024.0, 4, 8, ' ', VAST_SB_PAD_LEFT);
                     vast_sb_s8(&sb, " MB");
 
                     vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
@@ -615,6 +647,8 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
             }
             vast_ui_panel_end(&ui_ctx);
         }
+
+        vast_ui_window_tile(platform_state, state, &ui_ctx, font_size);
 
         vast_ui_end(&ui_ctx);
     }
@@ -635,8 +669,8 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         gl->glActiveTexture(GL_TEXTURE0);
         gl->glBindTexture(GL_TEXTURE_2D, font_texture);
 
-        gl->glUniform3f(ui_shader.loc_iResolution, (f32)state->window.width, (f32)state->window.height, 1.0f);
-        gl->glUniform1f(ui_shader.loc_iTime, (f32)state->timing.time_elapsed);
+        gl->glUniform3f(ui_shader.loc_iResolution, (f32)platform_state->window.width, (f32)platform_state->window.height, 1.0f);
+        gl->glUniform1f(ui_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
         gl->glUniform1i(ui_shader.loc_texture_font, 0);
 
         gl->glBindBuffer(GL_ARRAY_BUFFER, ui_vbo);

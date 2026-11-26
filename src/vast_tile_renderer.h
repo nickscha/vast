@@ -6,7 +6,7 @@
  * #############################################################################
  */
 #include "vast_types.h"               /* Basic types (u8, u32, ...)    */
-#include "vast.h"                     /* Platform State                */
+#include "vast_tiles.h"               /* Platform State                */
 #include "vast_state.h"               /* Vast state struct             */
 #include "vast_string_builder.h"      /* String printing               */
 #include "vast_profiler.h"            /* Profiler metrics              */
@@ -334,7 +334,7 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(
 
     texture_layer_current = t->texture_layer[tile_index];
 
-    /* Current LOD has texture layer assigned. Free it. */
+    /* Current LOD has texture layer assigned. Free istate->tiles. */
     if (texture_layer_current >= 0 && lod_current >= 0)
     {
         texture_layer_used[lod_current * VAST_TILES_TOTAL + texture_layer_current] = 0;
@@ -380,7 +380,6 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(
 VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *state)
 {
     static u8 tiles_initialized = 0;
-    static vast_tiles t = {0};
 
     static vast_tile_shader_heightmap tiles_hm_shader = {0};
     static vast_tile_shader_normalmap tiles_nm_shader = {0};
@@ -418,10 +417,10 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         f32 tile_world_size = 256.0f;
 
         VAST_PROFILER_BEGIN(tile_init);
-        vast_tiles_init(&t, state->camera.position.x, state->camera.position.z, tile_world_size);
+        vast_tiles_init(&state->tiles, state->camera.position.x, state->camera.position.z, tile_world_size);
         VAST_PROFILER_END(tile_init);
 
-        lod_count = (u32)t.tile_lod_max + 1;
+        lod_count = (u32)state->tiles.tile_lod_max + 1;
 
         /* Allocate permanent tile memory */
         {
@@ -445,7 +444,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
             for (lod = 0; lod < lod_count; ++lod)
             {
-                u32 texture_pool_size = vast_tile_calc_pool_size(&t, lod);
+                u32 texture_pool_size = vast_tile_calc_pool_size(&state->tiles, lod);
 
                 s8 tmp[128];
                 vast_sb sb = {0};
@@ -575,7 +574,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
     }
 
 #ifndef VAST_RELEASE
-    vast_tile_shader_hot_reload(platform_state, state, &t, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, state->camera.position.x, state->camera.position.z);
+    vast_tile_shader_hot_reload(platform_state, state, &state->tiles, &tiles_shader, &tiles_hm_shader, &tiles_nm_shader, state->camera.position.x, state->camera.position.z);
 #endif
 
     /* Test camera movement tile change */
@@ -600,28 +599,28 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
     /* Check for new dirty tiles */
     VAST_PROFILER_BEGIN(tile_update);
-    vast_tiles_update(&t, state->camera.position.x, state->camera.position.z);
+    vast_tiles_update(&state->tiles, state->camera.position.x, state->camera.position.z);
     VAST_PROFILER_END(tile_update);
 
     /* Process dirty tiles */
-    if (t.dirty_indices_count > 0)
+    if (state->tiles.dirty_indices_count > 0)
     {
         /* When no tiles calculated process everything in one frame otherwise introduce frame pacing */
-        i32 updates_per_frame = t.dirty_indices_count == VAST_TILES_TOTAL ? VAST_TILES_TOTAL : 6;
+        i32 updates_per_frame = state->tiles.dirty_indices_count == VAST_TILES_TOTAL ? VAST_TILES_TOTAL : 6;
 
         VAST_PROFILER_BEGIN(tile_process_dirty);
 
-        while (updates_per_frame > 0 && t.dirty_indices_count > 0)
+        while (updates_per_frame > 0 && state->tiles.dirty_indices_count > 0)
         {
-            u32 last_idx = t.dirty_indices_count - 1;
-            u32 tile_idx = t.dirty_indices[last_idx];
+            u32 last_idx = state->tiles.dirty_indices_count - 1;
+            u32 tile_idx = state->tiles.dirty_indices[last_idx];
 
-            i8 tile_lod_required = t.tile_lod_required[tile_idx];
+            i8 tile_lod_required = state->tiles.tile_lod_required[tile_idx];
 
             i32 height_tex_size = resolution_base_heightmap / (1 << tile_lod_required) + 1; /* +1 because of skirts */
             i32 normal_tex_size = resolution_base_normalmap / (1 << tile_lod_required);
 
-            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&t, tile_idx, texture_layer_used, texture_layer_next_free, lod_texture_pool_size);
+            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&state->tiles, tile_idx, texture_layer_used, texture_layer_next_free, lod_texture_pool_size);
 
             if (texture_array_layer == -1)
             {
@@ -652,11 +651,11 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 gl->glViewport(0, 0, height_tex_size, height_tex_size);
 
                 gl->glUseProgram(tiles_hm_shader.header.program);
-                gl->glUniform2f(tiles_hm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
+                gl->glUniform2f(tiles_hm_shader.loc_tile_offset, (f32)state->tiles.tile_x[tile_idx], (f32)state->tiles.tile_z[tile_idx]);
                 gl->glUniform1f(tiles_hm_shader.loc_texture_size, (f32)height_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */
-                gl->glUniform1f(tiles_hm_shader.loc_tile_size, t.world_size);
+                gl->glUniform1f(tiles_hm_shader.loc_tile_size, state->tiles.world_size);
 
                 gl->glDrawArrays(GL_TRIANGLES, 0, 3);
             }
@@ -669,11 +668,11 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 gl->glViewport(0, 0, normal_tex_size, normal_tex_size);
 
                 gl->glUseProgram(tiles_nm_shader.header.program);
-                gl->glUniform2f(tiles_nm_shader.loc_tile_offset, (f32)t.tile_x[tile_idx], (f32)t.tile_z[tile_idx]);
+                gl->glUniform2f(tiles_nm_shader.loc_tile_offset, (f32)state->tiles.tile_x[tile_idx], (f32)state->tiles.tile_z[tile_idx]);
                 gl->glUniform1f(tiles_nm_shader.loc_texture_size, (f32)normal_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */
-                gl->glUniform1f(tiles_nm_shader.loc_tile_size, t.world_size);
+                gl->glUniform1f(tiles_nm_shader.loc_tile_size, state->tiles.world_size);
 
                 gl->glDrawArrays(GL_TRIANGLES, 0, 3);
             }
@@ -683,8 +682,8 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             gl->glViewport(0, 0, (i32)platform_state->window.width, (i32)platform_state->window.height);
             gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            t.tile_lod_current[tile_idx] = tile_lod_required;
-            t.dirty_indices_count--;
+            state->tiles.tile_lod_current[tile_idx] = tile_lod_required;
+            state->tiles.dirty_indices_count--;
             updates_per_frame--;
         }
 
@@ -737,7 +736,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
         gl->glUniform3f(tiles_shader.loc_sun_dir, state->sun_direction.x, state->sun_direction.y, state->sun_direction.z);
         gl->glUniform1f(tiles_shader.loc_visualization_mode, (f32)visualization_mode);
 
-        gl->glUniform1f(tiles_shader.loc_tile_size, t.world_size);
+        gl->glUniform1f(tiles_shader.loc_tile_size, state->tiles.world_size);
         gl->glUniform1i(tiles_shader.loc_heightmap, 0);
         gl->glUniform1i(tiles_shader.loc_normalmap, 1);
 
@@ -752,29 +751,29 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
             for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
             {
-                i32 tile_lod_current = t.tile_lod_current[tile_index];
-                i32 texture_array_layer = t.texture_layer[tile_index];
+                i32 tile_lod_current = state->tiles.tile_lod_current[tile_index];
+                i32 texture_array_layer = state->tiles.texture_layer[tile_index];
 
                 if (tile_lod_current != (i32)lod || texture_array_layer < 0)
                 {
                     continue;
                 }
 
-                if (!vast_tile_is_visible(&t, &state->view_frustum, tile_index, -200.0f, 600.0f))
+                if (!vast_tile_is_visible(&state->tiles, &state->view_frustum, tile_index, -200.0f, 600.0f))
                 {
                     /* Stop LOD geomorphing since the tile is not visible */
-                    t.tile_lod_transition_factor[tile_index] = 1.0f;
+                    state->tiles.tile_lod_transition_factor[tile_index] = 1.0f;
                     continue;
                 }
 
                 /* LOD Geomorphing: Fine to Coarse transition when moving backwards */
-                if (vast_tile_is_on_lod_outer_edge(&t, tile_index))
+                if (vast_tile_is_on_lod_outer_edge(&state->tiles, tile_index))
                 {
                     f32 threshold = 0.1f;
 
                     /* 1.0f at boundary - 0.0f at edge */
                     f32 camera_tile_factor = vast_tile_calculate_camera_backface_edge_factor(
-                        &t,
+                        &state->tiles,
                         state->camera.position.x, state->camera.position.z,
                         state->camera.forward.x, state->camera.forward.z,
                         threshold);
@@ -784,11 +783,11 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                     /*tile_transition_timer[tile_index] = camera_tile_factor;*/
                 }
 
-                instance_buffer[instance_count].offset_x = (f32)t.tile_x[tile_index];
-                instance_buffer[instance_count].offset_z = (f32)t.tile_z[tile_index];
+                instance_buffer[instance_count].offset_x = (f32)state->tiles.tile_x[tile_index];
+                instance_buffer[instance_count].offset_z = (f32)state->tiles.tile_z[tile_index];
                 instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
-                instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&t, tile_index);
-                instance_buffer[instance_count].transition_factor = t.tile_lod_transition_factor[tile_index];
+                instance_buffer[instance_count].is_dirty = (f32)vast_tile_is_dirty(&state->tiles, tile_index);
+                instance_buffer[instance_count].transition_factor = state->tiles.tile_lod_transition_factor[tile_index];
                 instance_count++;
             }
 
@@ -828,7 +827,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             gl->glUseProgram(water_shader.header.program);
             gl->glUniformMatrix4fv(water_shader.loc_view_projection, 1, GL_FALSE, state->view_projection.e);
             gl->glUniform1f(water_shader.loc_water_level, global_water_level);
-            gl->glUniform1f(water_shader.loc_tile_size, t.world_size);
+            gl->glUniform1f(water_shader.loc_tile_size, state->tiles.world_size);
             gl->glUniform1f(water_shader.loc_iTime, (f32)platform_state->timing.time_elapsed);
             gl->glUniform3f(water_shader.loc_sun_dir, state->sun_direction.x, state->sun_direction.y, state->sun_direction.z);
             gl->glUniform3f(water_shader.loc_camera, state->camera.position.x, state->camera.position.y, state->camera.position.z);
@@ -854,21 +853,21 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
                 for (tile_index = 0; tile_index < VAST_TILES_TOTAL; ++tile_index)
                 {
-                    i32 tile_lod_current = t.tile_lod_current[tile_index];
-                    i32 texture_array_layer = t.texture_layer[tile_index];
+                    i32 tile_lod_current = state->tiles.tile_lod_current[tile_index];
+                    i32 texture_array_layer = state->tiles.texture_layer[tile_index];
 
                     if (tile_lod_current != (i32)lod || texture_array_layer < 0)
                     {
                         continue;
                     }
 
-                    if (!vast_tile_is_visible(&t, &state->view_frustum, tile_index, -200.0f, 600.0f))
+                    if (!vast_tile_is_visible(&state->tiles, &state->view_frustum, tile_index, -200.0f, 600.0f))
                     {
                         continue;
                     }
 
-                    instance_buffer[instance_count].offset_x = (f32)t.tile_x[tile_index];
-                    instance_buffer[instance_count].offset_z = (f32)t.tile_z[tile_index];
+                    instance_buffer[instance_count].offset_x = (f32)state->tiles.tile_x[tile_index];
+                    instance_buffer[instance_count].offset_z = (f32)state->tiles.tile_z[tile_index];
                     instance_buffer[instance_count].texture_array_layer = (f32)texture_array_layer;
                     instance_count++;
                 }

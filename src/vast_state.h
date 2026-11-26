@@ -9,6 +9,7 @@
 #include "vast.h"                     /* Platform memory struct     */
 #include "vast_math_linear_algebra.h" /* Vectors/Matrices           */
 #include "vast_camera.h"              /* Camera data                */
+#include "vast_tiles.h"               /* Toroidal Tile data         */
 
 /* #############################################################################
  * # [SECTION] State Single source of truth
@@ -65,6 +66,9 @@ typedef struct vast_state
     u32 ui_font_texture_height;
     f32 ui_font_size;
     f32 ui_font_advancement_factor;
+
+    /* Tile data */
+    vast_tiles tiles;
 
 } vast_state;
 
