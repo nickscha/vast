@@ -534,7 +534,7 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
         /* Memory Information Window */
         {
             static f32 mem_win_w = 280.0f;
-            static f32 mem_win_h = 140.0f;
+            static f32 mem_win_h = 160.0f;
 
             f32 mem_win_x = (f32)state->window.width - mem_win_w;
             f32 mem_win_y = 0.0f;
@@ -595,6 +595,14 @@ VAST_API void vast_ui_render(vast_platform_state *state, vast_state *vstate)
                     vast_sb sb = {0};
                     sb.buffer = buffer;
                     sb.size = sizeof(buffer);
+
+                    vast_sb_s8_pad(&sb, "cpu_ram", 11, ' ', VAST_SB_PAD_RIGHT);
+                    vast_sb_f64_pad(&sb, (f64)(vstate->memory_region_permanent.offset + vstate->memory_region_transient.offset) / 1024.0 / 1024.0, 4, 8, ' ', VAST_SB_PAD_LEFT);
+                    vast_sb_s8(&sb, " MB");
+
+                    vast_ui_label(&ui_ctx, buffer, 0xFFFFFFFF);
+
+                    sb.length = 0;
 
                     vast_sb_s8_pad(&sb, "gpu_vram", 11, ' ', VAST_SB_PAD_RIGHT);
                     vast_sb_f64_pad(&sb, (f64)vstate->memory_vram_usage / 1024.0 / 1024.0, 4, 8, ' ', VAST_SB_PAD_LEFT);
