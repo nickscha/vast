@@ -218,7 +218,7 @@ void main()
     vec3 matGrass   = getMaterialGrass();
     vec3 matRock    = getMaterialRock();
     vec3 matSnow    = vec3(0.90, 0.92,  0.95);
-    vec3 matSand    = vec3(0.66, 0.55, 0.33);
+    vec3 matSand    = vec3(0.56, 0.45, 0.23);
     
     vec3 mate = matRock;
 
