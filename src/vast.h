@@ -255,6 +255,18 @@ typedef struct vast_platform_memory
 } vast_platform_memory;
 
 /* #############################################################################
+ * # [SECTION] Platform Sound
+ * #############################################################################
+ */
+typedef struct vast_platform_sound
+{
+    u32 samples_per_second; /* Samples per second */
+    u32 samples_count;      /* The size of the sound buffer */
+    i16 *samples;           /* The sound buffer data  */
+
+} vast_platform_sound;
+
+/* #############################################################################
  * # [SECTION] Platform Timing
  * #############################################################################
  */
@@ -291,6 +303,7 @@ typedef struct vast_platform_state
     vast_platform_window window;     /* Platform window information */
     vast_platform_input input;       /* Platform input              */
     vast_platform_memory memory;     /* Platform memory             */
+    vast_platform_sound sound;       /* Platform sound              */
     vast_platform_timing timing;     /* Platform timing             */
     vast_platform_graphics graphics; /* Platform provided graphics  */
 
