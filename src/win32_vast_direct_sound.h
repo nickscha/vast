@@ -151,7 +151,7 @@ struct IDirectSound
  */
 typedef i32 (*direct_sound_create)(GUID *pcGuidDevice, IDirectSound **ppDS, void *pUnkOuter);
 
-static direct_sound_create *DirectSoundCreate = 0;
+static direct_sound_create DirectSoundCreate = 0;
 
 VAST_API u8 direct_sound_load(void)
 {
@@ -162,7 +162,7 @@ VAST_API u8 direct_sound_load(void)
         return 0;
     }
 
-    DirectSoundCreate = (direct_sound_create *)GetProcAddress(dsound_lib, "DirectSoundCreate");
+    DirectSoundCreate = (direct_sound_create)GetProcAddress(dsound_lib, "DirectSoundCreate");
 
     if (!DirectSoundCreate)
     {
