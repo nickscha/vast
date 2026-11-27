@@ -1254,6 +1254,10 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
 
         while (PeekMessageA(&message, state.window_handle, 0, 0, PM_REMOVE))
         {
+          if (message.message == WM_QUIT)
+          {
+            state.platform_state.running = 0;
+          }
           DispatchMessageA(&message);
         }
       }
