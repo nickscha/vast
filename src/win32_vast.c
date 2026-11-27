@@ -19,6 +19,7 @@ LICENSE
 #include "win32_vast_opengl.h"
 #include "win32_vast_api.h"
 #include "win32_vast_xinput.h"
+#include "win32_vast_direct_sound.h"
 
 /* Unfortunaly "modern" compilers sometimes inject memset intrinsics in the generated code
  * even if the application does not call memset and even with -fno-builtin, ... set.
@@ -1142,6 +1143,11 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   if (!xinput_load())
   {
     win32_print("[win32][warning] Could not load XInput (xinput1_4.dll, xinput1_3.dll or xinput9_1_0.dll)! XInput gamepads/controllers (e.g. XBOX) are not functional.\n");
+  }
+
+  if (!direct_sound_load())
+  {
+    win32_print("[win32][warning] Could not load DirectSound (dsound.dll)! Sound playback is not supported.\n");
   }
 
   /******************************/

@@ -115,11 +115,10 @@ typedef struct IDirectSoundBufferVtbl
 
 } IDirectSoundBufferVtbl;
 
-typedef struct IDirectSoundBuffer
+struct IDirectSoundBuffer
 {
     IDirectSoundBufferVtbl *lpVtbl;
-
-} IDirectSoundBuffer;
+};
 
 typedef struct IDirectSoundVtbl
 {
@@ -162,7 +161,7 @@ VAST_API u8 direct_sound_load(void)
         return 0;
     }
 
-    DirectSoundCreate = (direct_sound_create)GetProcAddress(dsound_lib, "DirectSoundCreate");
+    *(void **)(&DirectSoundCreate) = GetProcAddress(dsound_lib, "DirectSoundCreate");
 
     if (!DirectSoundCreate)
     {
