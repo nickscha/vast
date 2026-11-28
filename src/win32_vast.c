@@ -56,6 +56,16 @@ typedef struct win32_vast_application
   s8 *dllName;
 } win32_vast_application;
 
+typedef struct win32_sound_output
+{
+  i32 SamplesPerSecond;
+  u32 RunningSampleIndex;
+  i32 BytesPerSample;
+  u32 SecondaryBufferSize;
+  u32 SafetyBytes;
+
+} win32_sound_output;
+
 typedef struct win32_vast_state
 {
   win32_vast_application application;
@@ -77,6 +87,10 @@ typedef struct win32_vast_state
   void *device_context;
   WINDOWPLACEMENT g_wpPrev;
   i32 thread_count;
+
+  /* DirectSound specific */
+  IDirectSoundBuffer *GlobalSecondaryBuffer;
+  win32_sound_output sound_output;
 
 } win32_vast_state;
 
@@ -719,6 +733,88 @@ VAST_API void win32_window_enter_windowed(win32_vast_state *state)
   }
 }
 
+VAST_API u8 win32_direct_sound_load(win32_vast_state *win32_state)
+{
+  IDirectSound *DirectSound = 0;
+  WAVEFORMATEX WaveFormat = {0};
+
+  if (!direct_sound_load() || !DirectSoundCreate || DS_FAILED(DirectSoundCreate(0, &DirectSound, 0)))
+  {
+    return 0;
+  }
+
+  WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
+  WaveFormat.nChannels = 2;
+  WaveFormat.nSamplesPerSec = (u32)win32_state->sound_output.SamplesPerSecond;
+  WaveFormat.wBitsPerSample = 16;
+  WaveFormat.nBlockAlign = (u16)((WaveFormat.nChannels * WaveFormat.wBitsPerSample) / 8);
+  WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec * WaveFormat.nBlockAlign;
+  WaveFormat.cbSize = 0;
+
+  if (DS_SUCCEEDED(DirectSound->lpVtbl->SetCooperativeLevel(DirectSound, win32_state->window_handle, DSSCL_PRIORITY)))
+  {
+    DSBUFFERDESC BufferDescription = {0};
+    IDirectSoundBuffer *PrimaryBuffer = 0;
+
+    BufferDescription.dwSize = sizeof(BufferDescription);
+    BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+    if (DS_SUCCEEDED(DirectSound->lpVtbl->CreateSoundBuffer(DirectSound, &BufferDescription, &PrimaryBuffer, 0)))
+    {
+      PrimaryBuffer->lpVtbl->SetFormat(PrimaryBuffer, &WaveFormat);
+    }
+  }
+
+  {
+    DSBUFFERDESC BufferDescription = {0};
+    BufferDescription.dwSize = sizeof(BufferDescription);
+    BufferDescription.dwFlags = DSBCAPS_GETCURRENTPOSITION2;
+    BufferDescription.dwBufferBytes = (u32)win32_state->sound_output.SecondaryBufferSize;
+    BufferDescription.lpwfxFormat = &WaveFormat;
+
+    if (DS_FAILED(DirectSound->lpVtbl->CreateSoundBuffer(DirectSound, &BufferDescription, &win32_state->GlobalSecondaryBuffer, 0)))
+    {
+      win32_print("[win32][error] DirectSound secondary buffer creation failed!\n");
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+VAST_API void win32_direct_sound_buffer_clear(win32_vast_state *win32_state)
+{
+  void *Region1 = 0;
+  u32 Region1Size = 0;
+  void *Region2 = 0;
+  u32 Region2Size = 0;
+
+  if (!win32_state->GlobalSecondaryBuffer)
+  {
+    return;
+  }
+
+  if (DS_SUCCEEDED(win32_state->GlobalSecondaryBuffer->lpVtbl->Lock(win32_state->GlobalSecondaryBuffer, 0, win32_state->sound_output.SecondaryBufferSize, &Region1, &Region1Size, &Region2, &Region2Size, 0)))
+  {
+    u8 *DestSample = (u8 *)Region1;
+    u32 ByteIndex;
+
+    for (ByteIndex = 0; ByteIndex < Region1Size; ++ByteIndex)
+    {
+      *DestSample++ = 0;
+    }
+
+    DestSample = (u8 *)Region2;
+
+    for (ByteIndex = 0; ByteIndex < Region2Size; ++ByteIndex)
+    {
+      *DestSample++ = 0;
+    }
+
+    win32_state->GlobalSecondaryBuffer->lpVtbl->Unlock(win32_state->GlobalSecondaryBuffer, Region1, Region1Size, Region2, Region2Size);
+  }
+}
+
 #ifndef VAST_RELEASE
 VAST_API u8 win32_load_application(win32_vast_state *state)
 {
@@ -1146,20 +1242,30 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   }
 
   /******************************/
-  /* Load DirectSound           */
-  /******************************/
-  if (!direct_sound_load())
-  {
-    win32_print("[win32][warning] Could not load DirectSound (dsound.dll)! Sound playback is not supported.\n");
-  }
-
-  /******************************/
   /* Window and OpenGL context  */
   /******************************/
   if (!win32_opengl_create_context(&state))
   {
     win32_print("[win32][error] Could not create opengl context!\n");
     return 1;
+  }
+
+  /******************************/
+  /* Load DirectSound           */
+  /******************************/
+  {
+    state.sound_output.SamplesPerSecond = 48000;
+    state.sound_output.RunningSampleIndex = 0;
+    state.sound_output.BytesPerSample = sizeof(i16) * 2;
+    state.sound_output.SecondaryBufferSize = (u32)(state.sound_output.SamplesPerSecond * state.sound_output.BytesPerSample);
+    state.sound_output.SafetyBytes = (u32)((state.sound_output.SamplesPerSecond * state.sound_output.BytesPerSample / 60) * 4);
+
+    if (!win32_direct_sound_load(&state))
+    {
+      win32_print("[win32][warning] Could not load DirectSound (dsound.dll)! Sound playback is not supported.\n");
+    }
+
+    win32_direct_sound_buffer_clear(&state);
   }
 
   /* Avoid clear color flickering */
