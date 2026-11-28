@@ -123,6 +123,7 @@ typedef void (*PFNGLCULLFACEPROC)(u32 mode);
 typedef void (*PFNGLDRAWELEMENTSPROC)(u32 mode, i32 count, i32 type, void *indices);
 typedef void (*PFNGLDEPTHMASKPROC)(u8 flag);
 typedef void (*PFNGLDEPTHFUNCPROC)(i32 func);
+typedef void (*PFNGLGETTEXIMAGEPROC)(u32 target, i32 level, u32 format, u32 type, void *pixels);
 
 /* Opengl 1.1+ until current */
 typedef u32 (*PFNGLCREATESHADERPROC)(u32 shaderType);
@@ -211,6 +212,7 @@ typedef struct vast_opengl_api
     PFNGLDRAWELEMENTSPROC glDrawElements;
     PFNGLDEPTHMASKPROC glDepthMask;
     PFNGLDEPTHFUNCPROC glDepthFunc;
+    PFNGLGETTEXIMAGEPROC glGetTexImage;
 
     /* Opengl 1.1+ until current */
     PFNGLCREATESHADERPROC glCreateShader;

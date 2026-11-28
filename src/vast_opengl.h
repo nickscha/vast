@@ -51,6 +51,7 @@ VAST_API VAST_INLINE u8 vast_opengl_load_functions(vast_opengl_function_loader l
     opengl->glDrawElements = (PFNGLDRAWELEMENTSPROC)load("glDrawElements");
     opengl->glDepthMask = (PFNGLDEPTHMASKPROC)load("glDepthMask");
     opengl->glDepthFunc = (PFNGLDEPTHFUNCPROC)load("glDepthFunc");
+    opengl->glGetTexImage = (PFNGLGETTEXIMAGEPROC)load("glGetTexImage");
 
     /* Opengl 1.1+ until current */
     opengl->glCreateShader = (PFNGLCREATESHADERPROC)load("glCreateShader");
