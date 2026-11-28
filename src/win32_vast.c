@@ -206,6 +206,58 @@ VAST_API u8 win32_file_read(s8 *filename, u8 *buffer, u32 buffer_size)
   return 1;
 }
 
+VAST_API u8 win32_file_write(s8 *filename, u8 *buffer, u32 buffer_size)
+{
+  void *hFile = INVALID_HANDLE;
+  u32 totalWritten = 0;
+  i32 attempt;
+
+  if (!filename || (!buffer && buffer_size > 0))
+  {
+    return 0;
+  }
+
+  for (attempt = 0; attempt < 4; ++attempt)
+  {
+    hFile = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+
+    if (hFile != INVALID_HANDLE)
+    {
+      break;
+    }
+
+    Sleep(5);
+  }
+
+  if (hFile == INVALID_HANDLE)
+  {
+    return 0;
+  }
+
+  while (totalWritten < buffer_size)
+  {
+    u32 bytesWritten = 0;
+
+    if (!WriteFile(hFile, buffer + totalWritten, buffer_size - totalWritten, &bytesWritten, 0))
+    {
+      CloseHandle(hFile);
+      return 0;
+    }
+
+    if (bytesWritten == 0)
+    {
+      CloseHandle(hFile);
+      return 0;
+    }
+
+    totalWritten += bytesWritten;
+  }
+
+  CloseHandle(hFile);
+
+  return 1;
+}
+
 VAST_API VAST_INLINE FILETIME win32_file_mod_time(s8 *file)
 {
   static FILETIME empty = {0, 0};
@@ -1226,6 +1278,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   state.platform_state.api.io_file_size = win32_file_size;
   state.platform_state.api.io_file_mod_signature = win32_file_mod_signature;
   state.platform_state.api.io_file_read = win32_file_read;
+  state.platform_state.api.io_file_write = win32_file_write;
   state.platform_state.api.time_ms_current = win32_time_ms_current;
 
   /* Platform Window setup */
@@ -1236,7 +1289,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
   state.platform_state.window.clear_color_b = 0.1f;
 
   /* Platform Memory Setup */
-  state.platform_state.memory.size = 1024 * 1024 * 8; /* 8 MB */
+  state.platform_state.memory.size = 1024 * 1024 * 32; /* 32 MB */
   state.platform_state.memory.data = VirtualAlloc(0, state.platform_state.memory.size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
   if (!state.platform_state.memory.data)
