@@ -815,6 +815,59 @@ VAST_API void win32_direct_sound_buffer_clear(win32_vast_state *win32_state)
   }
 }
 
+VAST_API void win32_direct_sound_buffer_fill(win32_vast_state *win32_state, u32 ByteToLock, u32 BytesToWrite)
+{
+  void *Region1 = 0;
+  u32 Region1Size = 0;
+  void *Region2 = 0;
+  u32 Region2Size = 0;
+  i32 LockResult;
+
+  if (!win32_state->GlobalSecondaryBuffer || BytesToWrite == 0)
+  {
+    return;
+  }
+
+  LockResult = win32_state->GlobalSecondaryBuffer->lpVtbl->Lock(win32_state->GlobalSecondaryBuffer, ByteToLock, BytesToWrite, &Region1, &Region1Size, &Region2, &Region2Size, 0);
+
+  if (LockResult == (i32)DSERR_BUFFERLOST)
+  {
+    win32_state->GlobalSecondaryBuffer->lpVtbl->Restore(win32_state->GlobalSecondaryBuffer);
+    win32_direct_sound_buffer_clear(win32_state);
+    LockResult = win32_state->GlobalSecondaryBuffer->lpVtbl->Lock(win32_state->GlobalSecondaryBuffer, ByteToLock, BytesToWrite, &Region1, &Region1Size, &Region2, &Region2Size, 0);
+  }
+
+  if (DS_SUCCEEDED(LockResult))
+  {
+    u32 Region1SampleCount = Region1Size / (u32)win32_state->sound_output.BytesPerSample;
+    i16 *DestSample = (i16 *)Region1;
+    i16 *SourceSample = win32_state->platform_state.sound.samples;
+    u32 SampleIndex;
+
+    for (SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
+    {
+      *DestSample++ = *SourceSample++;
+      *DestSample++ = *SourceSample++;
+      ++win32_state->sound_output.RunningSampleIndex;
+    }
+
+    {
+      u32 Region2SampleCount = Region2Size / (u32)win32_state->sound_output.BytesPerSample;
+
+      DestSample = (i16 *)Region2;
+
+      for (SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
+      {
+        *DestSample++ = *SourceSample++;
+        *DestSample++ = *SourceSample++;
+        ++win32_state->sound_output.RunningSampleIndex;
+      }
+    }
+
+    win32_state->GlobalSecondaryBuffer->lpVtbl->Unlock(win32_state->GlobalSecondaryBuffer, Region1, Region1Size, Region2, Region2Size);
+  }
+}
+
 #ifndef VAST_RELEASE
 VAST_API u8 win32_load_application(win32_vast_state *state)
 {
@@ -1266,6 +1319,17 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
     }
 
     win32_direct_sound_buffer_clear(&state);
+
+    if (state.GlobalSecondaryBuffer)
+    {
+      state.GlobalSecondaryBuffer->lpVtbl->Play(state.GlobalSecondaryBuffer, 0, 0, DSBPLAY_LOOPING);
+    }
+
+    /* Allocate samples */
+    state.platform_state.sound.samples_per_second = (u32)state.sound_output.SamplesPerSecond;
+    state.platform_state.sound.samples = (i16 *)VirtualAlloc(0, state.sound_output.SecondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+    (void)win32_direct_sound_buffer_fill;
   }
 
   /* Avoid clear color flickering */
