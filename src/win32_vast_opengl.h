@@ -11,8 +11,6 @@
  * # [SECTION] Win32 OpenGL functions
  * #############################################################################
  */
-#define WIN32_OPENGL_API(r) __declspec(dllimport) r __stdcall
-
 #define WGL_DRAW_TO_WINDOW_ARB 0x2001
 #define WGL_SUPPORT_OPENGL_ARB 0x2010
 #define WGL_DOUBLE_BUFFER_ARB 0x2011
