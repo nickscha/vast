@@ -270,6 +270,40 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
     }
 }
 
+VAST_API void vast_play_sound(vast_platform_state *platform_state)
+{
+
+    vast_platform_sound *sound = &platform_state->sound;
+
+    static i32 ToneHz = 256;
+    static i16 ToneVolume = 3000;
+    static f32 tSine = 0.0f;
+
+    i16 *sample_out = sound->samples;
+    u32 sample_index;
+
+    f32 step = 2.0f * VAST_PI * (f32)ToneHz / (f32)sound->samples_per_second;
+
+    for (sample_index = 0; sample_index < sound->samples_count; ++sample_index)
+    {
+        i16 SampleValue = (i16)(vast_sinf(tSine) * (f32)ToneVolume);
+
+        *sample_out++ = SampleValue;
+        *sample_out++ = SampleValue;
+
+        tSine += step;
+
+        if (tSine >= 2.0f * VAST_PI)
+        {
+            tSine -= 2.0f * VAST_PI;
+        }
+        else if (tSine < 0.0f)
+        {
+            tSine += 2.0f * VAST_PI;
+        }
+    }
+}
+
 void vast_update(vast_platform_state *platform_state)
 {
     vast_state *state = (vast_state *)platform_state->memory.data;
@@ -355,6 +389,7 @@ void vast_update(vast_platform_state *platform_state)
         window->window_mode_changed = 1;
     }
 
+    vast_play_sound(platform_state);
     vast_scene(platform_state, state);
 
     /* Reset transient memory after every update */

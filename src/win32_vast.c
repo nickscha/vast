@@ -313,8 +313,6 @@ VAST_API VAST_INLINE u8 win32_enable_high_resolution_timer(void)
 
     res = timeBeginPeriod(1);
 
-    FreeLibrary(winmm);
-
     /* TIMERR_NOCANDO */
     if (res == 97)
     {
@@ -1312,7 +1310,7 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
     state.sound_output.RunningSampleIndex = 0;
     state.sound_output.BytesPerSample = sizeof(i16) * 2;
     state.sound_output.SecondaryBufferSize = (u32)(state.sound_output.SamplesPerSecond * state.sound_output.BytesPerSample);
-    state.sound_output.SafetyBytes = (u32)((state.sound_output.SamplesPerSecond * state.sound_output.BytesPerSample / 60) * 4);
+    state.sound_output.SafetyBytes = (u32)((state.sound_output.SamplesPerSecond * state.sound_output.BytesPerSample / 10) * 4);
 
     if (!win32_direct_sound_load(&state))
     {
