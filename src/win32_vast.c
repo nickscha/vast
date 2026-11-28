@@ -91,6 +91,7 @@ typedef struct win32_vast_state
   /* DirectSound specific */
   IDirectSoundBuffer *GlobalSecondaryBuffer;
   win32_sound_output sound_output;
+  u8 SoundIsValid;
 
 } win32_vast_state;
 
@@ -1315,21 +1316,25 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
 
     if (!win32_direct_sound_load(&state))
     {
+      state.platform_state.sound.active = 0;
       win32_print("[win32][warning] Could not load DirectSound (dsound.dll)! Sound playback is not supported.\n");
     }
-
-    win32_direct_sound_buffer_clear(&state);
-
-    if (state.GlobalSecondaryBuffer)
+    else
     {
-      state.GlobalSecondaryBuffer->lpVtbl->Play(state.GlobalSecondaryBuffer, 0, 0, DSBPLAY_LOOPING);
+      win32_direct_sound_buffer_clear(&state);
+
+      if (state.GlobalSecondaryBuffer)
+      {
+        state.GlobalSecondaryBuffer->lpVtbl->Play(state.GlobalSecondaryBuffer, 0, 0, DSBPLAY_LOOPING);
+      }
+
+      /* Setup platform sound buffer */
+      state.platform_state.sound.active = 1;
+      state.platform_state.sound.samples_per_second = (u32)state.sound_output.SamplesPerSecond;
+      state.platform_state.sound.samples = (i16 *)VirtualAlloc(0, state.sound_output.SecondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+      (void)win32_direct_sound_buffer_fill;
     }
-
-    /* Allocate samples */
-    state.platform_state.sound.samples_per_second = (u32)state.sound_output.SamplesPerSecond;
-    state.platform_state.sound.samples = (i16 *)VirtualAlloc(0, state.sound_output.SecondaryBufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-    (void)win32_direct_sound_buffer_fill;
   }
 
   /* Avoid clear color flickering */
@@ -1567,7 +1572,68 @@ VAST_API i32 win32_start(i32 argc, u8 **argv)
       /******************************/
       /* Main Application Logic     */
       /******************************/
-      vast_update(&state.platform_state);
+      {
+        u32 PlayCursor = 0;
+        u32 WriteCursor = 0;
+        u32 ByteToLock = 0;
+        u32 BytesToWrite = 0;
+
+        if (state.platform_state.sound.active)
+        {
+          i32 PosResult = state.GlobalSecondaryBuffer->lpVtbl->GetCurrentPosition(state.GlobalSecondaryBuffer, &PlayCursor, &WriteCursor);
+
+          if (PosResult == (i32)DSERR_BUFFERLOST)
+          {
+            state.GlobalSecondaryBuffer->lpVtbl->Restore(state.GlobalSecondaryBuffer);
+            win32_direct_sound_buffer_clear(&state);
+
+            state.SoundIsValid = 0;
+            PosResult = state.GlobalSecondaryBuffer->lpVtbl->GetCurrentPosition(state.GlobalSecondaryBuffer, &PlayCursor, &WriteCursor);
+          }
+
+          if (DS_SUCCEEDED(PosResult))
+          {
+            u32 BytesPerSample = (u32)state.sound_output.BytesPerSample;
+            u32 AlignedPlayCursor = (PlayCursor / BytesPerSample) * BytesPerSample;
+            u32 AlignedWriteCursor = (WriteCursor / BytesPerSample) * BytesPerSample;
+            u32 TargetCursor;
+
+            if (!state.SoundIsValid)
+            {
+              state.sound_output.RunningSampleIndex = AlignedWriteCursor / BytesPerSample;
+              state.SoundIsValid = 1;
+            }
+
+            ByteToLock = (state.sound_output.RunningSampleIndex * BytesPerSample) % state.sound_output.SecondaryBufferSize;
+            TargetCursor = (AlignedPlayCursor + state.sound_output.SafetyBytes) % state.sound_output.SecondaryBufferSize;
+
+            if (ByteToLock > TargetCursor)
+            {
+              BytesToWrite = (state.sound_output.SecondaryBufferSize - ByteToLock) + TargetCursor;
+            }
+            else
+            {
+              BytesToWrite = TargetCursor - ByteToLock;
+            }
+
+            BytesToWrite = (BytesToWrite / BytesPerSample) * BytesPerSample;
+
+            if (BytesToWrite > 0)
+            {
+              /* Set platform sound samples count */
+              state.platform_state.sound.samples_count = BytesToWrite / BytesPerSample;
+            }
+          }
+        }
+
+        /* Call application layer */
+        vast_update(&state.platform_state);
+
+        if (state.platform_state.sound.active)
+        {
+          win32_direct_sound_buffer_fill(&state, ByteToLock, BytesToWrite);
+        }
+      }
 
       /* Application updated the window size */
       if (state.platform_state.window.size_changed)

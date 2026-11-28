@@ -260,9 +260,10 @@ typedef struct vast_platform_memory
  */
 typedef struct vast_platform_sound
 {
-    u32 samples_per_second; /* Samples per second */
+    u8 active;              /* Is platform sound available? */
+    u32 samples_per_second; /* Samples per second           */
     u32 samples_count;      /* The size of the sound buffer */
-    i16 *samples;           /* The sound buffer data  */
+    i16 *samples;           /* The sound buffer data        */
 
 } vast_platform_sound;
 
