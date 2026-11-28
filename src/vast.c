@@ -194,9 +194,9 @@ VAST_API VAST_INLINE void vast_scene(vast_platform_state *platform_state, vast_s
 
         /* Camera Setup */
         state->camera = vast_camera_init();
-        state->camera.position.x = -250.0f;
+        state->camera.position.x = 0.0f;
         state->camera.position.y = 250.0f;
-        state->camera.position.z = -200.0f;
+        state->camera.position.z = 0.0f;
         state->camera_speed = 100.0f;
 
         /* Mouse setup */

@@ -95,7 +95,7 @@ typedef struct vast_tile_instance_data
 static s8 *vast_tile_texture_vertex_data =
     "#version 330 core\n"
     "out vec2 v_uv;\n"
-    "const vec2 verts[3] = vec2[](vec2(-1.0, -1.0),vec2( 3.0, -1.0),vec2(-1.0,  3.0));\n"
+    "vec2 verts[3] = vec2[](vec2(-1.0, -1.0),vec2( 3.0, -1.0),vec2(-1.0,  3.0));\n"
     "void main()\n"
     "{\n"
     "  vec2 p = verts[gl_VertexID];\n"
@@ -372,6 +372,251 @@ VAST_API i32 vast_tile_aquire_texture_array_layer(
     return texture_layer_assigned;
 }
 
+VAST_API void vast_write_ppm_p6(
+    vast_platform_state *platform_state,
+    vast_state *state,
+    s8 *filename,
+    u8 *rgb_data,
+    u32 width,
+    u32 height)
+{
+    s8 header_buf[64];
+    vast_sb sb;
+    u32 row_bytes;
+    u32 rgb_bytes;
+    u32 total_bytes;
+    u8 *file_buf;
+    u8 *dst_pixels;
+    u32 y;
+    u32 i;
+
+    if (!platform_state || !platform_state->api.io_file_write || !rgb_data || width == 0 || height == 0)
+    {
+        return;
+    }
+
+    sb.buffer = header_buf;
+    sb.size = sizeof(header_buf);
+    sb.length = 0;
+    sb.buffer[0] = 0;
+
+    vast_sb_s8(&sb, "P6\n");
+    vast_sb_i32(&sb, (i32)width);
+    vast_sb_s8(&sb, " ");
+    vast_sb_i32(&sb, (i32)height);
+    vast_sb_s8(&sb, "\n255\n");
+
+    row_bytes = width * 3u;
+    rgb_bytes = row_bytes * height;
+    total_bytes = sb.length + rgb_bytes;
+
+    file_buf = (u8 *)vast_memory_allocate(&state->memory_region_transient, total_bytes);
+    if (!file_buf)
+    {
+        return;
+    }
+
+    for (i = 0; i < sb.length; ++i)
+    {
+        file_buf[i] = (u8)sb.buffer[i];
+    }
+
+    dst_pixels = file_buf + sb.length;
+
+    for (y = 0; y < height; ++y)
+    {
+        u32 src_y = y;
+        u8 *src_row = rgb_data + (src_y * row_bytes);
+        u8 *dst_row = dst_pixels + (y * row_bytes);
+
+        for (i = 0; i < row_bytes; ++i)
+        {
+            dst_row[i] = src_row[i];
+        }
+    }
+
+    platform_state->api.io_file_write((s8 *)filename, file_buf, total_bytes);
+}
+
+VAST_API void vast_export_heightmap_ppm(
+    vast_platform_state *platform_state,
+    vast_state *state,
+    s8 *filename,
+    f32 *heightmap_data,
+    u32 width,
+    u32 height)
+{
+    u32 pixel_count = width * height;
+    u8 *rgb_buf;
+    f32 min_h;
+    f32 max_h;
+    f32 span;
+    u32 i;
+
+    if (!heightmap_data || pixel_count == 0)
+    {
+        return;
+    }
+
+    rgb_buf = (u8 *)vast_memory_allocate(&state->memory_region_transient, pixel_count * 3u);
+    if (!rgb_buf)
+    {
+        return;
+    }
+
+    min_h = heightmap_data[0];
+    max_h = heightmap_data[0];
+
+    for (i = 1u; i < pixel_count; ++i)
+    {
+        f32 h = heightmap_data[i];
+        if (h < min_h)
+        {
+            min_h = h;
+        }
+        if (h > max_h)
+        {
+            max_h = h;
+        }
+    }
+
+    span = max_h - min_h;
+
+    for (i = 0u; i < pixel_count; ++i)
+    {
+        f32 norm = (span > 0.00001f) ? ((heightmap_data[i] - min_h) / span) : 0.0f;
+        u8 v;
+
+        if (norm < 0.0f)
+        {
+            norm = 0.0f;
+        }
+        if (norm > 1.0f)
+        {
+            norm = 1.0f;
+        }
+
+        v = (u8)(norm * 255.0f + 0.5f);
+        rgb_buf[i * 3u + 0u] = v;
+        rgb_buf[i * 3u + 1u] = v;
+        rgb_buf[i * 3u + 2u] = v;
+    }
+
+    vast_write_ppm_p6(platform_state, state, filename, rgb_buf, width, height);
+}
+
+VAST_API void vast_render_textures(
+    vast_platform_state *platform_state,
+    vast_state *state,
+    vast_tile_shader_heightmap *tiles_hm_shader,
+    vast_tile_shader_normalmap *tiles_nm_shader)
+{
+    vast_opengl_api *gl = &platform_state->graphics.opengl;
+
+    static u8 initialized = 0;
+
+    static u32 heightmap_resolution = 1024;
+    static u32 normalmap_resolution = 1024;
+
+    static u32 heightmap_texture_id = 0;
+    static u32 normalmap_texture_id = 0;
+
+    static u32 heightmap_framebuffer_id = 0;
+    static u32 normalmap_framebuffer_id = 0;
+
+    static u32 dummy_vao = 0;
+
+    f32 tile_world_size = state->tiles.world_size;
+    i32 camera_tile_x = vast_tile_calculate_camera_tile(&state->tiles, state->camera.position.x);
+    i32 camera_tile_z = vast_tile_calculate_camera_tile(&state->tiles, state->camera.position.z);
+    u32 tile_index = vast_tile_index(camera_tile_x, camera_tile_z);
+
+    f32 tile_offset_x = (f32)state->tiles.tile_x[tile_index];
+    f32 tile_offset_z = (f32)state->tiles.tile_z[tile_index];
+
+    if (!initialized)
+    {
+        /* Dummy VAO */
+        gl->glGenVertexArrays(1, &dummy_vao);
+
+        /* Heightmap texture */
+        gl->glGenTextures(1, &heightmap_texture_id);
+        gl->glBindTexture(GL_TEXTURE_2D, heightmap_texture_id);
+        gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, (i32)heightmap_resolution, (i32)heightmap_resolution, 0, GL_RED, GL_FLOAT, VAST_NULL);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        /* Normalmap texture */
+        gl->glGenTextures(1, &normalmap_texture_id);
+        gl->glBindTexture(GL_TEXTURE_2D, normalmap_texture_id);
+        gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (i32)normalmap_resolution, (i32)normalmap_resolution, 0, GL_RGB, GL_UNSIGNED_BYTE, VAST_NULL);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        /* Heightmap framebuffer */
+        gl->glGenFramebuffers(1, &heightmap_framebuffer_id);
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, heightmap_framebuffer_id);
+        gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, heightmap_texture_id, 0);
+
+        /* Normalmap framebuffer */
+        gl->glGenFramebuffers(1, &normalmap_framebuffer_id);
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, normalmap_framebuffer_id);
+        gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, normalmap_texture_id, 0);
+
+        gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        initialized = 1;
+    }
+
+    gl->glBindVertexArray(dummy_vao);
+
+    /* Heightmap Render */
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, heightmap_framebuffer_id);
+    gl->glViewport(0, 0, (i32)heightmap_resolution, (i32)heightmap_resolution);
+    gl->glUseProgram(tiles_hm_shader->header.program);
+    gl->glUniform2f(tiles_hm_shader->loc_tile_offset, tile_offset_x, tile_offset_z);
+    gl->glUniform1f(tiles_hm_shader->loc_tile_size, tile_world_size);
+    gl->glUniform1f(tiles_hm_shader->loc_texture_size, (f32)heightmap_resolution);
+    gl->glDrawArrays(GL_TRIANGLES, 0, 3);
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    /* Normalmap Render */
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, normalmap_framebuffer_id);
+    gl->glViewport(0, 0, (i32)normalmap_resolution, (i32)normalmap_resolution);
+    gl->glUseProgram(tiles_nm_shader->header.program);
+    gl->glUniform2f(tiles_nm_shader->loc_tile_offset, tile_offset_x, tile_offset_z);
+    gl->glUniform1f(tiles_nm_shader->loc_tile_size, tile_world_size);
+    gl->glUniform1f(tiles_nm_shader->loc_texture_size, (f32)normalmap_resolution);
+    gl->glDrawArrays(GL_TRIANGLES, 0, 3);
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    {
+        u32 heightmap_data_size = heightmap_resolution * heightmap_resolution * sizeof(f32);
+        u32 normalmap_data_size = normalmap_resolution * normalmap_resolution * 3u;
+
+        f32 *heightmap_data = (f32 *)vast_memory_allocate(&state->memory_region_transient, heightmap_data_size);
+        u8 *normalmap_data = (u8 *)vast_memory_allocate(&state->memory_region_transient, normalmap_data_size);
+
+        gl->glBindTexture(GL_TEXTURE_2D, heightmap_texture_id);
+        gl->glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, heightmap_data);
+        gl->glBindTexture(GL_TEXTURE_2D, 0);
+
+        gl->glBindTexture(GL_TEXTURE_2D, normalmap_texture_id);
+        gl->glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, normalmap_data);
+        gl->glBindTexture(GL_TEXTURE_2D, 0);
+
+        vast_export_heightmap_ppm(platform_state, state, "tile_heightmap.ppm", heightmap_data, heightmap_resolution, heightmap_resolution);
+        vast_write_ppm_p6(platform_state, state, "tile_normalmap.ppm", normalmap_data, normalmap_resolution, normalmap_resolution);
+    }
+
+    /* Reset Window state */
+    gl->glViewport(0, 0, (i32)platform_state->window.width, (i32)platform_state->window.height);
+}
+
 /* #############################################################################
  * # [SECTION] Tile Rendering
  * #############################################################################
@@ -612,15 +857,15 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
 
         while (updates_per_frame > 0 && state->tiles.dirty_indices_count > 0)
         {
-            u32 last_idx = state->tiles.dirty_indices_count - 1;
-            u32 tile_idx = state->tiles.dirty_indices[last_idx];
+            u32 last_tile_index = state->tiles.dirty_indices_count - 1;
+            u32 tile_index = state->tiles.dirty_indices[last_tile_index];
 
-            i8 tile_lod_required = state->tiles.tile_lod_required[tile_idx];
+            i8 tile_lod_required = state->tiles.tile_lod_required[tile_index];
 
             i32 height_tex_size = resolution_base_heightmap / (1 << tile_lod_required) + 1; /* +1 because of skirts */
             i32 normal_tex_size = resolution_base_normalmap / (1 << tile_lod_required);
 
-            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&state->tiles, tile_idx, texture_layer_used, texture_layer_next_free, lod_texture_pool_size);
+            i32 texture_array_layer = vast_tile_aquire_texture_array_layer(&state->tiles, tile_index, texture_layer_used, texture_layer_next_free, lod_texture_pool_size);
 
             if (texture_array_layer == -1)
             {
@@ -630,7 +875,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 sb.buffer = tmp;
 
                 vast_sb_s8(&sb, "tile_index: ");
-                vast_sb_i32(&sb, (i32)tile_idx);
+                vast_sb_i32(&sb, (i32)tile_index);
                 vast_sb_s8(&sb, "\n");
 
                 vast_sb_s8(&sb, "tile_lod_required: ");
@@ -651,7 +896,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 gl->glViewport(0, 0, height_tex_size, height_tex_size);
 
                 gl->glUseProgram(tiles_hm_shader.header.program);
-                gl->glUniform2f(tiles_hm_shader.loc_tile_offset, (f32)state->tiles.tile_x[tile_idx], (f32)state->tiles.tile_z[tile_idx]);
+                gl->glUniform2f(tiles_hm_shader.loc_tile_offset, (f32)state->tiles.tile_x[tile_index], (f32)state->tiles.tile_z[tile_index]);
                 gl->glUniform1f(tiles_hm_shader.loc_texture_size, (f32)height_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */
@@ -668,7 +913,7 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
                 gl->glViewport(0, 0, normal_tex_size, normal_tex_size);
 
                 gl->glUseProgram(tiles_nm_shader.header.program);
-                gl->glUniform2f(tiles_nm_shader.loc_tile_offset, (f32)state->tiles.tile_x[tile_idx], (f32)state->tiles.tile_z[tile_idx]);
+                gl->glUniform2f(tiles_nm_shader.loc_tile_offset, (f32)state->tiles.tile_x[tile_index], (f32)state->tiles.tile_z[tile_index]);
                 gl->glUniform1f(tiles_nm_shader.loc_texture_size, (f32)normal_tex_size);
 
                 /* TODO(nickscha): only need to be set once and not every frame! */
@@ -682,12 +927,18 @@ VAST_API void vast_tile_render(vast_platform_state *platform_state, vast_state *
             gl->glViewport(0, 0, (i32)platform_state->window.width, (i32)platform_state->window.height);
             gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            state->tiles.tile_lod_current[tile_idx] = tile_lod_required;
+            state->tiles.tile_lod_current[tile_index] = tile_lod_required;
             state->tiles.dirty_indices_count--;
             updates_per_frame--;
         }
 
         VAST_PROFILER_END(tile_process_dirty);
+    }
+
+    /* Render Textures to Files */
+    if (platform_state->input.keyboard.keys_is_down[VAST_KEYBOARD_KEY_B] && !platform_state->input.keyboard.keys_was_down[VAST_KEYBOARD_KEY_B])
+    {
+        vast_render_textures(platform_state, state, &tiles_hm_shader, &tiles_nm_shader);
     }
 
     /* Render Tiles */
